@@ -7,14 +7,18 @@ interface SplashScreenProps {
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  // Auto redirect after 5.5 seconds
+  // Auto redirect after 5 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
-    }, 5500);
+    }, 5000);
     
     return () => clearTimeout(timer);
   }, [onComplete]);
+
+  const handleSkip = () => {
+    onComplete();
+  };
 
   return (
     <motion.div
@@ -311,6 +315,19 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         >
           by Shashank Yadav
         </motion.p>
+
+        {/* Skip button */}
+        <motion.button
+          onClick={handleSkip}
+          className="mt-10 px-6 py-2.5 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm text-white/80 text-sm font-medium tracking-wide hover:bg-white/10 hover:border-white/30 transition-all duration-300 active:scale-95"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2, duration: 0.5 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          Skip →
+        </motion.button>
       </div>
     </motion.div>
   );
