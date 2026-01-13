@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Music } from 'lucide-react';
 import { iosSpring } from '@/lib/animations';
 
 interface SplashScreenProps {
@@ -14,127 +13,224 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
       onAnimationComplete={() => {
-        setTimeout(onComplete, 2200);
+        setTimeout(onComplete, 2500);
       }}
     >
-      {/* iOS-style ambient background */}
+      {/* Animated ambient background */}
       <div className="absolute inset-0 overflow-hidden">
+        {/* Primary glow */}
         <motion.div
-          className="absolute top-1/3 left-1/3 w-[500px] h-[500px] rounded-full"
+          className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, hsl(211 100% 50% / 0.25), transparent 70%)',
+            background: 'radial-gradient(circle, hsl(211 100% 50% / 0.3), transparent 60%)',
+            filter: 'blur(60px)',
           }}
           animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.3, 0.5, 0.3],
-            x: [-20, 20, -20],
-            y: [-10, 10, -10],
+            scale: [1, 1.4, 1],
+            opacity: [0.4, 0.6, 0.4],
+            x: [-50, 50, -50],
+            y: [-30, 30, -30],
           }}
           transition={{
-            duration: 4,
+            duration: 5,
             repeat: Infinity,
             ease: "easeInOut"
           }}
         />
+        {/* Secondary glow */}
         <motion.div
-          className="absolute bottom-1/3 right-1/3 w-[400px] h-[400px] rounded-full"
+          className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, hsl(328 100% 54% / 0.2), transparent 70%)',
+            background: 'radial-gradient(circle, hsl(328 100% 54% / 0.25), transparent 60%)',
+            filter: 'blur(60px)',
           }}
           animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.25, 0.4, 0.25],
-            x: [20, -20, 20],
-            y: [10, -10, 10],
+            scale: [1.3, 1, 1.3],
+            opacity: [0.3, 0.5, 0.3],
+            x: [30, -30, 30],
+            y: [20, -20, 20],
           }}
           transition={{
-            duration: 4,
+            duration: 5,
             repeat: Infinity,
             ease: "easeInOut",
             delay: 0.5
           }}
         />
+        {/* Tertiary purple glow */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, hsl(270 100% 60% / 0.2), transparent 60%)',
+            filter: 'blur(80px)',
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.35, 0.2],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
       </div>
 
       <div className="relative flex flex-col items-center">
-        {/* Logo - iOS App Icon style */}
+        {/* Animated Logo */}
         <motion.div
           className="relative"
-          initial={{ scale: 0, rotate: -180, opacity: 0 }}
-          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
           transition={{
             ...iosSpring,
             delay: 0.2,
           }}
         >
+          {/* Outer ring animation */}
           <motion.div
-            className="w-28 h-28 rounded-[28px] flex items-center justify-center relative overflow-hidden"
+            className="absolute -inset-4 rounded-full"
             style={{
-              background: 'linear-gradient(135deg, hsl(211 100% 50%), hsl(280 100% 60%), hsl(328 100% 54%))',
+              background: 'conic-gradient(from 0deg, hsl(211 100% 50%), hsl(270 100% 60%), hsl(328 100% 54%), hsl(211 100% 50%))',
+              opacity: 0.6,
+            }}
+            animate={{
+              rotate: 360,
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+          <motion.div
+            className="absolute -inset-4 rounded-full bg-black/80"
+          />
+          
+          {/* Main logo container */}
+          <motion.div
+            className="w-32 h-32 rounded-[32px] flex items-center justify-center relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, hsl(211 100% 50%), hsl(270 100% 60%), hsl(328 100% 54%))',
             }}
             animate={{
               boxShadow: [
-                "0 0 30px hsl(211 100% 50% / 0.4)",
-                "0 0 60px hsl(211 100% 50% / 0.6), 0 0 100px hsl(328 100% 54% / 0.3)",
-                "0 0 30px hsl(211 100% 50% / 0.4)",
+                "0 0 40px hsl(211 100% 50% / 0.5)",
+                "0 0 80px hsl(270 100% 60% / 0.6), 0 0 120px hsl(328 100% 54% / 0.4)",
+                "0 0 40px hsl(211 100% 50% / 0.5)",
               ]
             }}
             transition={{
-              duration: 2,
+              duration: 2.5,
               repeat: Infinity,
               ease: "easeInOut"
             }}
           >
             {/* Inner highlight */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
-            <Music className="w-14 h-14 text-white relative z-10" strokeWidth={1.5} />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent" />
+            
+            {/* Animated Flow Icon */}
+            <motion.div className="relative z-10 flex items-center justify-center">
+              <svg 
+                width="64" 
+                height="64" 
+                viewBox="0 0 64 64" 
+                fill="none"
+                className="text-white"
+              >
+                {/* Infinity/Flow symbol */}
+                <motion.path
+                  d="M16 32C16 32 20 24 28 24C36 24 32 40 40 40C48 40 48 32 48 32C48 32 48 24 40 24C32 24 36 40 28 40C20 40 16 32 16 32Z"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  fill="none"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
+                />
+                {/* Music note accent */}
+                <motion.circle
+                  cx="32"
+                  cy="18"
+                  r="4"
+                  fill="currentColor"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 1.2, duration: 0.3 }}
+                />
+                <motion.path
+                  d="M36 18V10"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ delay: 1.3, duration: 0.3 }}
+                />
+              </svg>
+            </motion.div>
           </motion.div>
         </motion.div>
 
-        {/* iOS-style waveform */}
+        {/* Animated waveform */}
         <motion.div
-          className="flex items-center justify-center gap-1 mt-10 h-10"
+          className="flex items-center justify-center gap-1.5 mt-12 h-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ ...iosSpring, delay: 0.7 }}
+          transition={{ ...iosSpring, delay: 0.8 }}
         >
-          {[...Array(7)].map((_, i) => (
+          {[...Array(9)].map((_, i) => (
             <motion.div
               key={i}
               className="w-1 rounded-full"
               style={{
-                background: `linear-gradient(to top, hsl(211 100% 50%), hsl(328 100% 54%))`,
+                background: `linear-gradient(to top, hsl(211 100% 60%), hsl(328 100% 60%))`,
               }}
               animate={{
-                height: [6, 28 + Math.random() * 12, 6],
+                height: [4, 24 + Math.sin(i * 0.8) * 12, 4],
               }}
               transition={{
-                duration: 0.7 + Math.random() * 0.3,
+                duration: 0.6 + Math.random() * 0.2,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: i * 0.08,
+                delay: i * 0.06,
               }}
             />
           ))}
         </motion.div>
 
-        {/* Brand name - iOS style */}
-        <motion.h1
-          className="mt-10 text-4xl font-semibold tracking-tight"
+        {/* Brand name - Univers Flow */}
+        <motion.div
+          className="mt-10 text-center"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ ...iosSpring, delay: 0.9 }}
+          transition={{ ...iosSpring, delay: 1 }}
         >
-          <span className="gradient-text">Sonique</span>
-        </motion.h1>
+          <h1 className="text-4xl font-bold tracking-tight">
+            <span className="gradient-text">Univers</span>
+            <span className="text-white ml-2">Flow</span>
+          </h1>
+        </motion.div>
 
         <motion.p
-          className="mt-2 text-muted-foreground text-sm font-medium tracking-wide"
+          className="mt-3 text-muted-foreground text-sm font-medium tracking-wide"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.5 }}
+          transition={{ delay: 1.3, duration: 0.5 }}
         >
           Premium Music Experience
+        </motion.p>
+
+        {/* Creator credit */}
+        <motion.p
+          className="mt-8 text-[11px] text-muted-foreground/60 font-medium tracking-widest uppercase"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6, duration: 0.6 }}
+        >
+          by Shashank Yadav
         </motion.p>
       </div>
     </motion.div>
