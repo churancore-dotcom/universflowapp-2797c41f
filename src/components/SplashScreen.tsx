@@ -86,6 +86,96 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             delay: 1
           }}
         />
+
+        {/* Shooting Stars */}
+        {[...Array(6)].map((_, i) => {
+          const startX = Math.random() * 100;
+          const startY = Math.random() * 40;
+          const duration = 1.5 + Math.random() * 1;
+          const delay = i * 0.8 + Math.random() * 2;
+          
+          return (
+            <motion.div
+              key={`shooting-star-${i}`}
+              className="absolute"
+              style={{
+                top: `${startY}%`,
+                left: `${startX}%`,
+                width: '100px',
+                height: '2px',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), rgba(200,220,255,1))',
+                borderRadius: '50%',
+                filter: 'blur(0.5px)',
+                boxShadow: '0 0 6px 2px rgba(200,220,255,0.6)',
+              }}
+              initial={{ 
+                x: 0, 
+                y: 0, 
+                opacity: 0,
+                rotate: 35,
+                scale: 0.5,
+              }}
+              animate={{
+                x: [0, 300],
+                y: [0, 200],
+                opacity: [0, 1, 1, 0],
+                scale: [0.5, 1, 1, 0.3],
+              }}
+              transition={{
+                duration: duration,
+                delay: delay,
+                repeat: Infinity,
+                repeatDelay: 3 + Math.random() * 4,
+                ease: "easeOut",
+              }}
+            />
+          );
+        })}
+
+        {/* Additional smaller shooting stars */}
+        {[...Array(4)].map((_, i) => {
+          const startX = 20 + Math.random() * 60;
+          const startY = Math.random() * 30;
+          const duration = 1 + Math.random() * 0.8;
+          const delay = 2 + i * 1.2 + Math.random() * 1.5;
+          
+          return (
+            <motion.div
+              key={`small-star-${i}`}
+              className="absolute"
+              style={{
+                top: `${startY}%`,
+                left: `${startX}%`,
+                width: '60px',
+                height: '1.5px',
+                background: 'linear-gradient(90deg, transparent, rgba(180,200,255,0.7), rgba(255,255,255,0.9))',
+                borderRadius: '50%',
+                filter: 'blur(0.3px)',
+                boxShadow: '0 0 4px 1px rgba(180,200,255,0.5)',
+              }}
+              initial={{ 
+                x: 0, 
+                y: 0, 
+                opacity: 0,
+                rotate: 40,
+                scale: 0.3,
+              }}
+              animate={{
+                x: [0, 200],
+                y: [0, 150],
+                opacity: [0, 0.8, 0.8, 0],
+                scale: [0.3, 0.8, 0.8, 0.2],
+              }}
+              transition={{
+                duration: duration,
+                delay: delay,
+                repeat: Infinity,
+                repeatDelay: 4 + Math.random() * 5,
+                ease: "easeOut",
+              }}
+            />
+          );
+        })}
       </div>
 
       <div className="relative flex flex-col items-center">
