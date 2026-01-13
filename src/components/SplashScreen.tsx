@@ -130,46 +130,123 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             {/* Inner highlight */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent" />
             
-            {/* Animated Flow Icon */}
-            <motion.div className="relative z-10 flex items-center justify-center">
-              <svg 
-                width="64" 
-                height="64" 
-                viewBox="0 0 64 64" 
-                fill="none"
-                className="text-white"
+            {/* Realistic Universe Logo */}
+            <motion.div className="relative z-10 flex items-center justify-center w-full h-full">
+              {/* Galaxy core glow */}
+              <div 
+                className="absolute w-20 h-20 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(200,220,255,0.6) 20%, rgba(100,150,255,0.3) 40%, transparent 70%)',
+                  filter: 'blur(2px)',
+                }}
+              />
+              
+              {/* Spiral galaxy arms */}
+              <motion.div
+                className="absolute w-24 h-24"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               >
-                {/* Infinity/Flow symbol */}
-                <motion.path
-                  d="M16 32C16 32 20 24 28 24C36 24 32 40 40 40C48 40 48 32 48 32C48 32 48 24 40 24C32 24 36 40 28 40C20 40 16 32 16 32Z"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  fill="none"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
-                />
-                {/* Music note accent */}
+                {[0, 72, 144, 216, 288].map((rotation, i) => (
+                  <div
+                    key={i}
+                    className="absolute top-1/2 left-1/2 w-10 h-1 origin-left"
+                    style={{
+                      transform: `rotate(${rotation}deg)`,
+                      background: `linear-gradient(90deg, rgba(200,220,255,0.8), rgba(150,100,255,0.4), transparent)`,
+                      borderRadius: '50%',
+                      filter: 'blur(1px)',
+                    }}
+                  />
+                ))}
+              </motion.div>
+
+              {/* Orbiting stars */}
+              <motion.div
+                className="absolute w-28 h-28"
+                animate={{ rotate: -360 }}
+                transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+              >
+                {[0, 90, 180, 270].map((angle, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full bg-white"
+                    style={{
+                      top: '50%',
+                      left: '50%',
+                      transform: `rotate(${angle}deg) translateX(52px) translateY(-50%)`,
+                      boxShadow: '0 0 6px 2px rgba(255,255,255,0.8)',
+                    }}
+                    animate={{
+                      opacity: [0.5, 1, 0.5],
+                      scale: [0.8, 1.2, 0.8],
+                    }}
+                    transition={{
+                      duration: 2,
+                      delay: i * 0.5,
+                      repeat: Infinity,
+                    }}
+                  />
+                ))}
+              </motion.div>
+
+              {/* Music wave ring */}
+              <motion.svg
+                width="80"
+                height="80"
+                viewBox="0 0 80 80"
+                className="absolute"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.8, duration: 0.6 }}
+              >
+                <defs>
+                  <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="hsl(211, 100%, 70%)" />
+                    <stop offset="50%" stopColor="hsl(280, 100%, 70%)" />
+                    <stop offset="100%" stopColor="hsl(328, 100%, 70%)" />
+                  </linearGradient>
+                </defs>
                 <motion.circle
-                  cx="32"
-                  cy="18"
-                  r="4"
-                  fill="currentColor"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 1.2, duration: 0.3 }}
-                />
-                <motion.path
-                  d="M36 18V10"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
+                  cx="40"
+                  cy="40"
+                  r="35"
+                  fill="none"
+                  stroke="url(#waveGradient)"
+                  strokeWidth="1.5"
+                  strokeDasharray="8 4"
                   initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ delay: 1.3, duration: 0.3 }}
+                  animate={{ pathLength: 1, rotate: 360 }}
+                  transition={{ 
+                    pathLength: { duration: 1.5, delay: 0.5 },
+                    rotate: { duration: 10, repeat: Infinity, ease: "linear" }
+                  }}
+                  style={{ transformOrigin: 'center' }}
                 />
-              </svg>
+              </motion.svg>
+
+              {/* Central planet/star */}
+              <motion.div
+                className="relative w-12 h-12 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle at 30% 30%, #ffffff, #a0c4ff 30%, #6b8cff 60%, #4a6bff 100%)',
+                  boxShadow: '0 0 30px 10px rgba(100,150,255,0.5), inset -4px -4px 10px rgba(0,0,50,0.3)',
+                }}
+                animate={{
+                  boxShadow: [
+                    '0 0 30px 10px rgba(100,150,255,0.5), inset -4px -4px 10px rgba(0,0,50,0.3)',
+                    '0 0 50px 15px rgba(150,100,255,0.6), inset -4px -4px 10px rgba(0,0,50,0.3)',
+                    '0 0 30px 10px rgba(100,150,255,0.5), inset -4px -4px 10px rgba(0,0,50,0.3)',
+                  ]
+                }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                {/* Planet highlight */}
+                <div 
+                  className="absolute top-1 left-2 w-3 h-2 rounded-full bg-white/60"
+                  style={{ filter: 'blur(2px)' }}
+                />
+              </motion.div>
             </motion.div>
           </motion.div>
         </motion.div>
