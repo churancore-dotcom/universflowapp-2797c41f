@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { iosSpring } from '@/lib/animations';
 
@@ -6,15 +7,21 @@ interface SplashScreenProps {
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
+  // Auto redirect after 5.5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 5500);
+    
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
   return (
     <motion.div
       className="fixed inset-0 bg-black flex items-center justify-center z-50"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
-      onAnimationComplete={() => {
-        setTimeout(onComplete, 5500);
-      }}
     >
       {/* Animated ambient background */}
       <div className="absolute inset-0 overflow-hidden">
