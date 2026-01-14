@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Song } from './PlayerContext';
 
 interface DownloadedSong extends Song {
@@ -13,16 +13,27 @@ interface DownloadProgress {
   status: 'pending' | 'downloading' | 'completed' | 'error';
 }
 
+export interface QueuedSong extends Song {
+  queuedAt: string;
+  position: number;
+}
+
 interface DownloadContextType {
   downloads: DownloadedSong[];
   downloadProgress: Record<string, DownloadProgress>;
+  downloadQueue: QueuedSong[];
   downloadSong: (song: Song) => Promise<void>;
+  addToQueue: (songs: Song[]) => void;
+  removeFromQueue: (songId: string) => void;
+  clearQueue: () => void;
   removeSong: (songId: string) => void;
   isDownloaded: (songId: string) => boolean;
+  isInQueue: (songId: string) => boolean;
   getDownloadedUrl: (songId: string) => string | null;
   totalStorageUsed: number;
   clearAllDownloads: () => void;
   isIndexedDBSupported: boolean;
+  isProcessingQueue: boolean;
 }
 
 const DownloadContext = createContext<DownloadContextType | undefined>(undefined);
@@ -179,6 +190,9 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [downloadProgress, setDownloadProgress] = useState<Record<string, DownloadProgress>>({});
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
   const [isIndexedDBSupported, setIsIndexedDBSupported] = useState(true);
+  const [downloadQueue, setDownloadQueue] = useState<QueuedSong[]>([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const processingRef = useRef(false);
 
   // Load downloads from IndexedDB on mount
   useEffect(() => {
@@ -364,6 +378,10 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return downloads.some(d => d.id === songId);
   }, [downloads]);
 
+  const isInQueue = useCallback((songId: string) => {
+    return downloadQueue.some(q => q.id === songId);
+  }, [downloadQueue]);
+
   const getDownloadedUrl = useCallback((songId: string) => {
     return blobUrls[songId] || null;
   }, [blobUrls]);
@@ -387,17 +405,69 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [blobUrls]);
 
+  // Queue management functions
+  const addToQueue = useCallback((songs: Song[]) => {
+    const newQueueItems: QueuedSong[] = songs
+      .filter(song => !isDownloaded(song.id) && !isInQueue(song.id))
+      .map((song, index) => ({
+        ...song,
+        queuedAt: new Date().toISOString(),
+        position: downloadQueue.length + index,
+      }));
+    
+    if (newQueueItems.length > 0) {
+      setDownloadQueue(prev => [...prev, ...newQueueItems]);
+    }
+  }, [downloadQueue.length, isDownloaded, isInQueue]);
+
+  const removeFromQueue = useCallback((songId: string) => {
+    setDownloadQueue(prev => prev.filter(q => q.id !== songId));
+  }, []);
+
+  const clearQueue = useCallback(() => {
+    setDownloadQueue([]);
+  }, []);
+
+  // Process queue automatically
+  useEffect(() => {
+    const processQueue = async () => {
+      if (processingRef.current || downloadQueue.length === 0) return;
+      
+      processingRef.current = true;
+      setIsProcessingQueue(true);
+      
+      const nextSong = downloadQueue[0];
+      if (nextSong && !isDownloaded(nextSong.id)) {
+        await downloadSong(nextSong);
+      }
+      
+      // Remove from queue after download attempt
+      setDownloadQueue(prev => prev.slice(1));
+      
+      processingRef.current = false;
+      setIsProcessingQueue(false);
+    };
+    
+    processQueue();
+  }, [downloadQueue, downloadSong, isDownloaded]);
+
   return (
     <DownloadContext.Provider value={{
       downloads,
       downloadProgress,
+      downloadQueue,
       downloadSong,
+      addToQueue,
+      removeFromQueue,
+      clearQueue,
       removeSong,
       isDownloaded,
+      isInQueue,
       getDownloadedUrl,
       totalStorageUsed,
       clearAllDownloads,
       isIndexedDBSupported,
+      isProcessingQueue,
     }}>
       {children}
     </DownloadContext.Provider>

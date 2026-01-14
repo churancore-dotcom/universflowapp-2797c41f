@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { DownloadProvider } from "./contexts/DownloadContext";
 import SplashScreen from "./components/SplashScreen";
+import DownloadQueuePanel from "./components/DownloadQueuePanel";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
@@ -92,6 +93,7 @@ const App = () => {
               <TooltipProvider>
                 <Toaster />
                 <AppRoutes />
+                <DownloadQueuePanel />
               </TooltipProvider>
             </DownloadProvider>
           </PlayerProvider>

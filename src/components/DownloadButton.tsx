@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Check, Trash2, Loader2, CloudOff, AlertCircle } from 'lucide-react';
+import { Download, Check, Trash2, Loader2, CloudOff, AlertCircle, ListPlus } from 'lucide-react';
 import { useDownloads } from '@/contexts/DownloadContext';
 import { Song } from '@/contexts/PlayerContext';
 import { iosBounce } from '@/lib/animations';
@@ -8,12 +8,14 @@ interface DownloadButtonProps {
   song: Song;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
+  queueMode?: boolean; // If true, adds to queue instead of immediate download
 }
 
-const DownloadButton = ({ song, size = 'md', showLabel = false }: DownloadButtonProps) => {
-  const { downloadSong, removeSong, isDownloaded, downloadProgress } = useDownloads();
+const DownloadButton = ({ song, size = 'md', showLabel = false, queueMode = false }: DownloadButtonProps) => {
+  const { downloadSong, addToQueue, removeSong, isDownloaded, isInQueue, downloadProgress } = useDownloads();
   
   const downloaded = isDownloaded(song.id);
+  const inQueue = isInQueue(song.id);
   const progress = downloadProgress[song.id];
   const isDownloading = progress?.status === 'downloading' || progress?.status === 'pending';
   const hasError = progress?.status === 'error';
@@ -32,10 +34,12 @@ const DownloadButton = ({ song, size = 'md', showLabel = false }: DownloadButton
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDownloading) return;
+    if (isDownloading || inQueue) return;
     
     if (downloaded) {
       removeSong(song.id);
+    } else if (queueMode) {
+      addToQueue([song]);
     } else {
       downloadSong(song);
     }
@@ -43,10 +47,11 @@ const DownloadButton = ({ song, size = 'md', showLabel = false }: DownloadButton
 
   return (
     <motion.button
-      className={`relative ${sizeClasses[size]} rounded-full flex items-center justify-center transition-colors group`}
+      className={`relative ${sizeClasses[size]} rounded-full flex items-center justify-center transition-colors group ${inQueue ? 'opacity-60' : ''}`}
       onClick={handleClick}
       whileTap={{ scale: 0.9 }}
       transition={iosBounce}
+      disabled={inQueue}
     >
       {/* Progress ring */}
       <AnimatePresence>
@@ -137,6 +142,16 @@ const DownloadButton = ({ song, size = 'md', showLabel = false }: DownloadButton
             >
               <AlertCircle className={iconSizes[size]} />
             </motion.div>
+          ) : inQueue ? (
+            <motion.div
+              key="queued"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="text-primary"
+            >
+              <ListPlus className={iconSizes[size]} />
+            </motion.div>
           ) : downloaded ? (
             <motion.div
               key="downloaded"
@@ -206,6 +221,8 @@ const DownloadButton = ({ song, size = 'md', showLabel = false }: DownloadButton
         <span className="ml-2 text-sm">
           {isDownloading 
             ? `${progress?.progress || 0}%` 
+            : inQueue
+            ? 'Queued'
             : downloaded 
             ? 'Downloaded' 
             : 'Download'}

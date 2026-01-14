@@ -236,14 +236,14 @@ const Home = () => {
             {/* Favorites Widget */}
             <FavoritesWidget />
 
-            <HorizontalSection title="New Releases" subtitle="Fresh tracks just added">
+            <HorizontalSection title="New Releases" subtitle="Fresh tracks just added" songs={songs.slice(0, 10)}>
               {songs.slice(0, 10).map((song, i) => (
                 <SongCard key={song.id} song={song} index={i} />
               ))}
             </HorizontalSection>
 
             {songs.length > 5 && (
-              <HorizontalSection title="Trending Now" subtitle="What's hot right now">
+              <HorizontalSection title="Trending Now" subtitle="What's hot right now" songs={songs.slice(0, 8)}>
                 {songs.slice(0, 8).map((song, i) => (
                   <SongCard key={song.id} song={song} index={i} />
                 ))}
@@ -251,7 +251,7 @@ const Home = () => {
             )}
 
             {songs.length > 3 && (
-              <HorizontalSection title="Recommended for You" subtitle="Based on your taste">
+              <HorizontalSection title="Recommended for You" subtitle="Based on your taste" songs={songs.slice().reverse().slice(0, 8)}>
                 {songs.slice().reverse().slice(0, 8).map((song, i) => (
                   <SongCard key={song.id} song={song} index={i} />
                 ))}
