@@ -101,23 +101,31 @@ const Library = () => {
       setPlaylists(userPlaylists.data);
     }
 
-    // Build artists list from all songs
+    // Build artists list from all songs - normalize names for intelligent grouping
     if (allSongs.data) {
-      const artistMap = new Map<string, { count: number; coverUrl: string | null }>();
+      const artistMap = new Map<string, { displayName: string; count: number; coverUrl: string | null }>();
+      
       allSongs.data.forEach(song => {
-        const artistName = song.artist.trim();
-        const existing = artistMap.get(artistName);
+        // Normalize: trim, collapse multiple spaces, lowercase for matching
+        const normalizedKey = song.artist.trim().replace(/\s+/g, ' ').toLowerCase();
+        const displayName = song.artist.trim().replace(/\s+/g, ' ');
+        
+        const existing = artistMap.get(normalizedKey);
         if (existing) {
           existing.count++;
-          // Keep first cover found
+          // Keep the first (or most common) capitalization and first cover found
         } else {
-          artistMap.set(artistName, { count: 1, coverUrl: song.cover_url });
+          artistMap.set(normalizedKey, { 
+            displayName, 
+            count: 1, 
+            coverUrl: song.cover_url 
+          });
         }
       });
       
-      const artistList = Array.from(artistMap.entries())
-        .map(([name, data]) => ({
-          name,
+      const artistList = Array.from(artistMap.values())
+        .map(data => ({
+          name: data.displayName,
           songCount: data.count,
           coverUrl: data.coverUrl,
         }))

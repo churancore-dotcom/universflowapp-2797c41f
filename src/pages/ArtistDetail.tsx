@@ -32,11 +32,15 @@ const ArtistDetail = () => {
     if (!decodedArtistName) return;
 
     setLoading(true);
+    
+    // Normalize the artist name for matching (handle case + extra spaces)
+    const normalizedName = decodedArtistName.trim().replace(/\s+/g, ' ');
+    
     const { data, error } = await supabase
       .from('songs')
       .select('*')
       .eq('is_visible', true)
-      .ilike('artist', decodedArtistName)
+      .ilike('artist', normalizedName)
       .order('created_at', { ascending: false });
 
     if (data && !error) {
