@@ -5,11 +5,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface PipedInstance {
-  name: string;
-  api_url: string;
-  uptime_24h?: number;
-  uptime_7d?: number;
+// Cobalt API instances (v11) - from instances.cobalt.best
+// These provide direct download URLs for YouTube audio
+const COBALT_INSTANCES = [
+  'https://cobalt-api.meowing.de',
+  'https://cobalt-backend.canine.tools',
+  'https://kityune.imput.net',
+  'https://nachos.imput.net',
+  'https://sunny.imput.net',
+  'https://blossom.imput.net',
+  'https://capi.3kh0.net',
+];
+
+// Piped API instances as fallback
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.tokhmi.xyz',
+  'https://pipedapi.moomoo.me',
+  'https://api-piped.mha.fi',
+  'https://piapi.ggtyler.dev',
+];
+
+interface CobaltResponse {
+  status: 'tunnel' | 'redirect' | 'picker' | 'error' | 'local-processing';
+  url?: string;
+  filename?: string;
+  error?: { code: string };
+  picker?: Array<{ url: string; type: string }>;
+  tunnel?: string[];
 }
 
 interface PipedAudioStream {
@@ -17,74 +40,26 @@ interface PipedAudioStream {
   bitrate: number;
   mimeType: string;
   quality: string;
-  format: string;
 }
 
 interface PipedResponse {
   audioStreams?: PipedAudioStream[];
   title?: string;
-  uploader?: string;
-  duration?: number;
   error?: string;
   message?: string;
 }
 
-// Comprehensive list of Piped API instances
-// Sources: https://github.com/TeamPiped/Piped/wiki/Instances
-const PIPED_INSTANCES = [
-  // Primary instances (most reliable)
-  'https://pipedapi.kavin.rocks',
-  'https://api.piped.private.coffee',
-  'https://pipedapi.tokhmi.xyz',
-  'https://pipedapi.moomoo.me',
-  'https://piapi.ggtyler.dev',
-  'https://api-piped.mha.fi',
-  'https://piped-api.garudalinux.org',
-  'https://pipedapi.rivo.lol',
-  // Secondary instances
-  'https://pipedapi.syncpundit.io',
-  'https://pipedapi.colinslegacy.com',
-  'https://piped-api.lunar.icu',
-  'https://ytapi.dc09.ru',
-  'https://watchapi.whatever.social',
-  'https://pipedapi.palveluntarjoaja.eu',
-  'https://pipedapi.smnz.de',
-  'https://pipedapi.in.projectsegfau.lt',
-  'https://pipedapi.leptons.xyz',
-  'https://piped-api.hostux.net',
-  'https://pipedapi.osphost.fi',
-  'https://pipedapi.drgns.space',
-  'https://piped-api.cfe.re',
-  'https://pipedapi.darkness.services',
-  'https://pa.mint.lgbt',
-  'https://api.piped.yt',
-];
-
 function extractVideoId(url: string): string | null {
-  // Try URL parsing first for query parameters
   try {
     const urlObj = new URL(url);
-    
-    // Check for ?v= parameter (most common)
     const vParam = urlObj.searchParams.get('v');
     if (vParam && vParam.length === 11) return vParam;
-    
-    // Check for playlist with currently playing video
-    // URLs like: youtube.com/watch?v=XXX&list=YYY
-    // But NOT: youtube.com/playlist?list=YYY (no video playing)
-    
-  } catch {
-    // Not a valid URL, try regex patterns
-  }
+  } catch { /* ignore */ }
   
   const patterns = [
-    // Standard watch URLs
     /(?:youtube\.com|music\.youtube\.com)\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
-    // Short URLs
     /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    // Embed and other formats
     /youtube\.com\/(?:embed|v|shorts|live)\/([a-zA-Z0-9_-]{11})/,
-    // Direct video ID
     /^([a-zA-Z0-9_-]{11})$/,
   ];
   
@@ -99,23 +74,104 @@ function isPlaylistUrl(url: string): boolean {
   return url.includes('playlist?list=') || (url.includes('list=') && !url.includes('v='));
 }
 
-// Get Piped instances - use hardcoded list directly (more reliable than dynamic fetch)
-function getPipedInstances(): string[] {
-  // Shuffle instances to distribute load
-  const shuffled = [...PIPED_INSTANCES].sort(() => Math.random() - 0.5);
-  return shuffled;
+// Try Cobalt API v11
+async function tryCobaltInstance(
+  instanceUrl: string, 
+  videoUrl: string,
+  timeoutMs: number = 15000
+): Promise<{ success: boolean; audioUrl?: string; filename?: string; error?: string }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    console.log(`Trying Cobalt: ${instanceUrl}`);
+    
+    const response = await fetch(instanceUrl, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'UniversFlow/1.0',
+      },
+      body: JSON.stringify({
+        url: videoUrl,
+        downloadMode: 'audio',
+        audioFormat: 'mp3',
+        audioBitrate: '320',
+        filenameStyle: 'basic',
+      }),
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      return { success: false, error: `HTTP ${response.status}: ${text.slice(0, 100)}` };
+    }
+
+    const data: CobaltResponse = await response.json();
+    console.log(`Cobalt response status: ${data.status}`);
+    
+    if (data.status === 'error') {
+      return { success: false, error: data.error?.code || 'Unknown error' };
+    }
+    
+    if (data.status === 'tunnel' || data.status === 'redirect') {
+      if (data.url) {
+        console.log(`✓ Got audio URL from Cobalt`);
+        return {
+          success: true,
+          audioUrl: data.url,
+          filename: data.filename || 'audio.mp3',
+        };
+      }
+    }
+    
+    if (data.status === 'local-processing' && data.tunnel && data.tunnel.length > 0) {
+      console.log(`✓ Got tunnel URL from Cobalt (local-processing)`);
+      return {
+        success: true,
+        audioUrl: data.tunnel[0],
+        filename: 'audio.mp3',
+      };
+    }
+    
+    if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+      // Find audio in picker
+      const audioItem = data.picker.find(p => p.type === 'audio') || data.picker[0];
+      if (audioItem?.url) {
+        console.log(`✓ Got audio from Cobalt picker`);
+        return {
+          success: true,
+          audioUrl: audioItem.url,
+          filename: 'audio.mp3',
+        };
+      }
+    }
+    
+    return { success: false, error: `Unexpected status: ${data.status}` };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    const msg = error instanceof Error ? error.message : 'Network error';
+    if (msg.includes('abort')) {
+      return { success: false, error: 'Timeout' };
+    }
+    return { success: false, error: msg };
+  }
 }
 
+// Try Piped API as fallback
 async function tryPipedInstance(
   instanceUrl: string, 
   videoId: string,
-  timeoutMs: number = 8000
+  timeoutMs: number = 10000
 ): Promise<{ success: boolean; audioUrl?: string; title?: string; error?: string }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
-    console.log(`Trying: ${instanceUrl}`);
+    console.log(`Trying Piped: ${instanceUrl}`);
     
     const response = await fetch(`${instanceUrl}/streams/${videoId}`, {
       signal: controller.signal,
@@ -141,17 +197,17 @@ async function tryPipedInstance(
       return { success: false, error: 'No audio streams' };
     }
 
-    // Find best audio stream (prefer M4A/MP4 format, higher bitrate)
+    // Find best audio stream (prefer M4A/MP4, higher bitrate)
     const sortedStreams = [...data.audioStreams].sort((a, b) => {
-      const aIsM4a = a.mimeType?.includes('mp4') || a.format?.includes('M4A');
-      const bIsM4a = b.mimeType?.includes('mp4') || b.format?.includes('M4A');
+      const aIsM4a = a.mimeType?.includes('mp4');
+      const bIsM4a = b.mimeType?.includes('mp4');
       if (aIsM4a && !bIsM4a) return -1;
       if (!aIsM4a && bIsM4a) return 1;
       return (b.bitrate || 0) - (a.bitrate || 0);
     });
 
     const bestStream = sortedStreams[0];
-    console.log(`✓ Found: ${bestStream.quality}, ${bestStream.mimeType}`);
+    console.log(`✓ Found Piped stream: ${bestStream.quality}`);
 
     return {
       success: true,
@@ -161,41 +217,61 @@ async function tryPipedInstance(
   } catch (error) {
     clearTimeout(timeoutId);
     const msg = error instanceof Error ? error.message : 'Network error';
-    if (msg.includes('abort')) {
-      return { success: false, error: 'Timeout' };
-    }
-    return { success: false, error: msg };
+    return { success: false, error: msg.includes('abort') ? 'Timeout' : msg };
   }
 }
 
-// Race multiple instances in parallel for faster results
-async function extractFromYouTube(videoId: string): Promise<{
+// Main extraction function - try Cobalt first, then Piped
+async function extractFromYouTube(url: string, videoId: string): Promise<{
   success: boolean;
   audioUrl?: string;
   title?: string;
+  filename?: string;
   error?: string;
 }> {
-  const instances = getPipedInstances();
-  console.log(`Trying ${instances.length} Piped instances in parallel batches...`);
+  // Shuffle instances for load distribution
+  const cobaltInstances = [...COBALT_INSTANCES].sort(() => Math.random() - 0.5);
+  const pipedInstances = [...PIPED_INSTANCES].sort(() => Math.random() - 0.5);
   
-  // Try in batches of 4 for efficiency
-  const batchSize = 4;
+  console.log(`\n=== Trying ${cobaltInstances.length} Cobalt instances ===`);
   
-  for (let i = 0; i < instances.length; i += batchSize) {
-    const batch: string[] = instances.slice(i, i + batchSize);
-    console.log(`Batch ${Math.floor(i/batchSize) + 1}: ${batch.map((u: string) => new URL(u).hostname).join(', ')}`);
+  // Try Cobalt instances in batches of 3
+  for (let i = 0; i < cobaltInstances.length; i += 3) {
+    const batch = cobaltInstances.slice(i, i + 3);
+    console.log(`Cobalt batch ${Math.floor(i/3) + 1}: ${batch.map((u: string) => new URL(u).hostname).join(', ')}`);
+    
+    const results = await Promise.all(
+      batch.map((instance: string) => tryCobaltInstance(instance, url))
+    );
+    
+    const success = results.find((r: { success: boolean }) => r.success);
+    if (success && success.audioUrl) {
+      return success;
+    }
+    
+    results.forEach((r: { success: boolean; error?: string }, idx: number) => {
+      if (!r.success) {
+        console.log(`  ✗ ${new URL(batch[idx]).hostname}: ${r.error}`);
+      }
+    });
+  }
+  
+  console.log(`\n=== Cobalt failed, trying ${pipedInstances.length} Piped instances ===`);
+  
+  // Try Piped instances in batches of 3
+  for (let i = 0; i < pipedInstances.length; i += 3) {
+    const batch = pipedInstances.slice(i, i + 3);
+    console.log(`Piped batch ${Math.floor(i/3) + 1}: ${batch.map((u: string) => new URL(u).hostname).join(', ')}`);
     
     const results = await Promise.all(
       batch.map((instance: string) => tryPipedInstance(instance, videoId))
     );
     
-    // Return first successful result
     const success = results.find((r: { success: boolean }) => r.success);
-    if (success) {
+    if (success && success.audioUrl) {
       return success;
     }
     
-    // Log errors for debugging
     results.forEach((r: { success: boolean; error?: string }, idx: number) => {
       if (!r.success) {
         console.log(`  ✗ ${new URL(batch[idx]).hostname}: ${r.error}`);
@@ -205,7 +281,7 @@ async function extractFromYouTube(videoId: string): Promise<{
   
   return { 
     success: false, 
-    error: 'All extraction servers failed or are rate-limited' 
+    error: 'All extraction servers are unavailable or rate-limited' 
   };
 }
 
@@ -235,7 +311,8 @@ serve(async (req) => {
       );
     }
 
-    console.log(`\n=== Extracting audio from: ${url} ===`);
+    console.log(`\n========================================`);
+    console.log(`Extracting audio from: ${url}`);
     const platform = detectPlatform(url);
     console.log(`Platform: ${platform}`);
 
@@ -255,13 +332,12 @@ serve(async (req) => {
 
     // YouTube extraction
     if (platform === 'YouTube') {
-      // Check if it's a playlist URL without a specific video
       if (isPlaylistUrl(url)) {
         return new Response(
           JSON.stringify({ 
-            error: 'Playlist URLs are not supported. Please copy the link of a specific video instead.',
+            error: 'Playlist URLs are not supported. Please copy the link of a specific video.',
             platform: 'YouTube',
-            hint: 'Click on a video in the playlist, then copy its URL from the browser address bar.',
+            hint: 'Click on a video in the playlist, then copy its URL.',
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -282,28 +358,30 @@ serve(async (req) => {
 
       console.log(`Video ID: ${videoId}`);
 
-      const result = await extractFromYouTube(videoId);
+      const result = await extractFromYouTube(url, videoId);
       
       if (result.success && result.audioUrl) {
-        console.log(`✓ Success! Title: ${result.title}`);
+        const filename = result.filename || (result.title ? `${result.title.replace(/[<>:"/\\|?*]/g, '')}.mp3` : 'audio.mp3');
+        console.log(`\n✓ SUCCESS! File: ${filename}`);
+        
         return new Response(
           JSON.stringify({
             success: true,
             audioUrl: result.audioUrl,
             platform: 'YouTube',
-            filename: result.title ? `${result.title.replace(/[<>:"/\\|?*]/g, '')}.m4a` : 'audio.m4a',
+            filename,
             title: result.title,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log(`✗ All attempts failed: ${result.error}`);
+      console.log(`\n✗ FAILED: ${result.error}`);
       return new Response(
         JSON.stringify({ 
-          error: 'YouTube extraction temporarily unavailable. Please try again in a moment.',
+          error: 'YouTube extraction temporarily unavailable. Please try again.',
           platform: 'YouTube',
-          hint: 'The extraction servers may be busy. Try again or use a direct audio link.',
+          hint: 'Extraction servers may be busy. Try again in a moment or use a direct audio link.',
         }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
