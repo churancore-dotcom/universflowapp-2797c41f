@@ -5,28 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Piped API instances (free, no auth required)
-// These provide YouTube audio stream URLs via /streams/:videoId
-// Updated list from https://awsmfoss.com/piped/
-const PIPED_INSTANCES = [
-  'https://pipedapi.tokhmi.xyz',
-  'https://pipedapi.moomoo.me',
-  'https://pipedapi.syncpundit.io',
-  'https://api-piped.mha.fi',
-  'https://piped-api.garudalinux.org',
-  'https://pipedapi.rivo.lol',
-  'https://pipedapi.colinslegacy.com',
-  'https://yapi.vyper.me',
-  'https://piped-api.lunar.icu',
-  'https://ytapi.dc09.ru',
-  'https://watchapi.whatever.social',
-  'https://pipedapi.palveluntarjoaja.eu',
-  'https://pipedapi.smnz.de',
-  'https://pipedapi.qdi.fi',
-  'https://piped-api.hostux.net',
-  'https://pipedapi.osphost.fi',
-  'https://piapi.ggtyler.dev',
-];
+interface PipedInstance {
+  name: string;
+  api_url: string;
+  uptime_24h?: number;
+  uptime_7d?: number;
+}
 
 interface PipedAudioStream {
   url: string;
@@ -45,11 +29,22 @@ interface PipedResponse {
   message?: string;
 }
 
+// Fallback instances if dynamic fetch fails
+const FALLBACK_INSTANCES = [
+  'https://api.piped.private.coffee',
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.tokhmi.xyz',
+  'https://pipedapi.moomoo.me',
+  'https://api-piped.mha.fi',
+  'https://piped-api.garudalinux.org',
+  'https://pipedapi.rivo.lol',
+  'https://piapi.ggtyler.dev',
+];
+
 function extractVideoId(url: string): string | null {
-  // Handle various YouTube URL formats
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/, // Direct video ID
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/,
   ];
   
   for (const pattern of patterns) {
@@ -59,17 +54,65 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-async function tryPipedInstance(instanceUrl: string, videoId: string): Promise<{ success: boolean; audioUrl?: string; title?: string; error?: string }> {
+// Fetch instances dynamically from official API
+async function fetchPipedInstances(): Promise<string[]> {
   try {
-    console.log(`Trying Piped instance: ${instanceUrl}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch('https://piped-instances.kavin.rocks/', {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' }
+    });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      console.log('Failed to fetch instances list, using fallback');
+      return FALLBACK_INSTANCES;
+    }
+    
+    const instances: PipedInstance[] = await response.json();
+    
+    // Sort by uptime and take top instances
+    const sortedInstances = instances
+      .filter(i => i.api_url && i.uptime_24h && i.uptime_24h > 90)
+      .sort((a, b) => (b.uptime_24h || 0) - (a.uptime_24h || 0))
+      .slice(0, 10)
+      .map(i => i.api_url);
+    
+    if (sortedInstances.length === 0) {
+      console.log('No good instances found, using fallback');
+      return FALLBACK_INSTANCES;
+    }
+    
+    console.log(`Found ${sortedInstances.length} working Piped instances`);
+    return sortedInstances;
+  } catch (error) {
+    console.log('Error fetching instances:', error);
+    return FALLBACK_INSTANCES;
+  }
+}
+
+async function tryPipedInstance(
+  instanceUrl: string, 
+  videoId: string,
+  timeoutMs: number = 8000
+): Promise<{ success: boolean; audioUrl?: string; title?: string; error?: string }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    console.log(`Trying: ${instanceUrl}`);
     
     const response = await fetch(`${instanceUrl}/streams/${videoId}`, {
+      signal: controller.signal,
       headers: {
-        'User-Agent': 'UniversFlow/1.0 (+https://universflowapp.lovable.app)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
       },
     });
-
-    console.log(`Piped ${instanceUrl} returned status ${response.status}`);
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return { success: false, error: `HTTP ${response.status}` };
@@ -82,22 +125,20 @@ async function tryPipedInstance(instanceUrl: string, videoId: string): Promise<{
     }
 
     if (!data.audioStreams || data.audioStreams.length === 0) {
-      return { success: false, error: 'No audio streams available' };
+      return { success: false, error: 'No audio streams' };
     }
 
-    // Find the best audio stream (prefer higher bitrate, MP4/M4A format)
+    // Find best audio stream (prefer M4A/MP4 format, higher bitrate)
     const sortedStreams = [...data.audioStreams].sort((a, b) => {
-      // Prefer M4A/MP4 over WebM for better compatibility
       const aIsM4a = a.mimeType?.includes('mp4') || a.format?.includes('M4A');
       const bIsM4a = b.mimeType?.includes('mp4') || b.format?.includes('M4A');
       if (aIsM4a && !bIsM4a) return -1;
       if (!aIsM4a && bIsM4a) return 1;
-      // Then prefer higher bitrate
       return (b.bitrate || 0) - (a.bitrate || 0);
     });
 
     const bestStream = sortedStreams[0];
-    console.log(`Found audio stream: ${bestStream.quality}, ${bestStream.mimeType}`);
+    console.log(`✓ Found: ${bestStream.quality}, ${bestStream.mimeType}`);
 
     return {
       success: true,
@@ -105,9 +146,54 @@ async function tryPipedInstance(instanceUrl: string, videoId: string): Promise<{
       title: data.title,
     };
   } catch (error) {
-    console.error(`Error with Piped instance ${instanceUrl}:`, error);
-    return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+    clearTimeout(timeoutId);
+    const msg = error instanceof Error ? error.message : 'Network error';
+    if (msg.includes('abort')) {
+      return { success: false, error: 'Timeout' };
+    }
+    return { success: false, error: msg };
   }
+}
+
+// Race multiple instances in parallel for faster results
+async function extractFromYouTube(videoId: string): Promise<{
+  success: boolean;
+  audioUrl?: string;
+  title?: string;
+  error?: string;
+}> {
+  const instances = await fetchPipedInstances();
+  console.log(`Trying ${instances.length} Piped instances in parallel batches...`);
+  
+  // Try in batches of 3 for efficiency
+  const batchSize = 3;
+  
+  for (let i = 0; i < instances.length; i += batchSize) {
+    const batch = instances.slice(i, i + batchSize);
+    console.log(`Batch ${Math.floor(i/batchSize) + 1}: ${batch.map(u => new URL(u).hostname).join(', ')}`);
+    
+    const results = await Promise.all(
+      batch.map(instance => tryPipedInstance(instance, videoId))
+    );
+    
+    // Return first successful result
+    const success = results.find(r => r.success);
+    if (success) {
+      return success;
+    }
+    
+    // Log errors for debugging
+    results.forEach((r, idx) => {
+      if (!r.success) {
+        console.log(`  ✗ ${new URL(batch[idx]).hostname}: ${r.error}`);
+      }
+    });
+  }
+  
+  return { 
+    success: false, 
+    error: 'All extraction servers failed or are rate-limited' 
+  };
 }
 
 function detectPlatform(url: string): string {
@@ -118,16 +204,10 @@ function detectPlatform(url: string): string {
   if (lowercaseUrl.includes('tiktok.com')) return 'TikTok';
   if (lowercaseUrl.includes('twitter.com') || lowercaseUrl.includes('x.com')) return 'Twitter/X';
   if (lowercaseUrl.includes('instagram.com')) return 'Instagram';
-  if (lowercaseUrl.includes('facebook.com') || lowercaseUrl.includes('fb.watch')) return 'Facebook';
-  if (lowercaseUrl.includes('vimeo.com')) return 'Vimeo';
-  if (lowercaseUrl.includes('twitch.tv')) return 'Twitch';
-  if (lowercaseUrl.includes('reddit.com')) return 'Reddit';
-  if (lowercaseUrl.includes('bilibili.com')) return 'Bilibili';
-  return 'Unknown';
+  return 'Other';
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -142,13 +222,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Extracting audio from: ${url}`);
+    console.log(`\n=== Extracting audio from: ${url} ===`);
     const platform = detectPlatform(url);
-    console.log(`Detected platform: ${platform}`);
+    console.log(`Platform: ${platform}`);
 
-    // Check if it's a direct audio URL
-    if (url.match(/\.(mp3|wav|flac|aac|ogg|m4a|opus)(\?.*)?$/i)) {
-      console.log('Direct audio URL detected, returning as-is');
+    // Direct audio URL - return as-is
+    if (url.match(/\.(mp3|wav|flac|aac|ogg|m4a|opus|webm)(\?.*)?$/i)) {
+      console.log('Direct audio URL detected');
       return new Response(
         JSON.stringify({
           success: true,
@@ -160,7 +240,7 @@ serve(async (req) => {
       );
     }
 
-    // Handle YouTube URLs using Piped/Invidious
+    // YouTube extraction
     if (platform === 'YouTube') {
       const videoId = extractVideoId(url);
       
@@ -171,48 +251,48 @@ serve(async (req) => {
         );
       }
 
-      console.log(`Extracted video ID: ${videoId}`);
+      console.log(`Video ID: ${videoId}`);
 
-      // Try Piped instances first
-      for (const instance of PIPED_INSTANCES) {
-        const result = await tryPipedInstance(instance, videoId);
-        if (result.success && result.audioUrl) {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              audioUrl: result.audioUrl,
-              platform: 'YouTube',
-              filename: result.title ? `${result.title}.m4a` : 'audio.m4a',
-              title: result.title,
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      const result = await extractFromYouTube(videoId);
+      
+      if (result.success && result.audioUrl) {
+        console.log(`✓ Success! Title: ${result.title}`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            audioUrl: result.audioUrl,
+            platform: 'YouTube',
+            filename: result.title ? `${result.title.replace(/[<>:"/\\|?*]/g, '')}.m4a` : 'audio.m4a',
+            title: result.title,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-      // All instances failed
+
+      console.log(`✗ All attempts failed: ${result.error}`);
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to extract audio from YouTube. All extraction servers are unavailable.',
+          error: 'YouTube extraction temporarily unavailable. Please try again in a moment.',
           platform: 'YouTube',
-          hint: 'Try again later or use a direct audio link instead.',
+          hint: 'The extraction servers may be busy. Try again or use a direct audio link.',
         }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // For non-YouTube platforms, we currently don't support extraction
+    // Unsupported platform
     return new Response(
       JSON.stringify({ 
         error: `Audio extraction from ${platform} is not currently supported.`,
         platform,
-        hint: 'Please use a direct audio link (MP3, WAV, etc.) or a YouTube link.',
+        hint: 'Please use a YouTube link or direct audio link (MP3, WAV, etc.).',
         supportedPlatforms: ['YouTube', 'Direct Links (MP3, WAV, FLAC, M4A, OGG)'],
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
-    console.error('Error in extract-audio function:', error);
+    console.error('Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
