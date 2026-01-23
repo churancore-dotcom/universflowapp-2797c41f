@@ -215,7 +215,7 @@ const Profile = () => {
             whileTap={{ scale: 0.98, backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
           >
             <motion.div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{
                 background: isPremium 
                   ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
@@ -226,20 +226,32 @@ const Profile = () => {
             >
               <Crown className="w-5 h-5 text-white" />
             </motion.div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <span className="font-semibold block">
                 {isPremium ? 'Premium Member' : 'Upgrade to Premium'}
               </span>
-              <span className="text-xs text-muted-foreground">
-                {isPremium ? 'Manage your subscription' : 'Unlock all features'}
-              </span>
+              {isPremium ? (
+                <span className="text-xs text-muted-foreground">Manage your subscription</span>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/20 text-purple-300">
+                    Ad-free
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/20 text-blue-300">
+                    Offline
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-300">
+                    HQ Audio
+                  </span>
+                </div>
+              )}
             </div>
             {isPremium && (
-              <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400">
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 shrink-0">
                 Active
               </span>
             )}
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
           </motion.button>
 
           <motion.button
