@@ -27,6 +27,11 @@ import ManagePlaylists from "./pages/admin/ManagePlaylists";
 import ManageUsers from "./pages/admin/ManageUsers";
 import AdminSettings from "./pages/admin/Settings";
 import Analytics from "./pages/admin/Analytics";
+import ActivityLogs from "./pages/admin/ActivityLogs";
+import BulkActions from "./pages/admin/BulkActions";
+import SystemHealth from "./pages/admin/SystemHealth";
+import ContentScheduler from "./pages/admin/ContentScheduler";
+import BackupExport from "./pages/admin/BackupExport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +76,11 @@ const AnimatedRoutes = () => {
           <Route path="playlists" element={<ManagePlaylists />} />
           <Route path="users" element={<ManageUsers />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="logs" element={<ActivityLogs />} />
+          <Route path="bulk" element={<BulkActions />} />
+          <Route path="health" element={<SystemHealth />} />
+          <Route path="scheduler" element={<ContentScheduler />} />
+          <Route path="backup" element={<BackupExport />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
         <Route path="*" element={<NotFound />} />

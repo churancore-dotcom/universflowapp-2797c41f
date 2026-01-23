@@ -26,6 +26,11 @@ const navItems = [
   { icon: ListMusic, label: 'Playlists', path: '/admin/playlists' },
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+  { icon: BarChart3, label: 'Bulk Actions', path: '/admin/bulk' },
+  { icon: BarChart3, label: 'Activity Logs', path: '/admin/logs' },
+  { icon: BarChart3, label: 'System Health', path: '/admin/health' },
+  { icon: BarChart3, label: 'Scheduler', path: '/admin/scheduler' },
+  { icon: BarChart3, label: 'Backup', path: '/admin/backup' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
