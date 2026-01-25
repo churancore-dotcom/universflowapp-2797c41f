@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.5acaae55bbc847a7bd32f3924d8ef986',
-  appName: 'universflowapp',
+  appId: 'app.lovable.universflow',
+  appName: 'UniversFlow',
   webDir: 'dist',
   server: {
     // Hot reload from Lovable sandbox during development
