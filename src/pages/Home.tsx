@@ -10,7 +10,7 @@ import SongCard from '@/components/SongCard';
 import HorizontalSection from '@/components/HorizontalSection';
 import FavoritesWidget from '@/components/FavoritesWidget';
 import RecentlyPlayedSection from '@/components/RecentlyPlayedSection';
-import TopChartsSection from '@/components/TopChartsSection';
+
 import FeaturedArtistsSection from '@/components/FeaturedArtistsSection';
 import SleepTimerModal from '@/components/SleepTimerModal';
 import QueueDrawer from '@/components/QueueDrawer';
@@ -331,8 +331,6 @@ const Home = () => {
               {/* Featured Artists - Below Recommended */}
               <FeaturedArtistsSection />
 
-              {/* Top Charts */}
-              <TopChartsSection />
 
               {/* Recently Played */}
               <RecentlyPlayedSection />
