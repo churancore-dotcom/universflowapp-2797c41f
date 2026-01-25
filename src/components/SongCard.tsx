@@ -65,12 +65,12 @@ const SongCard = memo(({ song, index = 0 }: SongCardProps) => {
 
   return (
     <div
-      className="group relative flex-shrink-0 w-[140px] min-[375px]:w-[150px] sm:w-[160px] md:w-[170px] snap-start active:scale-[0.97] transition-transform duration-150 will-change-transform"
+      className="group relative flex-shrink-0 w-[150px] snap-start active:scale-[0.97] transition-transform duration-150 will-change-transform"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      {/* Card Container - iOS 18 style */}
+      {/* Card Container - mobile optimized */}
       <div
-        className="relative aspect-square rounded-[16px] min-[375px]:rounded-[18px] sm:rounded-[20px] overflow-hidden bg-muted/30 cursor-pointer shadow-lg"
+        className="relative aspect-square rounded-2xl overflow-hidden bg-muted/30 cursor-pointer shadow-lg"
         onClick={handleClick}
       >
         {/* Cover Image - Lazy loaded */}
@@ -79,12 +79,12 @@ const SongCard = memo(({ song, index = 0 }: SongCardProps) => {
             src={song.cover_url}
             alt={song.title}
             className="w-full h-full"
-            eager={index < 4} // Eager load first 4 items
+            eager={index < 4}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-purple-500/20 to-accent/30 flex items-center justify-center">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center">
-              <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
+            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+              <Play className="w-5 h-5 text-white/60" />
             </div>
           </div>
         )}
@@ -92,71 +92,60 @@ const SongCard = memo(({ song, index = 0 }: SongCardProps) => {
         {/* Subtle gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-80" />
         
-        {/* Action buttons - always visible on mobile, smaller touch targets */}
-        <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 flex flex-col gap-1">
-          <LikeButton songId={song.id} size="sm" className="bg-black/50 backdrop-blur-md rounded-full w-7 h-7 sm:w-8 sm:h-8" />
+        {/* Action buttons - 44px min touch targets */}
+        <div className="absolute top-2 right-2 z-20 flex flex-col gap-1.5">
+          <LikeButton songId={song.id} size="sm" className="bg-black/50 backdrop-blur-md rounded-full w-9 h-9" />
           <DownloadButton song={song} size="sm" />
           <button
             onClick={handleAddToPlaylist}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/80 hover:text-primary transition-colors"
+            className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/80 active:bg-black/70 transition-colors"
           >
-            <ListPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <ListPlus className="w-4 h-4" />
           </button>
         </div>
         
         {/* Downloaded badge */}
         {downloaded && (
-          <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 z-10">
-            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-green-500 flex items-center justify-center shadow-md">
-              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="absolute top-2 left-2 z-10">
+            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-md">
+              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             </div>
           </div>
         )}
-        
-        {/* Center play button - visible on hover (desktop) */}
-        <div className="absolute inset-0 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 flex items-center justify-center shadow-xl active:scale-90 transition-transform">
-            {isCurrentSong && isPlaying ? (
-              <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-black" fill="black" />
-            ) : (
-              <Play className="w-4 h-4 sm:w-5 sm:h-5 text-black ml-0.5" fill="black" />
-            )}
-          </div>
-        </div>
 
         {/* Now Playing indicator */}
         {isCurrentSong && (
-          <div className="absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary flex items-center justify-center shadow-lg">
+          <div className="absolute bottom-2 right-2">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
               <AudioWave isPlaying={isPlaying} />
             </div>
           </div>
         )}
       </div>
       
-      {/* Song Info - responsive typography */}
-      <div className="mt-2 sm:mt-2.5 px-0.5">
-        <p className={`font-semibold text-[13px] sm:text-[14px] truncate leading-tight ${isCurrentSong ? 'text-primary' : 'text-foreground'}`}>
+      {/* Song Info - larger text for mobile */}
+      <div className="mt-2.5 px-0.5">
+        <p className={`font-semibold text-sm truncate leading-tight ${isCurrentSong ? 'text-primary' : 'text-foreground'}`}>
           {song.title}
         </p>
-        <div 
-          className="flex items-center gap-1 sm:gap-1.5 mt-0.5 cursor-pointer group/artist"
+        <button 
+          className="flex items-center gap-1.5 mt-1 w-full min-h-[44px] -my-2"
           onClick={handleArtistClick}
         >
           {song.artist_photo_url && (
             <img 
               src={song.artist_photo_url} 
               alt={song.artist}
-              className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full object-cover"
+              className="w-4 h-4 rounded-full object-cover"
               loading="lazy"
             />
           )}
-          <p className={`text-[11px] sm:text-[12px] text-muted-foreground/80 truncate font-medium ${song.artist_id ? 'group-hover/artist:text-primary transition-colors' : ''}`}>
+          <p className={`text-xs text-muted-foreground/80 truncate font-medium ${song.artist_id ? 'active:text-primary transition-colors' : ''}`}>
             {song.artist}
           </p>
-        </div>
+        </button>
       </div>
 
       {/* Add to Playlist Modal - Lazy mounted */}
