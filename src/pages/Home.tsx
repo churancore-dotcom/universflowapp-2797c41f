@@ -381,20 +381,7 @@ const Home = () => {
               {/* Offline Section - Shows when offline or has downloads */}
               <OfflineSection isOffline={isOffline} />
 
-              {/* Favorites Widget */}
-              <FavoritesWidget />
-
-              {/* Recently Played */}
-              <RecentlyPlayedSection />
-
-              {/* Featured Artists */}
-              <FeaturedArtistsSection />
-
-              {/* Top Charts */}
-              <TopChartsSection />
-
-
-              {/* New Releases - use memoized values */}
+              {/* New Releases - TOP PRIORITY */}
               {newReleases.length > 0 && (
                 <HorizontalSection title="New Releases" subtitle="Fresh tracks just added" songs={newReleases}>
                   {newReleases.map((song, i) => (
@@ -403,7 +390,19 @@ const Home = () => {
                 </HorizontalSection>
               )}
 
-              {/* Trending Now - use memoized values */}
+              {/* Featured Artists */}
+              <FeaturedArtistsSection />
+
+              {/* Top Charts */}
+              <TopChartsSection />
+
+              {/* Recently Played */}
+              <RecentlyPlayedSection />
+
+              {/* Favorites Widget */}
+              <FavoritesWidget />
+
+              {/* Trending Now */}
               {trendingSongs.length > 0 && (
                 <HorizontalSection title="Trending Now" subtitle="What's hot right now" songs={trendingSongs}>
                   {trendingSongs.map((song, i) => (
