@@ -196,7 +196,7 @@ const Home = () => {
   return (
     <TabTransition>
       <motion.div 
-        className="min-h-screen bg-black pb-52 relative overflow-hidden"
+        className="min-h-screen bg-black pb-40 relative overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={iosSpring}
@@ -241,12 +241,11 @@ const Home = () => {
           isTriggered={isTriggered}
         />
 
-        {/* iOS-style header with blur */}
-        {/* Compact header - icons only, scrollable */}
+        {/* Compact header - mobile optimized */}
         <motion.header
-          className="sticky top-0 z-30 px-4 py-3 safe-area-pt"
+          className="sticky top-0 z-30 px-3 py-2.5 safe-area-pt"
           style={{
-            background: 'rgba(0, 0, 0, 0.85)',
+            background: 'rgba(0, 0, 0, 0.9)',
             backdropFilter: 'blur(40px) saturate(180%)',
             WebkitBackdropFilter: 'blur(40px) saturate(180%)',
             borderBottom: '0.5px solid rgba(255, 255, 255, 0.08)',
@@ -258,86 +257,86 @@ const Home = () => {
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-white/90 flex-shrink-0">{greeting()}</p>
             
-            {/* Scrollable icons container */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            {/* Scrollable icons container - 48px touch targets */}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
               {/* AI DJ button */}
               <motion.button
                 onClick={() => setShowAIPlaylist(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
                   background: 'linear-gradient(135deg, hsl(280 100% 60%), hsl(320 100% 55%))',
                 }}
                 whileTap={{ scale: 0.9 }}
                 transition={iosSpring}
               >
-                <Wand2 className="w-4 h-4 text-white" />
+                <Wand2 className="w-5 h-5 text-white" />
               </motion.button>
 
               {/* Queue button */}
               <motion.button
                 onClick={() => setShowQueue(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center glass flex-shrink-0"
+                className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center glass flex-shrink-0"
                 whileTap={{ scale: 0.9 }}
                 transition={iosSpring}
               >
-                <ListMusic className="w-4 h-4 text-white/80" />
+                <ListMusic className="w-5 h-5 text-white/80" />
               </motion.button>
 
               {/* Equalizer button */}
               <motion.button
                 onClick={() => setShowEqualizer(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center glass flex-shrink-0"
+                className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center glass flex-shrink-0"
                 whileTap={{ scale: 0.9 }}
                 transition={iosSpring}
               >
-                <Sliders className="w-4 h-4 text-white/80" />
+                <Sliders className="w-5 h-5 text-white/80" />
               </motion.button>
 
               {/* Visualizer button */}
               <motion.button
                 onClick={() => setShowVisualizer(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center glass flex-shrink-0"
+                className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center glass flex-shrink-0"
                 whileTap={{ scale: 0.9 }}
                 transition={iosSpring}
               >
-                <Waves className="w-4 h-4 text-white/80" />
+                <Waves className="w-5 h-5 text-white/80" />
               </motion.button>
 
               {/* Lock Screen button */}
               <motion.button
                 onClick={() => setShowLockScreen(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center glass flex-shrink-0"
+                className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center glass flex-shrink-0"
                 whileTap={{ scale: 0.9 }}
                 transition={iosSpring}
               >
-                <Lock className="w-4 h-4 text-white/80" />
+                <Lock className="w-5 h-5 text-white/80" />
               </motion.button>
 
               {/* Sleep timer button */}
               <motion.button
                 onClick={() => setShowSleepTimer(true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center glass flex-shrink-0"
+                className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center glass flex-shrink-0"
                 whileTap={{ scale: 0.9 }}
                 transition={iosSpring}
               >
-                <Moon className="w-4 h-4 text-white/80" />
+                <Moon className="w-5 h-5 text-white/80" />
               </motion.button>
 
               {!notificationsEnabled && (
                 <motion.button
                   onClick={handleEnableNotifications}
-                  className="w-9 h-9 rounded-full flex items-center justify-center glass flex-shrink-0"
+                  className="w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center glass flex-shrink-0"
                   whileTap={{ scale: 0.9 }}
                   transition={iosSpring}
                 >
-                  <Bell className="w-4 h-4 text-white/80" />
+                  <Bell className="w-5 h-5 text-white/80" />
                 </motion.button>
               )}
             </div>
           </div>
         </motion.header>
 
-        <main className="px-4 sm:px-6 pt-6 sm:pt-8 relative z-10 overflow-x-hidden">
+        <main className="px-3 pt-4 relative z-10 overflow-x-hidden">
           {loading ? (
             <LoadingSkeleton />
           ) : songs.length === 0 ? (
@@ -347,7 +346,7 @@ const Home = () => {
               variants={staggerContainer}
               initial="initial"
               animate="animate"
-              className="space-y-6 sm:space-y-8"
+              className="space-y-5"
             >
               {/* Offline Section - Shows when offline or has downloads */}
               <OfflineSection isOffline={isOffline} />

@@ -29,7 +29,7 @@ const BottomNav = () => {
         borderTop: '0.5px solid rgba(255, 255, 255, 0.08)'
       }}
     >
-      <div className="flex items-center justify-around py-2 px-2">
+      <div className="flex items-center justify-around py-1.5">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
@@ -37,13 +37,13 @@ const BottomNav = () => {
           return (
             <motion.button
               key={item.path}
-              className="flex flex-col items-center gap-1 py-1.5 px-5 min-w-[64px]"
+              className="flex flex-col items-center justify-center gap-0.5 min-w-[72px] min-h-[52px] py-1"
               onClick={() => navigate(item.path)}
               whileTap={{ scale: 0.88 }}
               transition={iosBounce}
             >
               <Icon
-                className={`w-[22px] h-[22px] transition-colors duration-150 ${
+                className={`w-6 h-6 transition-colors duration-150 ${
                   isActive ? 'text-rose-500' : 'text-white/40'
                 }`}
                 strokeWidth={isActive ? 2.2 : 1.8}
