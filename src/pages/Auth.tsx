@@ -110,6 +110,9 @@ const Auth = () => {
             <p className="mt-2 text-muted-foreground text-sm font-medium tracking-wide">
               Premium Music Experience
             </p>
+            <p className="mt-1 text-muted-foreground/60 text-xs">
+              By SHASHANK YADAV
+            </p>
           </div>
 
           {/* Form card */}
