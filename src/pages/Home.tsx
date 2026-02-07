@@ -60,17 +60,17 @@ const Home = () => {
   const [showEqualizer, setShowEqualizer] = useState(false);
 
   const newReleases = useMemo(() => 
-    songs.filter(s => (s as any).show_in_new_releases).slice(0, 8),
+    songs.filter(s => (s as any).show_in_new_releases).slice(0, 10),
     [songs]
   );
   
   const trendingSongs = useMemo(() => 
-    songs.filter(s => (s as any).show_in_trending).slice(0, 6),
+    songs.filter(s => (s as any).show_in_trending).slice(0, 10),
     [songs]
   );
 
-  // All songs for the "All Songs" section
-  const allSongs = useMemo(() => songs.slice(0, 20), [songs]);
+  // All songs for the "All Songs" section - show all available songs
+  const allSongs = useMemo(() => songs, [songs]);
 
   useEffect(() => {
     fetchSongs();
@@ -223,9 +223,13 @@ const Home = () => {
                 </HorizontalSection>
               )}
 
-              {/* All Songs Section */}
+              {/* All Songs Section - Show complete catalog */}
               {allSongs.length > 0 && (
-                <HorizontalSection title="All Songs" subtitle="Browse all music" songs={allSongs}>
+                <HorizontalSection 
+                  title="All Songs" 
+                  subtitle={`${allSongs.length} tracks available`} 
+                  songs={allSongs}
+                >
                   {allSongs.map((song, i) => (
                     <SongCard key={song.id} song={song} index={i} sectionSongs={allSongs} />
                   ))}

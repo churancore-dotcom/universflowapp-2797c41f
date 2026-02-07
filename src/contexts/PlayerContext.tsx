@@ -193,7 +193,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return nextIdx;
   }, []);
 
-  // Play a song at specific index
+  // Play a song at specific index - synchronous for gapless playback
   const playSongAtIndex = useCallback((index: number, songQueue: Song[]) => {
     const song = songQueue[index];
     if (!song || !audioRef.current) return;
@@ -210,19 +210,37 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       nextAudioRef.current.src = '';
     }
 
+    // Update state first
     setCurrentSong(song);
     setCurrentIndex(index);
     setProgress(0);
+    setIsPlaying(true); // Set playing immediately to prevent UI flicker
     
+    // Set source and play immediately
     audioRef.current.src = song.audio_url;
     audioRef.current.volume = volume;
     audioRef.current.currentTime = 0;
     
-    audioRef.current.play().then(() => {
-      setIsPlaying(true);
-    }).catch(err => {
-      console.warn('Playback failed:', err.message);
-    });
+    // Use load() + play() for faster start
+    audioRef.current.load();
+    const playPromise = audioRef.current.play();
+    if (playPromise) {
+      playPromise.catch(err => {
+        console.warn('Playback failed:', err.message);
+        setIsPlaying(false);
+      });
+    }
+    
+    // Preload next song for gapless playback
+    const nextIdx = (index + 1) % songQueue.length;
+    if (nextIdx !== index && nextAudioRef.current) {
+      const nextSong = songQueue[nextIdx];
+      if (nextSong) {
+        nextAudioRef.current.src = nextSong.audio_url;
+        nextAudioRef.current.preload = 'auto';
+        nextAudioRef.current.load();
+      }
+    }
   }, [volume]);
 
   // Handle song end and crossfade
@@ -234,14 +252,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setDuration(audio.duration || 0);
     };
 
-    const handleEnded = async () => {
+    const handleEnded = () => {
       if (repeat === 'one') {
         audio.currentTime = 0;
         audio.play().catch(console.warn);
         return;
       }
 
-      // Move to next song
+      // Move to next song immediately - no async operations
       const nextIdx = getNextIndex(currentIndex, queue.length, shuffle, repeat);
       if (nextIdx !== null) {
         const nextSong = queue[nextIdx];
@@ -256,6 +274,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         
         setSongsPlayedSinceAd(prev => prev + 1);
+        // Play next song immediately without any async delay
         playSongAtIndex(nextIdx, queue);
       } else {
         setIsPlaying(false);
@@ -365,7 +384,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, stepDuration);
   }, [queue, currentIndex, shuffle, repeat, crossfadeDuration, volume, getNextIndex]);
 
-  const playActualSong = useCallback(async (song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
+  const playActualSong = useCallback((song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
     if (!audioRef.current) return;
 
     // Cancel any ongoing crossfade
@@ -375,18 +394,24 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     isCrossfading.current = false;
 
+    // Update state immediately to prevent UI flicker
     setCurrentSong(song);
     setProgress(0);
+    setIsPlaying(true);
     
+    // Set audio source - use offline URL if available
     audioRef.current.src = offlineUrl || song.audio_url;
     audioRef.current.volume = volume;
     audioRef.current.currentTime = 0;
 
-    try {
-      await audioRef.current.play();
-      setIsPlaying(true);
-    } catch (err: any) {
-      console.warn('Playback failed:', err?.message);
+    // Load and play immediately
+    audioRef.current.load();
+    const playPromise = audioRef.current.play();
+    if (playPromise) {
+      playPromise.catch(err => {
+        console.warn('Playback failed:', err?.message);
+        setIsPlaying(false);
+      });
     }
 
     // If a queue is provided, use it
@@ -405,18 +430,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
 
-    // Track recently played
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
+    // Track recently played (fire and forget - no await)
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        await supabase.from('recently_played').insert({
+        supabase.from('recently_played').insert({
           user_id: user.id,
           song_id: song.id,
-        });
+        }).then(() => {});
       }
-    } catch {
-      // Silent fail
-    }
+    }).catch(() => {});
   }, [volume, queue]);
 
   // Check premium status from database
@@ -448,12 +470,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
-  const playSong = useCallback(async (song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
-    // Check premium status before showing ad
-    const isPremium = await checkPremiumStatus();
-    
+  const playSong = useCallback((song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
+    // Use cached premium status - don't await async call which causes pause
     // Only show ads to non-premium users
-    if (!isPremium) {
+    if (!isPremiumUser) {
       const shouldShowAd = songsPlayedSinceAd >= AD_FREQUENCY - 1;
       
       if (shouldShowAd) {
@@ -468,8 +488,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     // Play directly (premium or not ad time yet)
     setSongsPlayedSinceAd(prev => prev + 1);
-    await playActualSong(song, offlineUrl, songsQueue);
-  }, [songsPlayedSinceAd, playActualSong, checkPremiumStatus]);
+    playActualSong(song, offlineUrl, songsQueue);
+  }, [songsPlayedSinceAd, playActualSong, isPremiumUser]);
 
   const onPrerollAdComplete = useCallback(() => {
     setShowPrerollAd(false);

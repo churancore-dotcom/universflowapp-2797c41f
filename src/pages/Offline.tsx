@@ -62,14 +62,18 @@ const Offline = memo(function Offline() {
   const handlePlayAll = () => {
     if (cachedSongs.length > 0) {
       triggerHaptic('impactMedium');
-      // Use the blob URL (offline URL) for playback
       const firstSong = cachedSongs[0];
+      // Create queue with offline-ready songs - ensure all have their local blob URLs
       const offlineQueue = cachedSongs.map(s => ({
-        ...s,
-        audio_url: s.audio_url, // This is already the blobUrl from downloads
+        id: s.id,
+        title: s.title,
+        artist: s.artist,
+        cover_url: s.cover_url,
+        audio_url: s.audio_url, // This is the blobUrl from downloads
       }));
       setQueue(offlineQueue as any);
-      playSong(firstSong as any, firstSong.audio_url);
+      // Pass the blob URL explicitly for offline playback
+      playSong(firstSong as any, firstSong.audio_url, offlineQueue as any);
     }
   };
 
@@ -78,21 +82,28 @@ const Offline = memo(function Offline() {
       triggerHaptic('impactMedium');
       const shuffled = [...cachedSongs].sort(() => Math.random() - 0.5);
       const offlineQueue = shuffled.map(s => ({
-        ...s,
-        audio_url: s.audio_url,
+        id: s.id,
+        title: s.title,
+        artist: s.artist,
+        cover_url: s.cover_url,
+        audio_url: s.audio_url, // Local blob URL
       }));
       setQueue(offlineQueue as any);
-      playSong(shuffled[0] as any, shuffled[0].audio_url);
+      playSong(shuffled[0] as any, shuffled[0].audio_url, offlineQueue as any);
     }
   };
 
   const handlePlaySong = (song: CachedSong) => {
     triggerHaptic('impactLight');
-    // Pass the offline URL for playback
+    // Create queue with all cached songs using their local URLs
     const offlineQueue = cachedSongs.map(s => ({
-      ...s,
-      audio_url: s.audio_url,
+      id: s.id,
+      title: s.title,
+      artist: s.artist,
+      cover_url: s.cover_url,
+      audio_url: s.audio_url, // Local blob URL
     }));
+    // Pass the blob URL and offline queue
     playSong(song as any, song.audio_url, offlineQueue as any);
   };
 
