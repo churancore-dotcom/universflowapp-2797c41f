@@ -65,11 +65,12 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cp android-widgets/res/xml/*.xml android/app/src/main/res/xml/
           
-          # Copy string resources (merge with existing)
-          cat android-widgets/res/values/strings_widgets.xml >> android/app/src/main/res/values/strings.xml
-          # Fix the XML by removing duplicate closing tag
-          sed -i 's/<\/resources><resources>//g' android/app/src/main/res/values/strings.xml
+          # Merge string resources properly (remove XML declaration and root tags from widget strings)
+          # First, remove the closing </resources> tag from the base strings.xml
           sed -i '/<\/resources>/d' android/app/src/main/res/values/strings.xml
+          # Extract only the <string> elements from widget strings (skip XML declaration and root tags)
+          grep '<string name=' android-widgets/res/values/strings_widgets.xml >> android/app/src/main/res/values/strings.xml
+          # Add the closing tag back
           echo '</resources>' >> android/app/src/main/res/values/strings.xml
 
       - name: Update AndroidManifest.xml for widgets
