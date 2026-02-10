@@ -1,4 +1,4 @@
-import { useState, memo, useCallback } from 'react';
+import { useState, memo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ChevronDown, ListMusic, Share2, Ellipsis, Heart } from 'lucide-react';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -19,6 +19,19 @@ const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Song change transition variants
+const songInfoVariants = {
+  initial: { opacity: 0, y: 20, filter: 'blur(4px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const } },
+  exit: { opacity: 0, y: -15, filter: 'blur(4px)', transition: { duration: 0.2 } },
+};
+
+const albumArtVariants = {
+  initial: { opacity: 0, scale: 0.88, rotate: -2 },
+  animate: { opacity: 1, scale: 1, rotate: 0, transition: { type: "spring" as const, stiffness: 300, damping: 25, mass: 0.8 } },
+  exit: { opacity: 0, scale: 0.92, rotate: 2, transition: { duration: 0.25 } },
 };
 
 // Simple volume slider
@@ -68,13 +81,34 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [showDedicationModal, setShowDedicationModal] = useState(false);
+  const [direction, setDirection] = useState(0); // -1 prev, 1 next
+  const prevSongIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
+
+  // Track song changes for animation direction
+  useEffect(() => {
+    if (currentSong?.id && currentSong.id !== prevSongIdRef.current) {
+      prevSongIdRef.current = currentSong.id;
+    }
+  }, [currentSong?.id]);
 
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
     if (info.offset.y > 100) {
       setExpanded(false);
     }
   }, [setExpanded]);
+
+  const handleNext = useCallback(() => {
+    triggerHaptic('impactMedium');
+    setDirection(1);
+    nextSong();
+  }, [nextSong]);
+
+  const handlePrev = useCallback(() => {
+    triggerHaptic('impactMedium');
+    setDirection(-1);
+    prevSong();
+  }, [prevSong]);
 
   if (!currentSong || !isExpanded) return null;
 
@@ -96,18 +130,27 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
           dragElastic={{ top: 0, bottom: 0.3 }} 
           onDragEnd={handleDragEnd}
         >
-          {/* Blurred background */}
-          <div className="absolute inset-0 overflow-hidden">
-            {currentSong.cover_url && (
-              <img 
-                src={currentSong.cover_url} 
-                alt="" 
-                className="absolute inset-0 w-full h-full object-cover opacity-40"
-                style={{ filter: 'blur(60px) saturate(1.3)' }} 
-              />
-            )}
-            <div className="absolute inset-0 bg-black/60" />
-          </div>
+          {/* Blurred background with crossfade */}
+          <AnimatePresence mode="popLayout">
+            <motion.div 
+              key={currentSong.id + '-bg'}
+              className="absolute inset-0 overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              {currentSong.cover_url && (
+                <img 
+                  src={currentSong.cover_url} 
+                  alt="" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-40"
+                  style={{ filter: 'blur(60px) saturate(1.3)' }} 
+                />
+              )}
+              <div className="absolute inset-0 bg-black/60" />
+            </motion.div>
+          </AnimatePresence>
 
           {/* Main content */}
           <div className="relative flex flex-col h-full px-4 pt-2 pb-2 overflow-hidden">
@@ -142,65 +185,83 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
               </button>
             </div>
 
-            {/* Album Art */}
+            {/* Album Art with song change animation */}
             <div className="flex-1 flex items-center justify-center py-4">
               <div className="relative w-[85vw] max-w-[340px] aspect-square">
                 {/* Simple glow */}
                 {isPlaying && (
-                  <div
+                  <motion.div
                     className="absolute inset-[-15%] rounded-3xl pointer-events-none"
                     style={{
                       background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 60%)',
                       filter: 'blur(30px)',
                     }}
+                    animate={{ opacity: [0.6, 1, 0.6] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                   />
                 )}
                 
-                <div 
-                  className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl z-10 bg-muted"
-                  style={{
-                    boxShadow: isPlaying 
-                      ? '0 0 40px 10px hsl(var(--primary) / 0.2)' 
-                      : '0 15px 30px -10px rgba(0, 0, 0, 0.5)',
-                  }}
-                >
-                  {currentSong.cover_url ? (
-                    <img 
-                      src={currentSong.cover_url} 
-                      alt={currentSong.title} 
-                      className="w-full h-full object-cover" 
-                      draggable={false}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                      <div className="text-white/60 text-5xl">♪</div>
-                    </div>
-                  )}
-                </div>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.div
+                    key={currentSong.id}
+                    className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl z-10 bg-muted"
+                    variants={albumArtVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    style={{
+                      boxShadow: isPlaying 
+                        ? '0 0 40px 10px hsl(var(--primary) / 0.2)' 
+                        : '0 15px 30px -10px rgba(0, 0, 0, 0.5)',
+                    }}
+                  >
+                    {currentSong.cover_url ? (
+                      <img 
+                        src={currentSong.cover_url} 
+                        alt={currentSong.title} 
+                        className="w-full h-full object-cover" 
+                        draggable={false}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                        <div className="text-white/60 text-5xl">♪</div>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
 
             {/* Controls Section */}
             <div className="flex-shrink-0 space-y-2 mt-1">
-              {/* Title and Artist */}
+              {/* Title and Artist - animated on song change */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold text-white truncate">
-                    {currentSong.title}
-                  </h2>
-                  <button 
-                    className="text-base text-rose-400 font-medium truncate block active:opacity-70" 
-                    onClick={() => {
-                      if (currentSong.artist_id) {
-                        triggerHaptic('selection');
-                        setExpanded(false);
-                        navigate(`/artist/${currentSong.artist_id}`);
-                      }
-                    }}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.div 
+                    key={currentSong.id + '-info'}
+                    className="flex-1 min-w-0"
+                    variants={songInfoVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                   >
-                    {currentSong.artist}
-                  </button>
-                </div>
+                    <h2 className="text-xl font-bold text-white truncate">
+                      {currentSong.title}
+                    </h2>
+                    <button 
+                      className="text-base text-rose-400 font-medium truncate block active:opacity-70" 
+                      onClick={() => {
+                        if (currentSong.artist_id) {
+                          triggerHaptic('selection');
+                          setExpanded(false);
+                          navigate(`/artist/${currentSong.artist_id}`);
+                        }
+                      }}
+                    >
+                      {currentSong.artist}
+                    </button>
+                  </motion.div>
+                </AnimatePresence>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <LikeButton songId={currentSong.id} size="sm" />
                   <DownloadButton song={currentSong} size="sm" />
@@ -225,44 +286,74 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
 
               {/* Main Controls */}
               <div className="flex items-center justify-center gap-5">
-                <button 
-                  className={`w-11 h-11 flex items-center justify-center rounded-full active:scale-90 transition-transform ${shuffle ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
+                <motion.button 
+                  className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors ${shuffle ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
                   onClick={() => { triggerHaptic('impactLight'); toggleShuffle(); }}
+                  whileTap={{ scale: 0.85 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
                   <Shuffle className="w-[18px] h-[18px]" />
-                </button>
+                </motion.button>
 
-                <button 
-                  className="w-14 h-14 flex items-center justify-center active:scale-90 transition-transform" 
-                  onClick={() => { triggerHaptic('impactMedium'); prevSong(); }}
+                <motion.button 
+                  className="w-14 h-14 flex items-center justify-center" 
+                  onClick={handlePrev}
+                  whileTap={{ scale: 0.8, x: -4 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
                   <SkipBack className="w-9 h-9 text-white" fill="white" />
-                </button>
+                </motion.button>
                 
-                <button 
-                  className="w-[74px] h-[74px] rounded-full bg-white flex items-center justify-center shadow-xl active:scale-95 transition-transform"
+                <motion.button 
+                  className="w-[74px] h-[74px] rounded-full bg-white flex items-center justify-center shadow-xl"
                   onClick={() => { triggerHaptic('impactHeavy'); togglePlay(); }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 >
-                  {isPlaying ? (
-                    <Pause className="w-9 h-9 text-black" fill="black" />
-                  ) : (
-                    <Play className="w-9 h-9 text-black ml-1" fill="black" />
-                  )}
-                </button>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={isPlaying ? 'pause' : 'play'}
+                      initial={{ scale: 0.5, opacity: 0, rotate: -90 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      exit={{ scale: 0.5, opacity: 0, rotate: 90 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-9 h-9 text-black" fill="black" />
+                      ) : (
+                        <Play className="w-9 h-9 text-black ml-1" fill="black" />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </motion.button>
                 
-                <button 
-                  className="w-14 h-14 flex items-center justify-center active:scale-90 transition-transform" 
-                  onClick={() => { triggerHaptic('impactMedium'); nextSong(); }}
+                <motion.button 
+                  className="w-14 h-14 flex items-center justify-center" 
+                  onClick={handleNext}
+                  whileTap={{ scale: 0.8, x: 4 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
                   <SkipForward className="w-9 h-9 text-white" fill="white" />
-                </button>
+                </motion.button>
 
-                <button 
-                  className={`w-11 h-11 flex items-center justify-center rounded-full active:scale-90 transition-transform ${repeat !== 'off' ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
+                <motion.button 
+                  className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors ${repeat !== 'off' ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
                   onClick={() => { triggerHaptic('impactLight'); toggleRepeat(); }}
+                  whileTap={{ scale: 0.85 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
-                  {repeat === 'one' ? <Repeat1 className="w-[18px] h-[18px]" /> : <Repeat className="w-[18px] h-[18px]" />}
-                </button>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={repeat}
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.5, opacity: 0 }}
+                      transition={{ duration: 0.12 }}
+                    >
+                      {repeat === 'one' ? <Repeat1 className="w-[18px] h-[18px]" /> : <Repeat className="w-[18px] h-[18px]" />}
+                    </motion.div>
+                  </AnimatePresence>
+                </motion.button>
               </div>
 
               {/* Volume slider */}

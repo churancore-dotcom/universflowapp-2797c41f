@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Search, Library, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePlayer } from '@/contexts/PlayerContext';
-import { iosBounce } from '@/lib/animations';
 import { triggerHaptic } from '@/hooks/useHaptics';
 
 const navItems = [
@@ -77,24 +76,40 @@ const BottomNav = memo(function BottomNav() {
             return (
               <motion.button
                 key={item.path}
-                className="flex flex-col items-center justify-center gap-0.5 min-w-[72px] min-h-[52px] py-1"
+                className="flex flex-col items-center justify-center gap-0.5 min-w-[72px] min-h-[52px] py-1 relative"
                 onClick={() => {
                   triggerHaptic('selection');
                   navigate(item.path);
                 }}
-                whileTap={{ scale: 0.88 }}
-                transition={iosBounce}
+                whileTap={{ scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
               >
-                <Icon
-                  className={`w-6 h-6 transition-colors duration-150 ${
-                    isActive ? 'text-rose-500' : 'text-white/40'
-                  }`}
-                  strokeWidth={isActive ? 2.2 : 1.8}
-                  fill={isActive ? 'currentColor' : 'none'}
-                />
+                {/* Active indicator dot */}
+                {isActive && (
+                  <motion.div
+                    className="absolute -top-0.5 w-1 h-1 rounded-full bg-rose-500"
+                    layoutId="nav-indicator"
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+                <motion.div
+                  animate={{ 
+                    scale: isActive ? 1.1 : 1,
+                    y: isActive ? -1 : 0,
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                >
+                  <Icon
+                    className={`w-6 h-6 transition-colors duration-200 ${
+                      isActive ? 'text-rose-500' : 'text-white/40'
+                    }`}
+                    strokeWidth={isActive ? 2.2 : 1.8}
+                    fill={isActive ? 'currentColor' : 'none'}
+                  />
+                </motion.div>
                 
                 <span
-                  className={`text-[10px] font-medium transition-colors duration-150 ${
+                  className={`text-[10px] font-medium transition-colors duration-200 ${
                     isActive ? 'text-rose-500' : 'text-white/40'
                   }`}
                 >

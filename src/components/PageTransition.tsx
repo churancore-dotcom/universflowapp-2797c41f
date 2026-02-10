@@ -86,27 +86,31 @@ export const FadeTransition = ({ children, className = '' }: PageTransitionProps
   );
 };
 
-// For tab-style navigation (home, search, library)
+// For tab-style navigation (home, search, library) - smoother fade
 export const TabTransition = ({ children, className = '' }: PageTransitionProps) => {
   return (
     <motion.div
       className={className}
       initial={{ 
         opacity: 0,
-        y: 15,
+        y: 12,
+        filter: 'blur(4px)',
       }}
       animate={{ 
         opacity: 1,
         y: 0,
+        filter: 'blur(0px)',
       }}
       exit={{ 
         opacity: 0,
-        y: -10,
+        y: -8,
+        filter: 'blur(4px)',
       }}
       transition={{
         type: "spring" as const,
         stiffness: 400,
-        damping: 30,
+        damping: 32,
+        filter: { duration: 0.25 },
       }}
     >
       {children}

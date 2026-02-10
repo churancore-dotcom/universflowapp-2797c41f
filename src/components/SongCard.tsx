@@ -87,7 +87,9 @@ const SongCard = memo(({ song, index = 0, sectionSongs }: SongCardProps) => {
       <motion.div
         className="relative aspect-square rounded-2xl overflow-hidden bg-muted/30 cursor-pointer shadow-lg"
         onClick={handleClick}
-        whileTap={{ scale: 0.97 }}
+        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 400, damping: 20 }}
       >
         {/* Cover Image - Lazy loaded */}
         {song.cover_url ? (
