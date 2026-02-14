@@ -149,13 +149,11 @@ const SongReactions = memo(({ songId, songTitle }: SongReactionsProps) => {
 
     setIsLoading(true);
     try {
-      // Insert comment without storing email (privacy fix)
       await (supabase as any)
         .from('song_comments')
         .insert({
           song_id: songId,
           user_id: user.id,
-          user_email: 'redacted', // Keep column for backward compat, don't store real email
           content: newComment.trim(),
         });
 

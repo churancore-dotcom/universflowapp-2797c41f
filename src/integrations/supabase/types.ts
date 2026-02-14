@@ -459,7 +459,6 @@ export type Database = {
           created_at: string
           id: string
           song_id: string
-          user_email: string
           user_id: string
         }
         Insert: {
@@ -467,7 +466,6 @@ export type Database = {
           created_at?: string
           id?: string
           song_id: string
-          user_email: string
           user_id: string
         }
         Update: {
@@ -475,7 +473,6 @@ export type Database = {
           created_at?: string
           id?: string
           song_id?: string
-          user_email?: string
           user_id?: string
         }
         Relationships: [
