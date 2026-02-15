@@ -1,14 +1,47 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// Cache for like states to reduce DB calls
-const likeCache = new Map<string, boolean>();
+// ============================================================
+// Batch Like Cache — single query loads ALL user likes,
+// eliminates per-song DB calls (critical for 2000+ users)
+// ============================================================
+
+// Global cache shared across all LikeButton instances
+let likeCache = new Set<string>();
+let likeCacheLoaded = false;
+let likeCacheUserId: string | null = null;
+let likeCachePromise: Promise<void> | null = null;
+
+const loadLikeCache = async (userId: string): Promise<void> => {
+  if (likeCacheLoaded && likeCacheUserId === userId) return;
+  
+  // Deduplicate concurrent calls
+  if (likeCachePromise && likeCacheUserId === userId) return likeCachePromise;
+
+  likeCacheUserId = userId;
+  likeCachePromise = (async () => {
+    const { data } = await supabase
+      .from('user_library')
+      .select('song_id')
+      .eq('user_id', userId);
+
+    likeCache = new Set(data?.map(d => d.song_id) || []);
+    likeCacheLoaded = true;
+    likeCachePromise = null;
+  })();
+
+  return likeCachePromise;
+};
+
+const invalidateLikeCache = () => {
+  likeCacheLoaded = false;
+};
 
 export const useLike = (songId: string) => {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(() => likeCache.get(`${user?.id}-${songId}`) ?? false);
+  const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const mountedRef = useRef(true);
 
@@ -17,33 +50,18 @@ export const useLike = (songId: string) => {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // Load entire library once, then check cache
   useEffect(() => {
-    if (user && songId) {
-      const cacheKey = `${user.id}-${songId}`;
-      if (likeCache.has(cacheKey)) {
-        setIsLiked(likeCache.get(cacheKey)!);
-      } else {
-        checkIfLiked();
+    if (!user || !songId) return;
+
+    const check = async () => {
+      await loadLikeCache(user.id);
+      if (mountedRef.current) {
+        setIsLiked(likeCache.has(songId));
       }
-    }
+    };
+    check();
   }, [user?.id, songId]);
-
-  const checkIfLiked = async () => {
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('user_library')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('song_id', songId)
-      .maybeSingle();
-
-    const liked = !!data;
-    likeCache.set(`${user.id}-${songId}`, liked);
-    if (mountedRef.current) {
-      setIsLiked(liked);
-    }
-  };
 
   const toggleLike = useCallback(async () => {
     if (!user) {
@@ -54,36 +72,41 @@ export const useLike = (songId: string) => {
     if (isLoading) return;
 
     setIsLoading(true);
-    // Optimistic update
     const newLiked = !isLiked;
+    
+    // Optimistic update
     setIsLiked(newLiked);
-    likeCache.set(`${user.id}-${songId}`, newLiked);
+    if (newLiked) {
+      likeCache.add(songId);
+    } else {
+      likeCache.delete(songId);
+    }
 
     try {
       if (!newLiked) {
-        // Unlike
         const { error } = await supabase
           .from('user_library')
           .delete()
           .eq('user_id', user.id)
           .eq('song_id', songId);
-
         if (error) throw error;
         toast.success('Removed from library');
       } else {
-        // Like
         const { error } = await supabase
           .from('user_library')
           .insert({ user_id: user.id, song_id: songId });
-
         if (error) throw error;
         toast.success('Added to library ❤️');
       }
     } catch (error) {
       console.error('Error toggling like:', error);
-      // Rollback on error
+      // Rollback
       setIsLiked(!newLiked);
-      likeCache.set(`${user.id}-${songId}`, !newLiked);
+      if (!newLiked) {
+        likeCache.add(songId);
+      } else {
+        likeCache.delete(songId);
+      }
       toast.error('Failed to update library');
     } finally {
       if (mountedRef.current) {
