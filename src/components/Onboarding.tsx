@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { Music, Download, Headphones, Sparkles, ArrowRight } from 'lucide-react';
-import appLogo from '@/assets/app-logo.png';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -9,28 +8,25 @@ interface OnboardingProps {
 
 const slides = [
   {
-    icon: Music,
     emoji: '🎵',
     title: 'Discover Music',
     subtitle: 'Stream unlimited songs from your favorite artists with crystal-clear audio quality.',
     gradient: 'from-rose-500 via-pink-500 to-purple-600',
-    orbColor: 'hsl(340 100% 50% / 0.35)',
+    bgGradient: 'radial-gradient(ellipse at 50% 30%, hsl(340 100% 50% / 0.2) 0%, transparent 50%)',
   },
   {
-    icon: Download,
     emoji: '📲',
     title: 'Listen Offline',
     subtitle: 'Download songs and enjoy your music anywhere — no internet required.',
     gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-    orbColor: 'hsl(200 100% 50% / 0.35)',
+    bgGradient: 'radial-gradient(ellipse at 50% 30%, hsl(200 100% 50% / 0.2) 0%, transparent 50%)',
   },
   {
-    icon: Headphones,
     emoji: '🎧',
     title: 'Premium Experience',
     subtitle: 'Equalizer, lyrics, social sharing, and a beautiful player designed for you.',
     gradient: 'from-purple-500 via-violet-500 to-indigo-600',
-    orbColor: 'hsl(270 100% 60% / 0.35)',
+    bgGradient: 'radial-gradient(ellipse at 50% 30%, hsl(270 100% 60% / 0.2) 0%, transparent 50%)',
   },
 ];
 
@@ -67,35 +63,17 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
   const isLast = currentSlide === slides.length - 1;
 
   const slideVariants = {
-    enter: (dir: number) => ({ x: dir > 0 ? 300 : -300, opacity: 0, scale: 0.9 }),
-    center: { x: 0, opacity: 1, scale: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? -300 : 300, opacity: 0, scale: 0.9 }),
+    enter: (dir: number) => ({ x: dir > 0 ? 200 : -200, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -200 : 200, opacity: 0 }),
   };
 
   return (
     <div className="h-[100dvh] bg-background flex flex-col relative overflow-hidden">
-      {/* Background orbs */}
-      <motion.div
-        key={`orb-${currentSlide}`}
-        className="absolute w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{
-          background: `radial-gradient(circle, ${slide.orbColor}, transparent 60%)`,
-          filter: 'blur(100px)',
-          top: '10%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-        }}
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8 }}
-      />
-
-      {/* Noise texture */}
+      {/* Static background gradient — no blur filters */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }}
+        className="absolute inset-0 pointer-events-none transition-all duration-500"
+        style={{ background: slide.bgGradient }}
       />
 
       {/* Skip button */}
@@ -132,48 +110,35 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
             dragElastic={0.3}
             onDragEnd={handleDragEnd}
           >
-            {/* Icon container with glow */}
+            {/* Icon container — static glow, no rotation */}
             <motion.div
               className="relative mb-8"
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
             >
-              <motion.div
-                className="absolute -inset-6 rounded-full"
-                style={{
-                  background: `conic-gradient(from 0deg, ${slide.orbColor}, transparent, ${slide.orbColor})`,
-                  filter: 'blur(20px)',
-                }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-              />
               <div
                 className={`w-28 h-28 rounded-3xl flex items-center justify-center relative bg-gradient-to-br ${slide.gradient}`}
-                style={{
-                  boxShadow: `0 20px 60px ${slide.orbColor}`,
-                }}
+                style={{ boxShadow: '0 15px 40px rgba(0,0,0,0.3)' }}
               >
                 <span className="text-5xl">{slide.emoji}</span>
               </div>
             </motion.div>
 
-            {/* Title */}
             <motion.h2
               className="text-3xl font-bold text-foreground mb-3 tracking-tight"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.4 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
             >
               {slide.title}
             </motion.h2>
 
-            {/* Subtitle */}
             <motion.p
               className="text-muted-foreground text-base leading-relaxed max-w-[280px]"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.4 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
             >
               {slide.subtitle}
             </motion.p>
@@ -189,7 +154,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
             <button
               key={i}
               onClick={() => goToSlide(i)}
-              className="relative h-2 rounded-full transition-all duration-300"
+              className="h-2 rounded-full transition-all duration-300"
               style={{
                 width: i === currentSlide ? 24 : 8,
                 background: i === currentSlide
@@ -201,7 +166,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
         </div>
 
         {/* CTA Button */}
-        <motion.button
+        <button
           onClick={handleNext}
           className="w-full h-14 rounded-2xl flex items-center justify-center gap-2 text-base font-bold text-primary-foreground active:scale-[0.97] transition-transform"
           style={{
@@ -210,11 +175,8 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
               : 'rgba(255,255,255,0.08)',
             color: isLast ? '#fff' : 'rgba(255,255,255,0.9)',
             border: isLast ? 'none' : '1px solid rgba(255,255,255,0.10)',
-            boxShadow: isLast
-              ? '0 4px 20px hsl(340 100% 50% / 0.35), 0 8px 40px hsl(260 100% 60% / 0.2)'
-              : 'none',
+            boxShadow: isLast ? '0 4px 20px hsl(340 100% 50% / 0.25)' : 'none',
           }}
-          whileTap={{ scale: 0.97 }}
         >
           {isLast ? (
             <>
@@ -227,7 +189,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
               <ArrowRight className="w-5 h-5" />
             </>
           )}
-        </motion.button>
+        </button>
       </div>
     </div>
   );

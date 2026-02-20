@@ -18,95 +18,39 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     <motion.div
       className="fixed inset-0 bg-black flex items-center justify-center z-50 overflow-hidden"
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Animated gradient orbs */}
-      <motion.div
-        className="absolute w-[600px] h-[600px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, hsl(340 100% 50% / 0.25), transparent 60%)',
-          filter: 'blur(100px)',
-        }}
-        initial={{ x: '-30%', y: '-40%', scale: 0.6, opacity: 0 }}
-        animate={{ x: '-20%', y: '-30%', scale: 1, opacity: 1 }}
-        transition={{ duration: 2, ease: 'easeOut' }}
-      />
-      <motion.div
-        className="absolute w-[500px] h-[500px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, hsl(260 100% 60% / 0.2), transparent 60%)',
-          filter: 'blur(100px)',
-        }}
-        initial={{ x: '30%', y: '40%', scale: 0.6, opacity: 0 }}
-        animate={{ x: '20%', y: '30%', scale: 1, opacity: 1 }}
-        transition={{ duration: 2, ease: 'easeOut', delay: 0.2 }}
-      />
-      <motion.div
-        className="absolute w-[300px] h-[300px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, hsl(210 100% 60% / 0.15), transparent 60%)',
-          filter: 'blur(80px)',
-        }}
-        initial={{ x: '0%', y: '0%', scale: 0.5, opacity: 0 }}
-        animate={{ x: '10%', y: '-10%', scale: 1.2, opacity: 1 }}
-        transition={{ duration: 2.5, ease: 'easeOut', delay: 0.4 }}
-      />
-
-      {/* Subtle noise texture overlay */}
+      {/* Static gradient background — no blur filters */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          background: 'radial-gradient(ellipse at 30% 20%, hsl(340 100% 50% / 0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, hsl(260 100% 60% / 0.12) 0%, transparent 50%)',
         }}
       />
 
       <div className="relative flex flex-col items-center">
-        {/* Glassmorphism logo container */}
+        {/* Logo container — static glow, no rotating animation */}
         <motion.div
           className="relative"
           initial={{ scale: 0.3, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            type: 'spring',
-            stiffness: 200,
-            damping: 20,
-            mass: 1,
-          }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         >
-          {/* Outer glow ring */}
-          <motion.div
-            className="absolute -inset-6 rounded-full"
+          <div
+            className="absolute -inset-6 rounded-full pointer-events-none"
             style={{
-              background: 'conic-gradient(from 0deg, hsl(340 100% 50% / 0.4), hsl(260 100% 60% / 0.3), hsl(210 100% 60% / 0.3), hsl(340 100% 50% / 0.4))',
-              filter: 'blur(24px)',
+              background: 'radial-gradient(circle, hsl(300 80% 55% / 0.3), transparent 70%)',
             }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
           />
-
-          {/* Circular logo container */}
           <div
             className="w-36 h-36 rounded-full flex items-center justify-center relative overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%)',
-              backdropFilter: 'blur(40px)',
               border: '1.5px solid rgba(255,255,255,0.10)',
-              boxShadow: '0 0 60px 10px hsl(260 100% 60% / 0.25), 0 0 120px 30px hsl(340 100% 50% / 0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
+              boxShadow: '0 0 40px 8px hsl(260 100% 60% / 0.2), 0 0 80px 20px hsl(340 100% 50% / 0.1)',
             }}
           >
-            {/* Inner shine sweep */}
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.08) 55%, transparent 60%)',
-              }}
-              initial={{ x: '-100%' }}
-              animate={{ x: '200%' }}
-              transition={{ duration: 2, delay: 0.8, ease: 'easeInOut' }}
-            />
-
-            {/* App logo image */}
             <img
               src={appLogo}
               alt="UniversFlow Logo"
@@ -115,39 +59,29 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           </div>
         </motion.div>
 
-        {/* Waveform loading animation */}
+        {/* Simple loading dots instead of waveform bars */}
         <motion.div
-          className="flex items-end justify-center gap-[3px] mt-10 h-8"
+          className="flex items-center justify-center gap-2 mt-10 h-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+          {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-[3px] rounded-full"
-              style={{
-                background: 'linear-gradient(to top, #FF2D55, #BF5AF2)',
-              }}
-              animate={{
-                height: [6, 16 + Math.random() * 16, 8, 20 + Math.random() * 12, 6],
-              }}
-              transition={{
-                duration: 1.2,
-                repeat: Infinity,
-                delay: i * 0.1,
-                ease: 'easeInOut',
-              }}
+              className="w-2 h-2 rounded-full bg-primary"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
             />
           ))}
         </motion.div>
 
-        {/* Brand name with stagger */}
+        {/* Brand name */}
         <motion.div
           className="mt-8 text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 0.4, duration: 0.5 }}
         >
           <h1 className="text-4xl font-bold tracking-tight">
             <span
@@ -164,49 +98,42 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         </motion.div>
 
         <motion.p
-          className="mt-3 text-[13px] tracking-[0.2em] uppercase font-medium"
-          style={{ color: 'rgba(255,255,255,0.4)' }}
-          initial={{ opacity: 0, letterSpacing: '0.5em' }}
-          animate={{ opacity: 1, letterSpacing: '0.2em' }}
-          transition={{ delay: 0.9, duration: 0.8 }}
+          className="mt-3 text-[13px] tracking-[0.2em] uppercase font-medium text-white/40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
         >
           Premium Music Experience
         </motion.p>
 
-        {/* Developer credit - glassmorphism pill */}
+        {/* Developer credit */}
         <motion.div
           className="mt-8 px-5 py-2 rounded-full flex items-center gap-2"
           style={{
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)',
           }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1, duration: 0.5 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
         >
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ background: '#FF2D55', boxShadow: '0 0 8px #FF2D55' }}
-          />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
           <p className="text-[11px] text-white/40 tracking-wider">
-            Crafted by{' '}
-            <span className="text-white/70 font-semibold">SHASHANK YADAV</span>
+            Crafted by <span className="text-white/70 font-semibold">SHASHANK YADAV</span>
           </p>
         </motion.div>
 
         {/* Skip button */}
         <motion.button
           onClick={onComplete}
-          className="mt-6 px-6 py-2.5 rounded-full text-white/50 text-xs font-medium tracking-wider uppercase active:scale-95 transition-all"
+          className="mt-6 px-6 py-2.5 rounded-full text-white/50 text-xs font-medium tracking-wider uppercase active:scale-95 transition-transform"
           style={{
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.06)',
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.4 }}
-          whileTap={{ scale: 0.92 }}
+          transition={{ delay: 1.2 }}
         >
           Skip →
         </motion.button>
