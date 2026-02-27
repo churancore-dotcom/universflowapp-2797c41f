@@ -118,26 +118,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    if (!navigator.onLine) {
-      return { error: new Error('Connection failed. Please check your internet connection and try again.') };
-    }
-
     const maxRetries = 2;
     let lastError: Error | null = null;
 
+    const isNetworkErrorMessage = (message?: string) => {
+      if (!message) return false;
+      const normalized = message.toLowerCase();
+      return normalized.includes('failed to fetch') || normalized.includes('network') || normalized.includes('timeout');
+    };
+
+    const resolveAdminStatus = async (userId: string) => {
+      try {
+        return await Promise.race<boolean>([
+          checkAdminStatus(userId),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2000)),
+        ]);
+      } catch {
+        return false;
+      }
+    };
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const signInRequest = supabase.auth.signInWithPassword({ email, password });
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout. Please try again.')), 12000)
+        );
+
+        const { data, error } = await Promise.race([signInRequest, timeout]);
 
         if (error) {
-          const isNetworkError =
-            error.message?.includes('Failed to fetch') ||
-            error.message?.toLowerCase().includes('network') ||
-            (error as any)?.status === 0;
-
-          if (isNetworkError && attempt < maxRetries) {
+          if (isNetworkErrorMessage(error.message) && attempt < maxRetries) {
             lastError = error as Error;
-            await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+            await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
             continue;
           }
 
@@ -145,19 +158,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (data.user) {
-          ensureShareCode(data.user.id);
-          const isUserAdmin = await checkAdminStatus(data.user.id);
+          void ensureShareCode(data.user.id);
+          const isUserAdmin = await resolveAdminStatus(data.user.id);
           return { error: null, isAdmin: isUserAdmin };
         }
 
         return { error: null, isAdmin: false };
       } catch (err) {
         const asError = err instanceof Error ? err : new Error('Login failed');
-        const isNetworkError = asError.message.includes('Failed to fetch') || asError.message.toLowerCase().includes('network');
 
-        if (isNetworkError && attempt < maxRetries) {
+        if (isNetworkErrorMessage(asError.message) && attempt < maxRetries) {
           lastError = asError;
-          await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+          await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
           continue;
         }
 
