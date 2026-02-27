@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { AuthContext } from '@/contexts/AuthContext';
 
 export type SubscriptionType = 'free' | 'premium_monthly' | 'premium_yearly';
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'pending';
@@ -22,7 +22,8 @@ interface UsePremiumReturn {
 }
 
 export const usePremium = (): UsePremiumReturn => {
-  const { user } = useAuth();
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user ?? null;
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
