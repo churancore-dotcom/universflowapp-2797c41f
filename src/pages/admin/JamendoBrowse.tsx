@@ -31,10 +31,16 @@ const GENRES = [
   { id: 'indian', emoji: '🇮🇳', tags: 'indian+bollywood+hindi' },
   { id: 'bollywood', emoji: '🎬', tags: 'bollywood+filmi' },
   { id: 'punjabi', emoji: '🎶', tags: 'punjabi+bhangra' },
+  { id: 'haryanvi', emoji: '🪘', tags: 'haryanvi+folk+indian' },
+  { id: 'lofi', emoji: '☕', tags: 'lofi+chillhop' },
+  { id: 'slowreverb', emoji: '🌊', tags: 'slow+reverb+ambient+chill' },
+  { id: 'devotional', emoji: '🙏', tags: 'devotional+spiritual+bhajan' },
+  { id: 'rajasthani', emoji: '🏜️', tags: 'rajasthani+folk+indian' },
+  { id: 'sufi', emoji: '💫', tags: 'sufi+qawwali+spiritual' },
+  { id: 'ghazal', emoji: '🌹', tags: 'ghazal+poetry+urdu' },
   { id: 'jazz', emoji: '🎷' },
   { id: 'classical', emoji: '🎻' },
   { id: 'ambient', emoji: '🌙' },
-  { id: 'lofi', emoji: '☕' },
   { id: 'blues', emoji: '🎵' },
   { id: 'folk', emoji: '🪕' },
   { id: 'funk', emoji: '🕺' },
@@ -72,9 +78,16 @@ const JamendoBrowse = () => {
     setIndianImporting(true);
     
     const indianGenres = [
-      { id: 'indian', tags: 'indian+bollywood+hindi', label: 'Indian' },
+      { id: 'indian', tags: 'indian+bollywood+hindi', label: 'Indian / Hindi' },
       { id: 'bollywood', tags: 'bollywood+filmi', label: 'Bollywood' },
-      { id: 'punjabi', tags: 'punjabi+bhangra', label: 'Punjabi' },
+      { id: 'punjabi', tags: 'punjabi+bhangra', label: 'Punjabi / Bhangra' },
+      { id: 'haryanvi', tags: 'haryanvi+folk+indian', label: 'Haryanvi' },
+      { id: 'devotional', tags: 'devotional+spiritual+bhajan', label: 'Devotional / Bhajan' },
+      { id: 'sufi', tags: 'sufi+qawwali+spiritual', label: 'Sufi / Qawwali' },
+      { id: 'ghazal', tags: 'ghazal+poetry+urdu', label: 'Ghazal' },
+      { id: 'rajasthani', tags: 'rajasthani+folk+indian', label: 'Rajasthani Folk' },
+      { id: 'lofi-indian', tags: 'lofi+chill+indian', label: 'Lo-Fi / Slow+Reverb' },
+      { id: 'classical-indian', tags: 'classical+indian+raga', label: 'Indian Classical' },
     ];
 
     let totalImported = 0;
@@ -86,7 +99,7 @@ const JamendoBrowse = () => {
       
       try {
         const { data, error } = await supabase.functions.invoke('jamendo-search', {
-          body: { action: 'bulk_genre', genre: genre.tags, limit: 50, offset: 0 },
+          body: { action: 'bulk_genre', genre: genre.tags, limit: 200, offset: 0 },
         });
         if (error) continue;
         
@@ -408,8 +421,8 @@ const JamendoBrowse = () => {
         <div className="flex items-center gap-3">
           <span className="text-3xl">🇮🇳</span>
           <div className="flex-1">
-            <h2 className="text-lg font-bold">Indian Music — One Click Import</h2>
-            <p className="text-xs text-muted-foreground">Imports ~150 free Indian, Bollywood & Punjabi songs instantly</p>
+            <h2 className="text-lg font-bold">Indian Music — Mega Import</h2>
+            <p className="text-xs text-muted-foreground">Imports 500+ free songs: Bollywood, Punjabi, Haryanvi, Sufi, Ghazal, Lo-Fi, Devotional & more!</p>
           </div>
           <motion.button
             onClick={bulkImportIndianAll}
