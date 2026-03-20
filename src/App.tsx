@@ -70,6 +70,7 @@ const UserEngagement = lazy(() => import("./pages/admin/UserEngagement"));
 const ABTesting = lazy(() => import("./pages/admin/ABTesting"));
 const SecurityCenter = lazy(() => import("./pages/admin/SecurityCenter"));
 const JamendoBrowse = lazy(() => import("./pages/admin/JamendoBrowse"));
+const DeezerImport = lazy(() => import("./pages/admin/DeezerImport"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
