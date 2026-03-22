@@ -51,6 +51,34 @@ const buildSearchQueries = (rawQuery: string): string[] => {
 };
 
 const searchYouTubeByQuery = async (searchQuery: string) => {
+  // Primary: parse YouTube search HTML directly (most reliable)
+  try {
+    const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
+    const response = await fetch(ytUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+
+    if (response.ok) {
+      const html = await response.text();
+      const videoIdMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+      if (videoIdMatch?.[1]) {
+        const videoId = videoIdMatch[1];
+        return {
+          videoId,
+          title: null,
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          source: "youtube-web",
+        };
+      }
+    }
+  } catch (error) {
+    console.error("YouTube HTML search failed:", error);
+  }
+
+  // Fallback: Invidious instances
   for (const instance of INVIDIOUS_SEARCH_INSTANCES) {
     try {
       const url = `${instance}/api/v1/search?q=${encodeURIComponent(searchQuery)}&type=video&sort_by=relevance`;
