@@ -285,7 +285,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     audioRef.current.load();
     const playPromise = audioRef.current.play();
     if (playPromise) {
-      playPromise.catch(err => {
+      playPromise.then(() => {
+        // Auto-bind to audio engine so EQ/visualizer work immediately
+        if (audioRef.current) {
+          audioEngine.bind(audioRef.current).catch(() => {});
+        }
+      }).catch(err => {
         console.warn('Playback failed:', err.message);
         setIsPlaying(false);
         wasPlayingBeforeHidden.current = false;
