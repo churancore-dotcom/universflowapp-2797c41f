@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect, useRef, memo, useMemo } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, RotateCcw, Volume2, Zap, Waves, Music2, Headphones, Radio, Globe } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { iosSpring } from '@/lib/animations';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
+import * as EQ from '@/lib/equalizer';
 
 interface EqualizerModalProps {
   isOpen: boolean;
@@ -81,20 +82,6 @@ function FrequencySliderComponent({ band, index, onChange }: FrequencySliderProp
 const FrequencySlider = memo(FrequencySliderComponent);
 FrequencySlider.displayName = 'FrequencySlider';
 
-// Persistent audio graph - survives modal open/close
-const audioState = {
-  context: null as AudioContext | null,
-  source: null as MediaElementAudioSourceNode | null,
-  filters: [] as BiquadFilterNode[],
-  gainNode: null as GainNode | null,
-  connectedElement: null as HTMLAudioElement | null,
-  pannerNode: null as StereoPannerNode | null,
-  convolverNode: null as ConvolverNode | null,
-  convolverGain: null as GainNode | null,
-  dryGain: null as GainNode | null,
-  spatialInterval: null as number | null,
-};
-
 const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   const { audioElement } = usePlayer();
   const [bands, setBands] = useState<EQBand[]>(() => {
@@ -119,9 +106,9 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   const [activePreset, setActivePreset] = useState<string | null>(() => {
     try { return localStorage.getItem('eq_preset') || 'Flat'; } catch { return 'Flat'; }
   });
-  const [isConnected, setIsConnected] = useState(audioState.connectedElement !== null);
+  const [connected, setConnected] = useState(false);
 
-  // Save settings to localStorage
+  // Persist settings
   useEffect(() => {
     try {
       localStorage.setItem('eq_bands', JSON.stringify(bands));
@@ -133,190 +120,53 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     } catch {}
   }, [bands, bassBoost, reverb, spatialAudio, playbackSpeed, activePreset]);
 
-  // Connect audio graph (only once per audio element)
+  // Bind equalizer when modal opens (or audio element changes)
   useEffect(() => {
     if (!audioElement || !isOpen) return;
-    if (audioState.connectedElement === audioElement) {
-      // Already connected — just make sure context is running
-      if (audioState.context?.state === 'suspended') {
-        audioState.context.resume().catch(() => {});
+
+    let cancelled = false;
+    (async () => {
+      const ok = await EQ.bindEqualizer(audioElement);
+      if (cancelled) return;
+      setConnected(ok);
+      if (ok) {
+        // Apply current settings to the freshly bound graph
+        EQ.setBands(bands.map(b => b.gain));
+        EQ.setBassBoost(bassBoost, bands.map(b => b.gain));
+        EQ.setReverb(reverb);
+        EQ.setSpatialAudio(spatialAudio);
       }
-      setIsConnected(true);
-      return;
-    }
+    })();
 
-    const connectGraph = async () => {
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
-
-        // If we had a previous context connected to a different element, clean up
-        if (audioState.context && audioState.connectedElement && audioState.connectedElement !== audioElement) {
-          try { audioState.context.close(); } catch {}
-          audioState.context = null;
-          audioState.source = null;
-          audioState.filters = [];
-          audioState.gainNode = null;
-          audioState.connectedElement = null;
-        }
-
-        const ctx = audioState.context || new AudioContextClass();
-        audioState.context = ctx;
-
-        // CRITICAL: Resume context BEFORE creating source so audio doesn't go silent
-        if (ctx.state === 'suspended') {
-          await ctx.resume();
-        }
-
-        // Remember if audio was playing so we can ensure it continues
-        const wasPlaying = !audioElement.paused;
-
-        const source = ctx.createMediaElementSource(audioElement);
-        audioState.source = source;
-
-        // Create 8-band EQ
-        const filters = defaultBands.map((band, i) => {
-          const filter = ctx.createBiquadFilter();
-          filter.type = i === 0 ? 'lowshelf' : i === defaultBands.length - 1 ? 'highshelf' : 'peaking';
-          filter.frequency.value = band.frequency;
-          filter.Q.value = 1.4;
-          filter.gain.value = bands[i]?.gain || 0;
-          return filter;
-        });
-        audioState.filters = filters;
-
-        const gainNode = ctx.createGain();
-        gainNode.gain.value = 1;
-        audioState.gainNode = gainNode;
-
-        // Chain: source -> filters -> gain -> destination
-        source.connect(filters[0]);
-        for (let i = 0; i < filters.length - 1; i++) {
-          filters[i].connect(filters[i + 1]);
-        }
-
-        // Create panner for 8D rotation
-        const panner = ctx.createStereoPanner();
-        panner.pan.value = 0;
-        audioState.pannerNode = panner;
-
-        // Create convolver for reverb
-        const convolver = ctx.createConvolver();
-        const convolverGain = ctx.createGain();
-        convolverGain.gain.value = 0;
-        const dryGain = ctx.createGain();
-        dryGain.gain.value = 1;
-
-        // Generate impulse response for reverb
-        const sampleRate = ctx.sampleRate;
-        const length = sampleRate * 2.5;
-        const impulse = ctx.createBuffer(2, length, sampleRate);
-        for (let ch = 0; ch < 2; ch++) {
-          const data = impulse.getChannelData(ch);
-          for (let i = 0; i < length; i++) {
-            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
-          }
-        }
-        convolver.buffer = impulse;
-
-        audioState.convolverNode = convolver;
-        audioState.convolverGain = convolverGain;
-        audioState.dryGain = dryGain;
-
-        // Chain: filters -> panner -> dry/wet split -> gain -> destination
-        filters[filters.length - 1].connect(panner);
-        panner.connect(dryGain);
-        panner.connect(convolver);
-        convolver.connect(convolverGain);
-        dryGain.connect(gainNode);
-        convolverGain.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        audioState.connectedElement = audioElement;
-        setIsConnected(true);
-
-        // Ensure playback continues after rerouting through AudioContext
-        if (wasPlaying && audioElement.paused) {
-          audioElement.play().catch(() => {});
-        }
-      } catch (error) {
-        console.error('Equalizer connect error:', error);
-        // If connection fails, ensure audio still plays through default output
-        // by not setting connectedElement
-      }
-    };
-
-    connectGraph();
+    return () => { cancelled = true; };
   }, [audioElement, isOpen]);
 
-  // Apply EQ band changes in real-time
+  // Resume context whenever modal opens
   useEffect(() => {
-    if (!audioState.filters.length) return;
-    bands.forEach((band, index) => {
-      if (audioState.filters[index]) {
-        audioState.filters[index].gain.value = band.gain;
-      }
-    });
-  }, [bands]);
-
-  // Apply bass boost to low-freq filters
-  useEffect(() => {
-    if (!audioState.filters.length) return;
-    const boost = bassBoost / 8;
-    if (audioState.filters[0]) audioState.filters[0].gain.value = bands[0].gain + boost;
-    if (audioState.filters[1]) audioState.filters[1].gain.value = bands[1].gain + (boost * 0.7);
-    if (audioState.filters[2]) audioState.filters[2].gain.value = bands[2].gain + (boost * 0.3);
-  }, [bassBoost, bands]);
-
-  // Apply reverb wet/dry mix
-  useEffect(() => {
-    if (audioState.convolverGain && audioState.dryGain) {
-      const wet = reverb / 100;
-      audioState.convolverGain.gain.value = wet * 0.6;
-      audioState.dryGain.gain.value = 1 - (wet * 0.3);
-    }
-  }, [reverb]);
-
-  // 8D Spatial Audio — real rotating panner
-  useEffect(() => {
-    if (audioState.spatialInterval) {
-      clearInterval(audioState.spatialInterval);
-      audioState.spatialInterval = null;
-    }
-
-    if (spatialAudio && audioState.pannerNode && audioState.context) {
-      let angle = 0;
-      audioState.spatialInterval = window.setInterval(() => {
-        angle += 0.04; // Slow rotation speed
-        if (audioState.pannerNode) {
-          audioState.pannerNode.pan.value = Math.sin(angle) * 0.85;
-        }
-      }, 30) as unknown as number;
-    } else if (audioState.pannerNode) {
-      audioState.pannerNode.pan.value = 0;
-    }
-
-    return () => {
-      if (audioState.spatialInterval) {
-        clearInterval(audioState.spatialInterval);
-        audioState.spatialInterval = null;
-      }
-    };
-  }, [spatialAudio]);
-
-  // Apply playback speed
-  useEffect(() => {
-    if (audioElement) {
-      audioElement.playbackRate = playbackSpeed;
-    }
-  }, [playbackSpeed, audioElement]);
-
-  // Resume audio context on user interaction
-  useEffect(() => {
-    if (isOpen && audioState.context?.state === 'suspended') {
-      audioState.context.resume();
-    }
+    if (isOpen) EQ.resumeContext();
   }, [isOpen]);
+
+  // Push band changes to engine
+  useEffect(() => {
+    if (connected) EQ.setBands(bands.map(b => b.gain));
+  }, [bands, connected]);
+
+  useEffect(() => {
+    if (connected) EQ.setBassBoost(bassBoost, bands.map(b => b.gain));
+  }, [bassBoost, bands, connected]);
+
+  useEffect(() => {
+    if (connected) EQ.setReverb(reverb);
+  }, [reverb, connected]);
+
+  useEffect(() => {
+    if (connected) EQ.setSpatialAudio(spatialAudio);
+    return () => { if (!spatialAudio) EQ.setSpatialAudio(false); };
+  }, [spatialAudio, connected]);
+
+  useEffect(() => {
+    if (audioElement) audioElement.playbackRate = playbackSpeed;
+  }, [playbackSpeed, audioElement]);
 
   const handleBandChange = useCallback((index: number, value: number) => {
     setBands(prev => prev.map((b, i) => i === index ? { ...b, gain: value } : b));
@@ -381,7 +231,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
               <div>
                 <h2 className="text-lg font-semibold">Equalizer</h2>
                 <p className="text-xs text-muted-foreground">
-                  {isConnected ? '● Connected' : 'Play a song to connect'}
+                  {connected ? '● Connected' : 'Play a song to connect'}
                 </p>
               </div>
             </div>
