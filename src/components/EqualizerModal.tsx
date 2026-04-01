@@ -27,7 +27,7 @@ interface Preset {
   reverb: number;
 }
 
-// Match the old screenshot layout: Flat, Bass Boost, Treble Boost, Vocal, 8D Audio, Phonk, Deep Bass, Concert
+// Presets: Flat, Bass Boost, Treble Boost, Vocal, Phonk, Deep Bass, Rock, Concert
 const presets: Preset[] = [
   { name: 'Flat', icon: <Music2 className="w-4 h-4" />, bands: [0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0, reverb: 0 },
   { name: 'Bass Boost', icon: <Zap className="w-4 h-4" />, bands: [10, 8, 5, 2, 0, -1, -2, -2], bassBoost: 75, reverb: 0 },
