@@ -81,7 +81,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   });
   const [bassBoost, setBassBoost] = useState(() => { try { return Number(localStorage.getItem('eq_bass')) || 0; } catch { return 0; } });
   const [reverb, setReverb] = useState(() => { try { return Number(localStorage.getItem('eq_reverb')) || 0; } catch { return 0; } });
-  const [spatialAudio, setSpatialAudio] = useState(() => { try { return localStorage.getItem('eq_spatial') === 'true'; } catch { return false; } });
+  // 8D removed — was unreliable
   const [playbackSpeed, setPlaybackSpeed] = useState(() => { try { return Number(localStorage.getItem('eq_speed')) || 1; } catch { return 1; } });
   const [activePreset, setActivePreset] = useState<string | null>(() => { try { return localStorage.getItem('eq_preset') || 'Flat'; } catch { return 'Flat'; } });
   const [connected, setConnected] = useState(audioEngine.connected);
