@@ -24,19 +24,17 @@ interface Preset {
   icon: React.ReactNode;
   bands: number[];
   bassBoost: number;
-  reverb: number;
 }
 
-// Presets: Flat, Bass Boost, Treble Boost, Vocal, Phonk, Deep Bass, Rock, Concert
 const presets: Preset[] = [
-  { name: 'Flat', icon: <Music2 className="w-4 h-4" />, bands: [0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0, reverb: 0 },
-  { name: 'Bass Boost', icon: <Zap className="w-4 h-4" />, bands: [10, 8, 5, 2, 0, -1, -2, -2], bassBoost: 75, reverb: 0 },
-  { name: 'Treble Boost', icon: <Sparkles className="w-4 h-4" />, bands: [-3, -2, 0, 2, 4, 7, 9, 10], bassBoost: 0, reverb: 0 },
-  { name: 'Vocal', icon: <Volume2 className="w-4 h-4" />, bands: [-4, -2, 2, 6, 7, 4, 1, 0], bassBoost: 0, reverb: 30 },
-  { name: 'Phonk', icon: <Radio className="w-4 h-4" />, bands: [10, 7, 4, 0, -3, 2, 4, 5], bassBoost: 85, reverb: 20 },
-  { name: 'Deep Bass', icon: <Headphones className="w-4 h-4" />, bands: [12, 10, 7, 3, 0, -2, -3, -4], bassBoost: 100, reverb: 15 },
-  { name: 'Rock', icon: <Sparkles className="w-4 h-4" />, bands: [6, 4, -1, -2, 1, 4, 6, 7], bassBoost: 30, reverb: 10 },
-  { name: 'Concert', icon: <Music2 className="w-4 h-4" />, bands: [4, 2, 0, 3, 5, 4, 3, 2], bassBoost: 20, reverb: 55 },
+  { name: 'Flat', icon: <Music2 className="w-4 h-4" />, bands: [0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0 },
+  { name: 'Bass Boost', icon: <Zap className="w-4 h-4" />, bands: [10, 8, 5, 2, 0, -1, -2, -2], bassBoost: 75 },
+  { name: 'Treble Boost', icon: <Sparkles className="w-4 h-4" />, bands: [-3, -2, 0, 2, 4, 7, 9, 10], bassBoost: 0 },
+  { name: 'Vocal', icon: <Volume2 className="w-4 h-4" />, bands: [-4, -2, 2, 6, 7, 4, 1, 0], bassBoost: 0 },
+  { name: 'Phonk', icon: <Radio className="w-4 h-4" />, bands: [10, 7, 4, 0, -3, 2, 4, 5], bassBoost: 85 },
+  { name: 'Deep Bass', icon: <Headphones className="w-4 h-4" />, bands: [12, 10, 7, 3, 0, -2, -3, -4], bassBoost: 100 },
+  { name: 'Rock', icon: <Sparkles className="w-4 h-4" />, bands: [6, 4, -1, -2, 1, 4, 6, 7], bassBoost: 30 },
+  { name: 'Pop', icon: <Music2 className="w-4 h-4" />, bands: [-1, 3, 5, 6, 4, 1, -1, -2], bassBoost: 10 },
 ];
 
 const defaultBands: EQBand[] = [
@@ -80,63 +78,50 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     try { const s = localStorage.getItem('eq_bands'); if (s) return JSON.parse(s); } catch {} return defaultBands;
   });
   const [bassBoost, setBassBoost] = useState(() => { try { return Number(localStorage.getItem('eq_bass')) || 0; } catch { return 0; } });
-  const [reverb, setReverb] = useState(() => { try { return Number(localStorage.getItem('eq_reverb')) || 0; } catch { return 0; } });
   const [playbackSpeed, setPlaybackSpeed] = useState(() => { try { return Number(localStorage.getItem('eq_speed')) || 1; } catch { return 1; } });
   const [activePreset, setActivePreset] = useState<string | null>(() => { try { return localStorage.getItem('eq_preset') || 'Flat'; } catch { return 'Flat'; } });
   const [connected, setConnected] = useState(false);
 
-  // Persist settings
+  // Persist
   useEffect(() => {
     try {
       localStorage.setItem('eq_bands', JSON.stringify(bands));
       localStorage.setItem('eq_bass', String(bassBoost));
-      localStorage.setItem('eq_reverb', String(reverb));
       localStorage.setItem('eq_speed', String(playbackSpeed));
       if (activePreset) localStorage.setItem('eq_preset', activePreset);
     } catch {}
-  }, [bands, bassBoost, reverb, playbackSpeed, activePreset]);
+  }, [bands, bassBoost, playbackSpeed, activePreset]);
 
-  // When modal opens: resume context, bind if needed, push settings
+  // On open: resume + bind if needed + push settings
   useEffect(() => {
     if (!isOpen) return;
-    
     (async () => {
       await audioEngine.resume();
-      
-      // If not connected and we have an audio element, bind now (user gesture context)
       if (!audioEngine.connected && audioElement) {
         await audioEngine.bind(audioElement);
       }
-      
-      const isConnected = audioEngine.connected;
-      setConnected(isConnected);
-      
-      if (isConnected) {
+      setConnected(audioEngine.connected);
+      if (audioEngine.connected) {
         audioEngine.setBands(bands.map(b => b.gain));
         audioEngine.setBassBoost(bassBoost, bands.map(b => b.gain));
-        audioEngine.setReverb(reverb);
       }
     })();
   }, [isOpen, audioElement]);
 
-  // Push changes to engine
+  // Push band changes
   useEffect(() => {
     if (!isOpen) return;
-    const isConn = audioEngine.connected;
-    setConnected(isConn);
-    if (isConn) audioEngine.setBands(bands.map(b => b.gain));
+    setConnected(audioEngine.connected);
+    if (audioEngine.connected) audioEngine.setBands(bands.map(b => b.gain));
   }, [bands, isOpen]);
-  
+
+  // Push bass boost
   useEffect(() => {
     if (!isOpen) return;
     if (audioEngine.connected) audioEngine.setBassBoost(bassBoost, bands.map(b => b.gain));
   }, [bassBoost, bands, isOpen]);
-  
-  useEffect(() => {
-    if (!isOpen) return;
-    if (audioEngine.connected) audioEngine.setReverb(reverb);
-  }, [reverb, isOpen]);
-  
+
+  // Playback speed
   useEffect(() => {
     if (audioElement) audioElement.playbackRate = playbackSpeed;
   }, [playbackSpeed, audioElement]);
@@ -149,7 +134,6 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   const handlePresetSelect = useCallback((preset: Preset) => {
     setBands(prev => prev.map((b, i) => ({ ...b, gain: preset.bands[i] ?? 0 })));
     setBassBoost(preset.bassBoost);
-    setReverb(preset.reverb);
     setActivePreset(preset.name);
     toast.success(`${preset.name} preset applied`);
   }, []);
@@ -157,7 +141,6 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   const handleReset = useCallback(() => {
     setBands(defaultBands);
     setBassBoost(0);
-    setReverb(0);
     setPlaybackSpeed(1);
     setActivePreset('Flat');
     if (audioElement) audioElement.playbackRate = 1;
@@ -216,7 +199,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
           </div>
 
           <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
-            {/* Presets - 2 rows of 4, matching old screenshot */}
+            {/* Presets */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-3">Presets</h3>
               <div className="grid grid-cols-4 gap-2">
@@ -267,17 +250,6 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
                   <span className="text-xs text-muted-foreground tabular-nums">{bassBoost}%</span>
                 </div>
                 <Slider value={[bassBoost]} min={0} max={100} step={5} onValueChange={([v]) => { setBassBoost(v); setActivePreset(null); }} className="w-full" />
-              </div>
-              {/* Reverb */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Waves className="w-4 h-4 text-cyan-400" />
-                    <span className="text-sm">Reverb</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground tabular-nums">{reverb}%</span>
-                </div>
-                <Slider value={[reverb]} min={0} max={100} step={5} onValueChange={([v]) => { setReverb(v); setActivePreset(null); }} className="w-full" />
               </div>
               {/* Playback Speed */}
               <div className="space-y-2">
