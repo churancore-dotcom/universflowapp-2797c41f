@@ -123,10 +123,6 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   useEffect(() => { if (connected) audioEngine.setBands(bands.map(b => b.gain)); }, [bands, connected]);
   useEffect(() => { if (connected) audioEngine.setBassBoost(bassBoost, bands.map(b => b.gain)); }, [bassBoost, bands, connected]);
   useEffect(() => { if (connected) audioEngine.setReverb(reverb); }, [reverb, connected]);
-  useEffect(() => {
-    if (connected) audioEngine.set8D(spatialAudio);
-    return () => { if (!spatialAudio) audioEngine.set8D(false); };
-  }, [spatialAudio, connected]);
   useEffect(() => { if (audioElement) audioElement.playbackRate = playbackSpeed; }, [playbackSpeed, audioElement]);
 
   const handleBandChange = useCallback((index: number, value: number) => {
