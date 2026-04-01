@@ -30,6 +30,10 @@ import {
   Globe
 } from 'lucide-react';
 
+import { 
+  Inbox
+} from 'lucide-react';
+
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Upload, label: 'Upload Music', path: '/admin/upload' },
