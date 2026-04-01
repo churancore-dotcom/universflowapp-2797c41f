@@ -60,6 +60,7 @@ const navItems = [
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
   { icon: Globe, label: 'Jamendo Library', path: '/admin/jamendo' },
   { icon: Music, label: 'YouTube Import', path: '/admin/deezer' },
+  { icon: Music, label: 'Song Requests', path: '/admin/song-requests' },
 ];
 
 const AdminLayout = () => {
