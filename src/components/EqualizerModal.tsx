@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, RotateCcw, Volume2, Zap, Waves, Music2, Headphones, Radio } from 'lucide-react';
+import { X, Sparkles, RotateCcw, Volume2, Zap, Waves, Music2, Headphones, Radio, Globe } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { iosSpring } from '@/lib/animations';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -27,15 +27,16 @@ interface Preset {
   reverb: number;
 }
 
+// Match the old screenshot layout: Flat, Bass Boost, Treble Boost, Vocal, 8D Audio, Phonk, Deep Bass, Concert
 const presets: Preset[] = [
   { name: 'Flat', icon: <Music2 className="w-4 h-4" />, bands: [0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0, reverb: 0 },
   { name: 'Bass Boost', icon: <Zap className="w-4 h-4" />, bands: [8, 6, 4, 1, 0, -1, -2, -2], bassBoost: 60, reverb: 0 },
-  { name: 'Deep Bass', icon: <Headphones className="w-4 h-4" />, bands: [10, 8, 5, 2, 0, -1, -2, -3], bassBoost: 80, reverb: 10 },
-  { name: 'Treble', icon: <Sparkles className="w-4 h-4" />, bands: [-2, -1, 0, 1, 3, 5, 6, 7], bassBoost: 0, reverb: 0 },
+  { name: 'Treble Boost', icon: <Sparkles className="w-4 h-4" />, bands: [-2, -1, 0, 1, 3, 5, 6, 7], bassBoost: 0, reverb: 0 },
   { name: 'Vocal', icon: <Volume2 className="w-4 h-4" />, bands: [-3, -1, 1, 4, 5, 3, 1, 0], bassBoost: 0, reverb: 25 },
+  { name: '8D Audio', icon: <Globe className="w-4 h-4" />, bands: [2, 1, 0, -1, 0, 1, 2, 3], bassBoost: 20, reverb: 45 },
   { name: 'Phonk', icon: <Radio className="w-4 h-4" />, bands: [7, 5, 3, 0, -2, 1, 3, 4], bassBoost: 70, reverb: 15 },
-  { name: 'Rock', icon: <Sparkles className="w-4 h-4" />, bands: [5, 3, -1, -2, 0, 2, 4, 5], bassBoost: 30, reverb: 10 },
-  { name: 'Pop', icon: <Music2 className="w-4 h-4" />, bands: [-1, 2, 4, 5, 3, 0, -1, -1], bassBoost: 10, reverb: 15 },
+  { name: 'Deep Bass', icon: <Headphones className="w-4 h-4" />, bands: [10, 8, 5, 2, 0, -1, -2, -3], bassBoost: 80, reverb: 10 },
+  { name: 'Concert', icon: <Sparkles className="w-4 h-4" />, bands: [3, 1, 0, 2, 4, 3, 2, 1], bassBoost: 15, reverb: 40 },
 ];
 
 const defaultBands: EQBand[] = [
@@ -82,7 +83,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   const [reverb, setReverb] = useState(() => { try { return Number(localStorage.getItem('eq_reverb')) || 0; } catch { return 0; } });
   const [playbackSpeed, setPlaybackSpeed] = useState(() => { try { return Number(localStorage.getItem('eq_speed')) || 1; } catch { return 1; } });
   const [activePreset, setActivePreset] = useState<string | null>(() => { try { return localStorage.getItem('eq_preset') || 'Flat'; } catch { return 'Flat'; } });
-  const [connected, setConnected] = useState(audioEngine.connected);
+  const [connected, setConnected] = useState(false);
 
   // Persist settings
   useEffect(() => {
@@ -95,39 +96,47 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     } catch {}
   }, [bands, bassBoost, reverb, playbackSpeed, activePreset]);
 
-  // CRITICAL FIX: Only resume context when modal opens, never re-bind.
-  // The audio engine is already bound in PlayerContext when playback starts.
-  // Re-binding here was causing audio to stop.
+  // When modal opens: just resume context and push settings. NEVER re-bind.
+  // The audio engine is already bound in PlayerContext BEFORE play starts.
   useEffect(() => {
     if (!isOpen) return;
     
-    // Just resume the context (for user gesture requirement) and check connection
     (async () => {
+      // Resume for user gesture requirement
       await audioEngine.resume();
+      const isConnected = audioEngine.connected;
+      setConnected(isConnected);
       
-      // If not connected yet and we have an audio element, try binding
-      // This handles the case where EQ is opened before any song plays
-      if (!audioEngine.connected && audioElement) {
-        const ok = await audioEngine.bind(audioElement);
-        setConnected(ok);
-      } else {
-        setConnected(audioEngine.connected);
-      }
-      
-      // Always push current settings to the engine
-      if (audioEngine.connected) {
+      // Push current settings
+      if (isConnected) {
         audioEngine.setBands(bands.map(b => b.gain));
         audioEngine.setBassBoost(bassBoost, bands.map(b => b.gain));
         audioEngine.setReverb(reverb);
       }
     })();
-  }, [isOpen, audioElement]);
+  }, [isOpen]);
 
-  // Push changes to engine - only if connected
-  useEffect(() => { if (connected) audioEngine.setBands(bands.map(b => b.gain)); }, [bands, connected]);
-  useEffect(() => { if (connected) audioEngine.setBassBoost(bassBoost, bands.map(b => b.gain)); }, [bassBoost, bands, connected]);
-  useEffect(() => { if (connected) audioEngine.setReverb(reverb); }, [reverb, connected]);
-  useEffect(() => { if (audioElement) audioElement.playbackRate = playbackSpeed; }, [playbackSpeed, audioElement]);
+  // Push changes to engine
+  useEffect(() => {
+    if (!isOpen) return;
+    const isConn = audioEngine.connected;
+    setConnected(isConn);
+    if (isConn) audioEngine.setBands(bands.map(b => b.gain));
+  }, [bands, isOpen]);
+  
+  useEffect(() => {
+    if (!isOpen) return;
+    if (audioEngine.connected) audioEngine.setBassBoost(bassBoost, bands.map(b => b.gain));
+  }, [bassBoost, bands, isOpen]);
+  
+  useEffect(() => {
+    if (!isOpen) return;
+    if (audioEngine.connected) audioEngine.setReverb(reverb);
+  }, [reverb, isOpen]);
+  
+  useEffect(() => {
+    if (audioElement) audioElement.playbackRate = playbackSpeed;
+  }, [playbackSpeed, audioElement]);
 
   const handleBandChange = useCallback((index: number, value: number) => {
     setBands(prev => prev.map((b, i) => i === index ? { ...b, gain: value } : b));
@@ -139,6 +148,16 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     setBassBoost(preset.bassBoost);
     setReverb(preset.reverb);
     setActivePreset(preset.name);
+    
+    // For 8D Audio preset, enable spatial panning
+    if (preset.name === '8D Audio') {
+      audioEngine.set8D(true);
+      localStorage.setItem('eq_spatial', 'true');
+    } else {
+      audioEngine.set8D(false);
+      localStorage.setItem('eq_spatial', 'false');
+    }
+    
     toast.success(`${preset.name} preset applied`);
   }, []);
 
@@ -149,6 +168,8 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     setPlaybackSpeed(1);
     setActivePreset('Flat');
     if (audioElement) audioElement.playbackRate = 1;
+    try { audioEngine.set8D(false); } catch {}
+    localStorage.removeItem('eq_spatial');
     toast.success('Equalizer reset');
   }, [audioElement]);
 
@@ -204,7 +225,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
           </div>
 
           <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
-            {/* Presets */}
+            {/* Presets - 2 rows of 4, matching old screenshot */}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-3">Presets</h3>
               <div className="grid grid-cols-4 gap-2">
