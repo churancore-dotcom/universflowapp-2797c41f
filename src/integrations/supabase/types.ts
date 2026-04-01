@@ -547,6 +547,51 @@ export type Database = {
           },
         ]
       }
+      song_requests: {
+        Row: {
+          artist: string
+          audio_url: string
+          cover_url: string | null
+          created_at: string
+          genre: string | null
+          id: string
+          mood: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          artist: string
+          audio_url: string
+          cover_url?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          artist?: string
+          audio_url?: string
+          cover_url?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       songs: {
         Row: {
           album: string | null
