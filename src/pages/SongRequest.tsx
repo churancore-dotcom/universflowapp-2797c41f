@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Upload, Music, Image, Send, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -12,8 +12,8 @@ import PageTransition from '@/components/PageTransition';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_COVER_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_AUDIO_SIZE = 50 * 1024 * 1024;
+const MAX_COVER_SIZE = 5 * 1024 * 1024;
 const ALLOWED_AUDIO = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
 const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -35,6 +35,14 @@ const SongRequest = () => {
   const [tab, setTab] = useState<'submit' | 'my-requests'>('submit');
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user) {
+      toast.error('Please sign in to submit a song request');
+      navigate('/auth');
+    }
+  }, [user, navigate]);
 
   const fetchMyRequests = useCallback(async () => {
     if (!user) return;
@@ -78,7 +86,7 @@ const SongRequest = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user) { toast.error('Please sign in first'); return; }
+    if (!user) { toast.error('Please sign in first'); navigate('/auth'); return; }
     if (!title.trim() || !artist.trim() || !audioFile) {
       toast.error('Title, artist and audio file are required');
       return;
@@ -121,6 +129,7 @@ const SongRequest = () => {
       setTitle(''); setArtist(''); setGenre(''); setMood('');
       setAudioFile(null); setCoverFile(null); setCoverPreview('');
     } catch (err: any) {
+      console.error('Song request error:', err);
       toast.error(err.message || 'Failed to submit request');
     } finally {
       setIsSubmitting(false);

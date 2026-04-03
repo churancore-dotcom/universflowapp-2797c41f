@@ -69,6 +69,19 @@ const SongRequests = () => {
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
+  // Realtime notification for new song requests
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-song-requests')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'song_requests' }, (payload) => {
+        const newReq = payload.new as any;
+        toast.info(`New song request: "${newReq.title}" by ${newReq.artist}`, { duration: 8000 });
+        fetchRequests();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchRequests]);
+
   useEffect(() => {
     return () => { audioEl.pause(); audioEl.src = ''; };
   }, [audioEl]);
