@@ -1,18 +1,17 @@
 import { useState, memo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ChevronDown, ListMusic, Share2, Ellipsis, Heart } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ChevronDown, ListMusic, Share2, Ellipsis } from 'lucide-react';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useNavigate } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
 import LikeButton from './LikeButton';
+import DownloadButton from './DownloadButton';
 import SocialShareModal from './SocialShareModal';
 import AddToPlaylistModal from './AddToPlaylistModal';
 import CreatePlaylistModal from './CreatePlaylistModal';
 import SongReactions from './SongReactions';
-import DownloadButton from './DownloadButton';
 import { supabase } from '@/integrations/supabase/client';
 import type { Song } from '@/contexts/PlayerContext';
-
 import { triggerHaptic } from '@/hooks/useHaptics';
 
 const formatTime = (seconds: number) => {
@@ -22,7 +21,6 @@ const formatTime = (seconds: number) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-// Song change transition variants
 const songInfoVariants = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const } },
@@ -35,7 +33,6 @@ const albumArtVariants = {
   exit: { opacity: 0, scale: 0.92, rotate: 2, transition: { duration: 0.25 } },
 };
 
-// Simple volume slider
 const VolumeSlider = memo(function VolumeSlider({
   value,
   onChange
@@ -81,14 +78,10 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
-  
   const [direction, setDirection] = useState(0);
   const prevSongIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
 
-
-
-  // Track song changes for animation direction
   useEffect(() => {
     if (currentSong?.id && currentSong.id !== prevSongIdRef.current) {
       prevSongIdRef.current = currentSong.id;
@@ -133,7 +126,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
           dragElastic={{ top: 0, bottom: 0.3 }} 
           onDragEnd={handleDragEnd}
         >
-          {/* Blurred background with crossfade */}
+          {/* Blurred background */}
           <AnimatePresence mode="popLayout">
             <motion.div 
               key={currentSong.id + '-bg'}
@@ -155,43 +148,38 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Main content */}
-          <div className="relative flex flex-col h-full px-4 pt-2 pb-2 overflow-hidden">
+          {/* Main content - uses flex to fill space like screenshot */}
+          <div className="relative flex flex-col h-full px-5 pt-2 pb-3 overflow-hidden">
             {/* Drag indicator */}
-            <div className="flex justify-center mb-1">
+            <div className="flex justify-center mb-1 flex-shrink-0">
               <div className="w-9 h-1 rounded-full bg-white/40" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <button 
-                className="w-10 h-10 flex items-center justify-center -ml-1 active:scale-90 transition-transform" 
+                className="w-10 h-10 flex items-center justify-center -ml-2 active:scale-90 transition-transform" 
                 onClick={() => { triggerHaptic('impactLight'); setExpanded(false); }}
               >
                 <ChevronDown className="w-6 h-6 text-white/80" />
               </button>
               
               <div className="text-center flex-1 px-2 min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">
-                  Now Playing
-                </p>
-                <p className="text-xs font-semibold text-white/90 truncate">
-                  {currentSong.album || 'Library'}
-                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">Now Playing</p>
+                <p className="text-xs font-semibold text-white/90 truncate">{currentSong.album || 'Library'}</p>
               </div>
               
               <button 
-                className="w-10 h-10 flex items-center justify-center -mr-1 active:scale-90 transition-transform" 
+                className="w-10 h-10 flex items-center justify-center -mr-2 active:scale-90 transition-transform" 
                 onClick={() => { triggerHaptic('impactLight'); setShowPlaylistModal(true); }}
               >
                 <Ellipsis className="w-5 h-5 text-white/80" />
               </button>
             </div>
 
-            {/* Album Art with song change animation */}
-            <div className="flex-shrink-0 flex flex-col items-center pt-4">
-              <div className="relative w-[75vw] max-w-[300px] aspect-square">
-                {/* Simple glow */}
+            {/* Album Art - flex-1 to fill available space */}
+            <div className="flex-1 flex items-center justify-center min-h-0">
+              <div className="relative w-[85vw] max-w-[340px] aspect-square">
                 {isPlaying && (
                   <motion.div
                     className="absolute inset-[-15%] rounded-3xl pointer-events-none"
@@ -233,12 +221,11 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   </motion.div>
                 </AnimatePresence>
               </div>
-
             </div>
 
-            {/* Controls Section */}
-            <div className="flex-shrink-0 space-y-2 mt-1">
-              {/* Title and Artist - animated on song change */}
+            {/* Controls Section - fixed at bottom */}
+            <div className="flex-shrink-0 space-y-2 mt-2">
+              {/* Title and Artist */}
               <div className="flex items-start justify-between gap-3">
                 <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div 
@@ -249,9 +236,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                     animate="animate"
                     exit="exit"
                   >
-                    <h2 className="text-xl font-bold text-white truncate">
-                      {currentSong.title}
-                    </h2>
+                    <h2 className="text-xl font-bold text-white truncate">{currentSong.title}</h2>
                     <button 
                       className="text-base text-rose-400 font-medium truncate block active:opacity-70" 
                       onClick={() => {
@@ -267,8 +252,8 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   </motion.div>
                 </AnimatePresence>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <DownloadButton song={currentSong} size="sm" />
                   <LikeButton songId={currentSong.id} size="sm" />
+                  <DownloadButton song={currentSong} size="sm" />
                 </div>
               </div>
 
@@ -293,7 +278,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors ${shuffle ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
                   onClick={() => { triggerHaptic('impactLight'); toggleShuffle(); }}
                   whileTap={{ scale: 0.85 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
                   <Shuffle className="w-[18px] h-[18px]" />
                 </motion.button>
@@ -302,7 +286,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className="w-14 h-14 flex items-center justify-center" 
                   onClick={handlePrev}
                   whileTap={{ scale: 0.8, x: -4 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
                   <SkipBack className="w-9 h-9 text-white" fill="white" />
                 </motion.button>
@@ -311,7 +294,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className="w-[74px] h-[74px] rounded-full bg-white flex items-center justify-center shadow-xl"
                   onClick={() => { triggerHaptic('impactHeavy'); togglePlay(); }}
                   whileTap={{ scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 >
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.div
@@ -334,7 +316,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className="w-14 h-14 flex items-center justify-center" 
                   onClick={handleNext}
                   whileTap={{ scale: 0.8, x: 4 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
                   <SkipForward className="w-9 h-9 text-white" fill="white" />
                 </motion.button>
@@ -343,19 +324,8 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors ${repeat !== 'off' ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
                   onClick={() => { triggerHaptic('impactLight'); toggleRepeat(); }}
                   whileTap={{ scale: 0.85 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
                 >
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                      key={repeat}
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.5, opacity: 0 }}
-                      transition={{ duration: 0.12 }}
-                    >
-                      {repeat === 'one' ? <Repeat1 className="w-[18px] h-[18px]" /> : <Repeat className="w-[18px] h-[18px]" />}
-                    </motion.div>
-                  </AnimatePresence>
+                  {repeat === 'one' ? <Repeat1 className="w-[18px] h-[18px]" /> : <Repeat className="w-[18px] h-[18px]" />}
                 </motion.button>
               </div>
 
@@ -370,7 +340,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                 >
                   <Share2 className="w-[18px] h-[18px] text-white/60" />
                 </button>
-                
                 <button 
                   className="w-11 h-11 flex items-center justify-center active:scale-90 transition-transform" 
                   onClick={() => { triggerHaptic('selection'); setShowPlaylistModal(true); }}
@@ -386,11 +355,9 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Modals */}
       {showShareModal && <SocialShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} song={currentSong} />}
       {showPlaylistModal && <AddToPlaylistModal isOpen={showPlaylistModal} onClose={() => setShowPlaylistModal(false)} song={currentSong} onCreateNew={() => setShowCreatePlaylist(true)} />}
       {showCreatePlaylist && <CreatePlaylistModal isOpen={showCreatePlaylist} onClose={() => setShowCreatePlaylist(false)} onCreated={() => {}} />}
-      
     </>
   );
 });
