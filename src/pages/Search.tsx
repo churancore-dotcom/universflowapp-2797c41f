@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search as SearchIcon, Music, X, Tag, Sparkles } from 'lucide-react';
+import { Search as SearchIcon, Music, X, Tag, Sparkles, Headphones, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlayer, Song } from '@/contexts/PlayerContext';
 import { useDownloads } from '@/contexts/DownloadContext';
@@ -13,6 +13,9 @@ import DownloadButton from '@/components/DownloadButton';
 import { TabTransition } from '@/components/PageTransition';
 import { Input } from '@/components/ui/input';
 import { SearchSkeleton } from '@/components/PageSkeletons';
+
+const AUDIUS_BASE = 'https://audius-discovery-1.the-standard.io/v1';
+const APP_NAME = 'univers_flow_official';
 
 const genres = [
   { name: 'Pop', color: 'from-pink-500 to-rose-500', icon: '🎤' },
@@ -30,13 +33,17 @@ const moods = [
   { name: 'Focus', color: 'from-violet-500 to-purple-600', icon: '🎯' },
 ];
 
+type SearchSource = 'all' | 'library' | 'audius';
+
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Song[]>([]);
+  const [audiusResults, setAudiusResults] = useState<Song[]>([]);
   const [searching, setSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [activeFilter, setActiveFilter] = useState<{ type: 'genre' | 'mood'; value: string } | null>(null);
+  const [source, setSource] = useState<SearchSource>('all');
   const { playSong, currentSong, isPlaying } = usePlayer();
   const { getDownloadedUrl } = useDownloads();
 
@@ -57,10 +64,14 @@ const Search = () => {
 
   useEffect(() => {
     if (query.length > 1) {
-      const timer = setTimeout(() => searchSongs(), 300);
+      const timer = setTimeout(() => {
+        searchSongs();
+        searchAudius();
+      }, 300);
       return () => clearTimeout(timer);
     } else if (!activeFilter) {
       setResults([]);
+      setAudiusResults([]);
     }
   }, [query]);
 
@@ -87,6 +98,28 @@ const Search = () => {
       })));
     }
     setSearching(false);
+  };
+
+  const searchAudius = async () => {
+    try {
+      const res = await fetch(
+        `${AUDIUS_BASE}/tracks/search?query=${encodeURIComponent(query)}&app_name=${APP_NAME}`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+      if (!res.ok) return;
+      const json = await res.json();
+      const tracks = (json.data || []).slice(0, 15);
+      setAudiusResults(tracks.map((t: any) => ({
+        id: `audius-${t.id}`,
+        title: t.title,
+        artist: t.user?.name || 'Unknown Artist',
+        cover_url: t.artwork?.['480x480'] || t.artwork?.['150x150'] || undefined,
+        audio_url: `${AUDIUS_BASE}/tracks/${t.id}/stream?app_name=${APP_NAME}`,
+        duration: t.duration,
+      })));
+    } catch (err) {
+      console.error('Audius search failed:', err);
+    }
   };
 
   const searchByGenre = async (genre: string) => {
@@ -145,7 +178,15 @@ const Search = () => {
     setActiveFilter(null);
     setQuery('');
     setResults([]);
+    setAudiusResults([]);
   };
+
+  // Combine results based on active source tab
+  const displayResults = source === 'audius' ? audiusResults 
+    : source === 'library' ? results 
+    : [...results, ...audiusResults];
+
+  const hasQuery = query.length > 1 || activeFilter;
 
   return (
     <TabTransition>
@@ -163,7 +204,7 @@ const Search = () => {
           />
         </div>
 
-        {/* Header — glassmorphism */}
+        {/* Header */}
         <header
           className="flex-shrink-0 z-30 px-4 pt-3 pb-3 safe-area-pt"
           style={{
@@ -182,7 +223,7 @@ const Search = () => {
             Search
           </motion.h1>
           
-          {/* Search bar — glass style */}
+          {/* Search bar */}
           <div className="relative">
             <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -200,7 +241,7 @@ const Search = () => {
             />
             {query && (
               <button
-                onClick={() => setQuery('')}
+                onClick={() => { setQuery(''); setAudiusResults([]); }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full"
                 style={{ background: 'rgba(255,255,255,0.15)' }}
               >
@@ -208,6 +249,35 @@ const Search = () => {
               </button>
             )}
           </div>
+
+          {/* Source tabs when searching */}
+          {hasQuery && (
+            <div className="flex gap-2 mt-2.5">
+              {[
+                { key: 'all' as SearchSource, label: 'All', icon: Globe },
+                { key: 'library' as SearchSource, label: 'Library', icon: Music },
+                { key: 'audius' as SearchSource, label: 'Audius', icon: Headphones },
+              ].map(tab => (
+                <motion.button
+                  key={tab.key}
+                  onClick={() => setSource(tab.key)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                  style={{
+                    background: source === tab.key ? 'hsl(var(--primary) / 0.2)' : 'rgba(255,255,255,0.05)',
+                    border: source === tab.key ? '1px solid hsl(var(--primary) / 0.3)' : '1px solid rgba(255,255,255,0.06)',
+                    color: source === tab.key ? 'hsl(var(--primary))' : undefined,
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <tab.icon className="w-3 h-3" />
+                  {tab.label}
+                  {tab.key === 'audius' && audiusResults.length > 0 && (
+                    <span className="ml-0.5 text-[10px] opacity-60">{audiusResults.length}</span>
+                  )}
+                </motion.button>
+              ))}
+            </div>
+          )}
 
           {/* Active Filter */}
           {activeFilter && (
@@ -310,17 +380,18 @@ const Search = () => {
           {/* Results */}
           {searching ? (
             <SearchSkeleton />
-          ) : results.length > 0 ? (
+          ) : displayResults.length > 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-sm font-bold mb-3">{results.length} results</h2>
+              <h2 className="text-sm font-bold mb-3">{displayResults.length} results</h2>
               <div className="space-y-1">
-                {results.map((song, i) => {
+                {displayResults.map((song, i) => {
                   const isActive = currentSong?.id === song.id;
-                  const offlineUrl = getDownloadedUrl(song.id);
+                  const isAudius = song.id.startsWith('audius-');
+                  const offlineUrl = isAudius ? undefined : getDownloadedUrl(song.id);
                   return (
                     <motion.div
                       key={song.id}
@@ -330,7 +401,7 @@ const Search = () => {
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.025, duration: 0.25 }}
-                      onClick={() => playSong(song, offlineUrl, results)}
+                      onClick={() => playSong(song, offlineUrl, displayResults)}
                     >
                       {/* Album art */}
                       <div className={`relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ${
@@ -343,6 +414,11 @@ const Search = () => {
                             <Music className="w-4 h-4 text-foreground/30" />
                           </div>
                         )}
+                        {isAudius && (
+                          <div className="absolute bottom-0 right-0 w-4 h-4 rounded-tl-md bg-purple-500 flex items-center justify-center">
+                            <Headphones className="w-2.5 h-2.5 text-white" />
+                          </div>
+                        )}
                       </div>
 
                       {/* Song info */}
@@ -350,7 +426,10 @@ const Search = () => {
                         <p className={`font-semibold text-[13px] truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
                           {song.title}
                         </p>
-                        <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">{song.artist}</p>
+                        <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">
+                          {song.artist}
+                          {isAudius && <span className="ml-1 text-purple-400">· Audius</span>}
+                        </p>
                       </div>
 
                       {/* Actions */}
@@ -367,8 +446,8 @@ const Search = () => {
                           </div>
                         ) : (
                           <>
-                            <LikeButton songId={song.id} size="sm" className="w-8 h-8" />
-                            <DownloadButton song={song} size="sm" />
+                            {!isAudius && <LikeButton songId={song.id} size="sm" className="w-8 h-8" />}
+                            {!isAudius && <DownloadButton song={song} size="sm" />}
                           </>
                         )}
                       </div>
