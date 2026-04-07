@@ -32,6 +32,7 @@ const eqState: {
   source: MediaElementAudioSourceNode | null;
   filters: BiquadFilterNode[];
   gainNode: GainNode | null;
+  compressor: DynamicsCompressorNode | null;
   convolver: ConvolverNode | null;
   dryGain: GainNode | null;
   wetGain: GainNode | null;
@@ -43,6 +44,7 @@ const eqState: {
   source: null,
   filters: [],
   gainNode: null,
+  compressor: null,
   convolver: null,
   dryGain: null,
   wetGain: null,
@@ -53,13 +55,13 @@ const eqState: {
 
 const presets: Preset[] = [
   { id: 'flat', name: 'Flat', icon: Music2, bands: [0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0 },
-  { id: 'bass-boost', name: 'Bass Boost', icon: Zap, bands: [2, 2, 1, 0, 0, -1, -1, -1], bassBoost: 20 },
-  { id: 'treble-boost', name: 'Treble Boost', icon: Sparkles, bands: [-1, -1, 0, 0, 1, 2, 3, 3], bassBoost: 0 },
-  { id: 'vocal', name: 'Vocal', icon: Volume2, bands: [-2, -1, 0, 2, 3, 2, 1, 0], bassBoost: 0 },
-  { id: '3d-audio', name: '3D Audio', icon: Globe, bands: [1, 0, -1, 0, 0, 1, 1, 1], bassBoost: 10 },
-  { id: 'phonk', name: 'Phonk', icon: Headphones, bands: [3, 2, 1, 0, -1, 1, 1, 2], bassBoost: 25 },
-  { id: 'deep-bass', name: 'Deep Bass', icon: Waves, bands: [3, 3, 2, 0, 0, -1, -1, -1], bassBoost: 30 },
-  { id: 'concert', name: 'Concert', icon: Sparkles, bands: [2, 1, 0, 1, 1, 2, 2, 1], bassBoost: 5 },
+  { id: 'bass-boost', name: 'Bass Boost', icon: Zap, bands: [3, 2, 1, 0, 0, 0, 0, 0], bassBoost: 30 },
+  { id: 'treble-boost', name: 'Treble Boost', icon: Sparkles, bands: [0, 0, 0, 0, 1, 2, 3, 3], bassBoost: 0 },
+  { id: 'vocal', name: 'Vocal', icon: Volume2, bands: [-1, 0, 1, 3, 3, 2, 0, -1], bassBoost: 0 },
+  { id: '3d-audio', name: '3D Audio', icon: Globe, bands: [1, 0, -1, 0, 0, 1, 2, 1], bassBoost: 10 },
+  { id: 'phonk', name: 'Phonk', icon: Headphones, bands: [4, 3, 1, 0, -1, 1, 2, 2], bassBoost: 40 },
+  { id: 'deep-bass', name: 'Deep Bass', icon: Waves, bands: [5, 4, 2, 0, 0, 0, -1, -1], bassBoost: 50 },
+  { id: 'concert', name: 'Concert', icon: Sparkles, bands: [2, 1, 0, 1, 1, 2, 2, 1], bassBoost: 10 },
 ];
 
 const defaultBands: EQBand[] = [
@@ -89,7 +91,7 @@ function saveSettings(data: any) {
   } catch {}
 }
 
-function createReverbIR(ctx: AudioContext, duration = 2.5, decay = 2.5) {
+function createReverbIR(ctx: AudioContext, duration = 2, decay = 3) {
   const length = ctx.sampleRate * duration;
   const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
@@ -101,20 +103,34 @@ function createReverbIR(ctx: AudioContext, duration = 2.5, decay = 2.5) {
   return impulse;
 }
 
+// Keep a WeakMap so we never call createMediaElementSource twice on the same element
+const sourceMap = new WeakMap<HTMLAudioElement, MediaElementAudioSourceNode>();
+
 function buildChain(ctx: AudioContext, source: MediaElementAudioSourceNode) {
-  // Create 8 peaking filters - use Q=0.7 for wide, musical bands
+  // Create 8 peaking filters with musical Q values
   const filters = defaultBands.map((band) => {
     const filter = ctx.createBiquadFilter();
     filter.type = 'peaking';
     filter.frequency.value = band.frequency;
-    filter.Q.value = 0.7;
+    // Use wider Q for bass, tighter for treble — more natural sound
+    filter.Q.value = band.frequency < 200 ? 0.5 : band.frequency < 2000 ? 0.7 : 1.0;
     filter.gain.value = 0;
     return filter;
   });
 
+  // Master gain
   const gainNode = ctx.createGain();
   gainNode.gain.value = 1;
 
+  // Compressor/limiter — prevents clipping and distortion
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -6;    // Start compressing at -6dB
+  compressor.knee.value = 12;         // Soft knee for natural sound
+  compressor.ratio.value = 4;         // 4:1 compression ratio
+  compressor.attack.value = 0.003;    // Fast attack to catch transients
+  compressor.release.value = 0.15;    // Smooth release
+
+  // Reverb (dry/wet)
   const dryGain = ctx.createGain();
   dryGain.gain.value = 1;
   const wetGain = ctx.createGain();
@@ -122,17 +138,19 @@ function buildChain(ctx: AudioContext, source: MediaElementAudioSourceNode) {
   const convolver = ctx.createConvolver();
   convolver.buffer = createReverbIR(ctx);
 
+  // Stereo panner
   const pannerNode = ctx.createStereoPanner();
   pannerNode.pan.value = 0;
 
-  // Wire: source -> filters -> gain -> [dry + convolver->wet] -> panner -> destination
+  // Wire: source -> filters -> gain -> compressor -> [dry + convolver->wet] -> panner -> destination
   source.connect(filters[0]);
   for (let i = 0; i < filters.length - 1; i++) {
     filters[i].connect(filters[i + 1]);
   }
   filters[filters.length - 1].connect(gainNode);
-  gainNode.connect(dryGain);
-  gainNode.connect(convolver);
+  gainNode.connect(compressor);
+  compressor.connect(dryGain);
+  compressor.connect(convolver);
   convolver.connect(wetGain);
   dryGain.connect(pannerNode);
   wetGain.connect(pannerNode);
@@ -141,14 +159,12 @@ function buildChain(ctx: AudioContext, source: MediaElementAudioSourceNode) {
   eqState.source = source;
   eqState.filters = filters;
   eqState.gainNode = gainNode;
+  eqState.compressor = compressor;
   eqState.dryGain = dryGain;
   eqState.wetGain = wetGain;
   eqState.convolver = convolver;
   eqState.pannerNode = pannerNode;
 }
-
-// Keep a WeakMap so we never call createMediaElementSource twice on the same element
-const sourceMap = new WeakMap<HTMLAudioElement, MediaElementAudioSourceNode>();
 
 function initEQGraph(audioElement: HTMLAudioElement): boolean {
   if (eqState.connectedElement === audioElement && eqState.ctx && eqState.filters.length) {
@@ -170,6 +186,7 @@ function initEQGraph(audioElement: HTMLAudioElement): boolean {
       eqState.source?.disconnect();
       eqState.filters.forEach(f => { try { f.disconnect(); } catch {} });
       eqState.gainNode?.disconnect();
+      eqState.compressor?.disconnect();
       eqState.dryGain?.disconnect();
       eqState.wetGain?.disconnect();
       eqState.convolver?.disconnect();
@@ -191,6 +208,13 @@ function initEQGraph(audioElement: HTMLAudioElement): boolean {
     return true;
   } catch (error) {
     console.error('EQ init error:', error);
+    // Fallback: connect source directly to destination so audio still plays
+    try {
+      const source = sourceMap.get(audioElement);
+      if (source && eqState.ctx) {
+        source.connect(eqState.ctx.destination);
+      }
+    } catch {}
     return false;
   }
 }
@@ -220,7 +244,6 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     setIsConnected(connected);
 
     if (connected) {
-      // Apply current band settings immediately
       applyBands(bands, bassBoost);
       applyReverb(reverb);
       applySpeed(playbackSpeed, audioElement);
@@ -246,30 +269,39 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
 
   // Helper functions that directly manipulate the audio graph
   function applyBands(currentBands: EQBand[], currentBassBoost: number) {
-    if (!eqState.filters.length) return;
+    if (!eqState.filters.length || !eqState.ctx) return;
     const ctx = eqState.ctx;
-    const boost = (currentBassBoost / 100) * 3.5;
+    const now = ctx.currentTime;
+    // Bass boost: scale to max +6dB extra on lowest bands (was 3.5 — caused clipping)
+    const boost = (currentBassBoost / 100) * 6;
+
     currentBands.forEach((band, i) => {
-      if (eqState.filters[i]) {
-        let gain = band.gain;
-        if (i === 0) gain += boost;
-        else if (i === 1) gain += boost * 0.5;
-        else if (i === 2) gain += boost * 0.2;
-        const safeGain = Math.max(-8, Math.min(8, gain));
-        if (ctx) {
-          eqState.filters[i].gain.setTargetAtTime(safeGain, ctx.currentTime, 0.04);
-        } else {
-          eqState.filters[i].gain.value = safeGain;
-        }
-      }
+      if (!eqState.filters[i]) return;
+      let gain = band.gain;
+      // Apply bass boost only to the lowest 3 bands with tapering
+      if (i === 0) gain += boost;
+      else if (i === 1) gain += boost * 0.6;
+      else if (i === 2) gain += boost * 0.25;
+      // Clamp to safe range — the compressor handles the rest
+      const safeGain = Math.max(-12, Math.min(12, gain));
+      eqState.filters[i].gain.setTargetAtTime(safeGain, now, 0.05);
     });
+
+    // Auto-reduce master gain when boosting heavily to prevent distortion
+    if (eqState.gainNode) {
+      const maxGain = Math.max(...currentBands.map(b => Math.abs(b.gain)), boost);
+      // Reduce master gain proportionally to prevent clipping
+      const masterGain = maxGain > 6 ? 1 - (maxGain - 6) * 0.04 : 1;
+      eqState.gainNode.gain.setTargetAtTime(Math.max(0.5, masterGain), now, 0.05);
+    }
   }
 
   function applyReverb(reverbLevel: number) {
     if (!eqState.dryGain || !eqState.wetGain) return;
     const wet = reverbLevel / 100;
-    eqState.dryGain.gain.value = 1 - (wet * 0.25);
-    eqState.wetGain.gain.value = wet * 0.22;
+    // Keep dry signal strong, blend reverb subtly
+    eqState.dryGain.gain.value = 1 - (wet * 0.15);
+    eqState.wetGain.gain.value = wet * 0.18;
   }
 
   function applySpeed(speed: number, el?: HTMLAudioElement | null) {
@@ -286,9 +318,9 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     if (enabled && eqState.pannerNode) {
       let angle = 0;
       eqState.spatialInterval = window.setInterval(() => {
-        angle += 0.025;
+        angle += 0.02;
         if (eqState.pannerNode) {
-          eqState.pannerNode.pan.value = Math.sin(angle) * 0.25;
+          eqState.pannerNode.pan.value = Math.sin(angle) * 0.2;
         }
       }, 80);
     } else if (eqState.pannerNode) {
@@ -301,17 +333,14 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     applyBands(bands, bassBoost);
   }, [bands, bassBoost]);
 
-  // Apply reverb
   useEffect(() => {
     applyReverb(reverb);
   }, [reverb]);
 
-  // Apply playback speed
   useEffect(() => {
     applySpeed(playbackSpeed);
   }, [playbackSpeed, audioElement]);
 
-  // Apply spatial audio
   useEffect(() => {
     applySpatial(spatialAudio);
     return () => {
@@ -354,6 +383,10 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     setSpatialAudio(false);
     setActivePreset('flat');
     if (audioElement) audioElement.playbackRate = 1;
+    // Reset master gain
+    if (eqState.gainNode && eqState.ctx) {
+      eqState.gainNode.gain.setTargetAtTime(1, eqState.ctx.currentTime, 0.05);
+    }
     toast.success('Equalizer reset');
   }, [audioElement]);
 
