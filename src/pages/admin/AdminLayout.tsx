@@ -31,7 +31,8 @@ import {
 } from 'lucide-react';
 
 import { 
-  Inbox
+  Inbox,
+  Bot
 } from 'lucide-react';
 
 const navItems = [
