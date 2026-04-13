@@ -39,6 +39,8 @@ const eqState: {
   pannerNode: StereoPannerNode | null;
   connectedElement: HTMLAudioElement | null;
   spatialInterval: number | null;
+  currentSignature: string | null;
+  mode: 'idle' | 'processed' | 'direct';
 } = {
   ctx: null,
   source: null,
@@ -51,6 +53,8 @@ const eqState: {
   pannerNode: null,
   connectedElement: null,
   spatialInterval: null,
+  currentSignature: null,
+  mode: 'idle',
 };
 
 const presets: Preset[] = [
@@ -113,9 +117,13 @@ function isEqCompatibleSource(audioElement: HTMLAudioElement) {
   return sourceUrl.startsWith('blob:') || sourceUrl.startsWith('data:');
 }
 
-function bypassEQGraph(audioElement: HTMLAudioElement) {
-  if (!eqState.ctx) return false;
+function getAudioSignature(audioElement: HTMLAudioElement) {
+  const sourceUrl = audioElement.currentSrc || audioElement.src;
+  if (!sourceUrl) return null;
+  return `${sourceUrl}::${audioElement.crossOrigin || 'none'}`;
+}
 
+function disconnectGraph() {
   try {
     eqState.source?.disconnect();
     eqState.filters.forEach((filter) => {
@@ -128,6 +136,12 @@ function bypassEQGraph(audioElement: HTMLAudioElement) {
     eqState.convolver?.disconnect();
     eqState.pannerNode?.disconnect();
   } catch {}
+}
+
+function bypassEQGraph(audioElement: HTMLAudioElement) {
+  if (!eqState.ctx) return false;
+
+  disconnectGraph();
 
   const source = sourceMap.get(audioElement);
   if (source) {
@@ -137,8 +151,8 @@ function bypassEQGraph(audioElement: HTMLAudioElement) {
     } catch {}
   }
 
-  eqState.connectedElement = null;
-  eqState.source = null;
+  eqState.connectedElement = audioElement;
+  eqState.source = source || null;
   eqState.filters = [];
   eqState.gainNode = null;
   eqState.compressor = null;
@@ -146,6 +160,8 @@ function bypassEQGraph(audioElement: HTMLAudioElement) {
   eqState.wetGain = null;
   eqState.convolver = null;
   eqState.pannerNode = null;
+  eqState.currentSignature = getAudioSignature(audioElement);
+  eqState.mode = 'direct';
 
   return false;
 }
@@ -211,13 +227,16 @@ function buildChain(ctx: AudioContext, source: MediaElementAudioSourceNode) {
 }
 
 function initEQGraph(audioElement: HTMLAudioElement): boolean {
-  if (!isEqCompatibleSource(audioElement)) {
-    return bypassEQGraph(audioElement);
+  const signature = getAudioSignature(audioElement);
+  if (!signature) return false;
+
+  if (eqState.connectedElement === audioElement && eqState.currentSignature === signature) {
+    if (eqState.ctx?.state === 'suspended') eqState.ctx.resume();
+    return eqState.mode === 'processed';
   }
 
-  if (eqState.connectedElement === audioElement && eqState.ctx && eqState.filters.length) {
-    if (eqState.ctx.state === 'suspended') eqState.ctx.resume();
-    return true;
+  if (!isEqCompatibleSource(audioElement)) {
+    return bypassEQGraph(audioElement);
   }
 
   try {
@@ -230,16 +249,7 @@ function initEQGraph(audioElement: HTMLAudioElement): boolean {
     const ctx = eqState.ctx;
 
     // Disconnect old chain cleanly
-    try {
-      eqState.source?.disconnect();
-      eqState.filters.forEach(f => { try { f.disconnect(); } catch {} });
-      eqState.gainNode?.disconnect();
-      eqState.compressor?.disconnect();
-      eqState.dryGain?.disconnect();
-      eqState.wetGain?.disconnect();
-      eqState.convolver?.disconnect();
-      eqState.pannerNode?.disconnect();
-    } catch {}
+    disconnectGraph();
     eqState.filters = [];
 
     // Get or create source for this element
@@ -251,6 +261,8 @@ function initEQGraph(audioElement: HTMLAudioElement): boolean {
 
     buildChain(ctx, source);
     eqState.connectedElement = audioElement;
+    eqState.currentSignature = signature;
+    eqState.mode = 'processed';
 
     if (ctx.state === 'suspended') ctx.resume();
     return true;
@@ -281,20 +293,37 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
       return;
     }
 
-    const connected = initEQGraph(audioElement);
-    setIsConnected(connected);
+    const resync = () => {
+      window.requestAnimationFrame(() => {
+        const connected = initEQGraph(audioElement);
+        setIsConnected(connected);
 
-    if (connected) {
-      applyBands(bands, bassBoost);
-      applyReverb(reverb);
-      applySpeed(playbackSpeed, audioElement);
-      applySpatial(spatialAudio);
-      return;
-    }
+        if (connected) {
+          applyBands(bands, bassBoost);
+          applyReverb(reverb);
+          applySpeed(playbackSpeed, audioElement);
+          applySpatial(spatialAudio);
+          return;
+        }
 
-    applySpeed(playbackSpeed, audioElement);
-    applySpatial(false);
-  }, [audioElement, currentSong?.id]);
+        applySpeed(playbackSpeed, audioElement);
+        applySpatial(false);
+      });
+    };
+
+    resync();
+    audioElement.addEventListener('loadedmetadata', resync);
+    audioElement.addEventListener('canplay', resync);
+    audioElement.addEventListener('emptied', resync);
+    audioElement.addEventListener('error', resync);
+
+    return () => {
+      audioElement.removeEventListener('loadedmetadata', resync);
+      audioElement.removeEventListener('canplay', resync);
+      audioElement.removeEventListener('emptied', resync);
+      audioElement.removeEventListener('error', resync);
+    };
+  }, [audioElement, currentSong?.id, bands, bassBoost, reverb, playbackSpeed, spatialAudio]);
 
   // Resume AudioContext on user interaction / play
   useEffect(() => {
@@ -318,7 +347,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     const ctx = eqState.ctx;
     const now = ctx.currentTime;
     // Bass boost: scale to max +6dB extra on lowest bands (was 3.5 — caused clipping)
-    const boost = (currentBassBoost / 100) * 4;
+    const boost = (currentBassBoost / 100) * 2.5;
 
     currentBands.forEach((band, i) => {
       if (!eqState.filters[i]) return;
@@ -328,15 +357,19 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
       else if (i === 1) gain += boost * 0.6;
       else if (i === 2) gain += boost * 0.25;
       // Clamp to safe range — the compressor handles the rest
-      const safeGain = Math.max(-8, Math.min(8, gain));
-      eqState.filters[i].gain.setTargetAtTime(safeGain, now, 0.05);
+      const safeGain = Math.max(-6, Math.min(6, gain));
+      eqState.filters[i].gain.cancelScheduledValues(now);
+      eqState.filters[i].gain.setValueAtTime(eqState.filters[i].gain.value, now);
+      eqState.filters[i].gain.setTargetAtTime(safeGain, now, 0.08);
     });
 
     // Auto-reduce master gain when boosting heavily to prevent distortion
     if (eqState.gainNode) {
       const maxGain = Math.max(...currentBands.map(b => Math.abs(b.gain)), boost);
-      const masterGain = maxGain > 4 ? 1 - (maxGain - 4) * 0.06 : 1;
-      eqState.gainNode.gain.setTargetAtTime(Math.max(0.62, masterGain), now, 0.05);
+      const masterGain = maxGain > 3 ? 1 - (maxGain - 3) * 0.05 : 1;
+      eqState.gainNode.gain.cancelScheduledValues(now);
+      eqState.gainNode.gain.setValueAtTime(eqState.gainNode.gain.value, now);
+      eqState.gainNode.gain.setTargetAtTime(Math.max(0.76, masterGain), now, 0.08);
     }
   }
 
@@ -344,8 +377,8 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
     if (!eqState.dryGain || !eqState.wetGain) return;
     const wet = reverbLevel / 100;
     // Keep dry signal strong, blend reverb subtly
-    eqState.dryGain.gain.value = 1 - (wet * 0.08);
-    eqState.wetGain.gain.value = wet * 0.1;
+    eqState.dryGain.gain.value = 1 - (wet * 0.06);
+    eqState.wetGain.gain.value = wet * 0.07;
   }
 
   function applySpeed(speed: number, el?: HTMLAudioElement | null) {
@@ -364,7 +397,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
       eqState.spatialInterval = window.setInterval(() => {
         angle += 0.02;
         if (eqState.pannerNode) {
-          eqState.pannerNode.pan.value = Math.sin(angle) * 0.2;
+          eqState.pannerNode.pan.value = Math.sin(angle) * 0.12;
         }
       }, 80);
     } else if (eqState.pannerNode) {
