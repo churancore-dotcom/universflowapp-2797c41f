@@ -108,7 +108,7 @@ async function resolveViaYouTubeFallback(artist: string, title: string): Promise
   };
 }
 
-export async function searchIndexedTracks(query: string, limit = 36): Promise<IndexedTrack[]> {
+export async function searchIndexedTracks(query: string, limit = 50): Promise<IndexedTrack[]> {
   const data = await requestIndexer<IndexedTracksResponse>({
     action: 'search',
     query,
@@ -118,7 +118,7 @@ export async function searchIndexedTracks(query: string, limit = 36): Promise<In
   return Array.isArray(data.results) ? data.results : [];
 }
 
-export async function getTopIndexedTracks(limit = 20): Promise<IndexedTrack[]> {
+export async function getTopIndexedTracks(limit = 30): Promise<IndexedTrack[]> {
   const data = await requestIndexer<IndexedTracksResponse>({
     action: 'top',
     limit,

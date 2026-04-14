@@ -15,7 +15,7 @@ const GlobalTopTracksSection = () => {
 
     const loadTopTracks = async () => {
       try {
-        const data = await getTopIndexedTracks(20);
+        const data = await getTopIndexedTracks(30);
         if (!cancelled) {
           setTracks(data);
         }
@@ -72,7 +72,7 @@ const GlobalTopTracksSection = () => {
       <section className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <Radio className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-bold text-foreground">Global Top 20</h2>
+          <h2 className="text-sm font-bold text-foreground">Global Top 30</h2>
         </div>
         <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -94,7 +94,7 @@ const GlobalTopTracksSection = () => {
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <Radio className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-bold text-foreground">Global Top 20</h2>
+          <h2 className="text-sm font-bold text-foreground">Global Top 30</h2>
         </div>
         <span className="text-[11px] text-muted-foreground">Live metadata + instant stream lookup</span>
       </div>

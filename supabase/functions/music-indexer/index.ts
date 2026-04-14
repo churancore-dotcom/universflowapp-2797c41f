@@ -612,7 +612,7 @@ serve(async (req) => {
 
     if (action === 'search') {
       const query = typeof body.query === 'string' ? body.query.trim() : '';
-      const limit = Math.max(1, Math.min(40, typeof body.limit === 'number' ? body.limit : 36));
+      const limit = Math.max(1, Math.min(60, typeof body.limit === 'number' ? body.limit : 50));
       if (query.length < 2) {
         return new Response(JSON.stringify({ success: false, error: 'Search query must be at least 2 characters' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -632,7 +632,7 @@ serve(async (req) => {
     }
 
     if (action === 'top') {
-      const limit = Math.max(1, Math.min(20, typeof body.limit === 'number' ? body.limit : 20));
+      const limit = Math.max(1, Math.min(50, typeof body.limit === 'number' ? body.limit : 30));
       try {
         const results = await getTopTracks(limit);
         return new Response(JSON.stringify({ success: true, results }), {
