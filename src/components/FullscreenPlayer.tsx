@@ -272,13 +272,8 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   </motion.div>
                 </AnimatePresence>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {showLikeAction && <LikeButton songId={currentSong.id} size="sm" />}
-                  {showDownloadAction && <DownloadButton song={currentSong} size="sm" />}
-                  {isPlaybackOnlyStream && (
-                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-white/70">
-                      Stream only
-                    </span>
-                  )}
+                  <LikeButton songId={currentSong.id} size="sm" />
+                  <DownloadButton song={currentSong} size="sm" />
                 </div>
               </div>
 
