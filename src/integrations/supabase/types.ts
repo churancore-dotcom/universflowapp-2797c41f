@@ -781,6 +781,7 @@ export type Database = {
         }[]
       }
       get_user_count: { Args: never; Returns: number }
+      has_premium_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
