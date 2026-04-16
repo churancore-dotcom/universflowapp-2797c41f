@@ -127,7 +127,7 @@ async function resolveStreamDirect(videoId: string): Promise<string | null> {
   // Race first 4 instances
   const raceInstances = instances.slice(0, 4);
   try {
-    return await Promise.any(raceInstances.map(async (inst) => {
+    return await (Promise as any).any(raceInstances.map(async (inst) => {
       const res = await fetchWithTimeout(`${inst}/api/v1/videos/${videoId}`, 5000);
       if (!res.ok) throw new Error('fail');
       const data = await res.json();
