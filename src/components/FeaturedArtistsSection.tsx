@@ -80,28 +80,15 @@ const FeaturedArtistsSection = () => {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const [artistsRes, songCountsRes] = await Promise.all([
-          supabase.from('artists').select('id, name, photo_url, genre'),
-          supabase.from('songs').select('artist_id').eq('is_visible', true).not('artist_id', 'is', null),
-        ]);
+        const { data, error } = await supabase
+          .from('artists')
+          .select('id, name, photo_url, genre')
+          .order('name');
 
-        if (artistsRes.error || songCountsRes.error) throw new Error('fetch failed');
+        if (error) throw error;
 
-        if (artistsRes.data && songCountsRes.data) {
-          const countMap = new Map<string, number>();
-          for (const song of songCountsRes.data) {
-            if (song.artist_id) {
-              countMap.set(song.artist_id, (countMap.get(song.artist_id) || 0) + 1);
-            }
-          }
-
-          const sorted = artistsRes.data
-            .map(a => ({ ...a, song_count: countMap.get(a.id) || 0 }))
-            .filter(a => a.song_count > 0)
-            .sort((a, b) => b.song_count - a.song_count)
-            .slice(0, 12);
-
-          setArtists(sorted);
+        if (data) {
+          setArtists(data.map(a => ({ ...a, song_count: 0 })));
         }
       } catch (err) {
         console.error('Failed to fetch artists:', err);
