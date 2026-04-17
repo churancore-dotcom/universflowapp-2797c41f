@@ -163,7 +163,16 @@ const Search = () => {
         duration: resolved.duration || track.duration,
         source: 'indexed',
       };
-      playSong(song, undefined, [song]);
+      playSong(song, undefined, visibleIndexedResults.map((item) => ({
+        id: item.id,
+        title: item.title,
+        artist: item.artist,
+        album: item.album,
+        cover_url: item.cover_url,
+        audio_url: item.id === track.id ? resolved.streamUrl! : 'resolving',
+        duration: item.duration,
+        source: 'indexed' as const,
+      })));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Playback failed');
     } finally {

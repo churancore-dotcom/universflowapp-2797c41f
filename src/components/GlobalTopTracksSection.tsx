@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Music2, Radio } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePlayer, Song } from '@/contexts/PlayerContext';
-import { getTopIndexedTracks, resolveIndexedTrack, type IndexedTrack } from '@/lib/musicIndexer';
+import { getTopIndexedTracks, prefetchIndexedTrack, resolveIndexedTrack, type IndexedTrack } from '@/lib/musicIndexer';
 
 const GlobalTopTracksSection = () => {
   const [tracks, setTracks] = useState<IndexedTrack[]>([]);
@@ -35,6 +35,12 @@ const GlobalTopTracksSection = () => {
     };
   }, []);
 
+  useEffect(() => {
+    tracks.slice(0, 8).forEach((track) => {
+      prefetchIndexedTrack(track.artist, track.title);
+    });
+  }, [tracks]);
+
   const handlePlay = useCallback(async (track: IndexedTrack) => {
     setResolvingId(track.id);
     try {
@@ -56,7 +62,7 @@ const GlobalTopTracksSection = () => {
 
       const allSongs: Song[] = tracks.map(t => ({
         id: t.id, title: t.title, artist: t.artist, album: t.album,
-        cover_url: t.cover_url, audio_url: '', source: 'indexed' as const,
+        cover_url: t.cover_url, audio_url: 'resolving', source: 'indexed' as const,
       }));
       playSong(song, undefined, allSongs);
     } catch (error) {
