@@ -909,7 +909,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }).then(() => {});
       }
     }).catch(() => {});
-  }, [isPlayableUrl, queue, resolveAudioUrl, volume]);
+  }, [isPlayableUrl, queue, resolveAudioUrl, volume, playYouTubeFallback, teardownYouTubePlayback]);
 
   // Check premium status from database
   const checkPremiumStatus = useCallback(async () => {
