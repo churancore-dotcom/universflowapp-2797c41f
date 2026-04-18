@@ -4,6 +4,34 @@ import { supabase } from '@/integrations/supabase/client';
 import { resolveIndexedTrack } from '@/lib/musicIndexer';
 import { toast } from 'sonner';
 
+interface YouTubePlayer {
+  playVideo: () => void;
+  pauseVideo: () => void;
+  stopVideo?: () => void;
+  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  loadVideoById: (videoId: string, startSeconds?: number) => void;
+  destroy: () => void;
+  setVolume?: (volume: number) => void;
+}
+
+interface YouTubeAPI {
+  Player: new (elementId: string | HTMLElement, config: Record<string, unknown>) => YouTubePlayer;
+  PlayerState: {
+    ENDED: number;
+    PLAYING: number;
+    PAUSED: number;
+  };
+}
+
+declare global {
+  interface Window {
+    YT?: YouTubeAPI;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
 export interface Song {
   id: string;
   title: string;
