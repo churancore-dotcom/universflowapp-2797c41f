@@ -471,7 +471,7 @@ const Search = () => {
                             ) : isResolving ? (
                               <Loader2 className="w-4 h-4 animate-spin text-primary" />
                             ) : (
-                              <LikeButton songId={track.id} size="sm" className="w-8 h-8" />
+                              <LikeButton songId={track.id} song={{ id: track.id, title: track.title, artist: track.artist, cover_url: track.cover_url, audio_url: track.audio_url || 'resolving', duration: track.duration, source: (track as any).source === 'audius' ? 'audius' : 'indexed' } as Song} size="sm" className="w-8 h-8" />
                             )}
                           </div>
                         </motion.div>
