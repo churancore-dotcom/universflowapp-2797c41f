@@ -14,6 +14,14 @@ import { TabTransition } from '@/components/PageTransition';
 import { Input } from '@/components/ui/input';
 import { SearchSkeleton } from '@/components/PageSkeletons';
 import { prefetchIndexedTrack, resolveIndexedTrack, searchIndexedTracks, type IndexedTrack } from '@/lib/musicIndexer';
+import {
+  getSongHistory,
+  removeSongFromHistory,
+  clearSongHistory,
+  MOOD_QUERIES,
+  GENRE_QUERIES,
+  type SongHistoryEntry,
+} from '@/lib/songHistory';
 import { toast } from 'sonner';
 
 const genres = [
