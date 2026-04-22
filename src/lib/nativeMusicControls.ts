@@ -102,11 +102,8 @@ async function attachListenerOnce() {
           break;
         case 'music-controls-toggle-play-pause':
         case 'music-controls-media-button-play-pause':
-          // Toggle handled by handlers (PlayerContext exposes togglePlay)
-          if (currentHandlers.onPlay && currentHandlers.onPause) {
-            // We don't know current state here — rely on togglePlay route via onPlay
-            currentHandlers.onPlay();
-          }
+          // Safer fallback: pause (avoids double-starting audio)
+          currentHandlers.onPause?.();
           break;
         case 'music-controls-next':
           currentHandlers.onNext?.();
