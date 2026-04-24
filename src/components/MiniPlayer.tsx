@@ -126,10 +126,9 @@ const MiniPlayer = memo(function MiniPlayer() {
   const swipeOpacity = Math.min(Math.abs(dragX) / 150, 0.5);
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed left-0 right-0 w-full z-40 px-2"
-        style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+    <motion.div
+      className="fixed left-0 right-0 w-full z-40 px-2"
+      style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
         initial={{ y: 60, opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
         animate={{ 
           y: isNavVisible ? 0 : 100, 
