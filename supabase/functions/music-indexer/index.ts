@@ -870,6 +870,21 @@ async function resolveStream(artist: string, title: string): Promise<ResolveResu
   const cached = getCached<ResolveResult>(ck);
   if (cached) return cached;
 
+  // ── Persistent DB cache (survives cold starts; shared across users) ──
+  const dbCached = await getDbCachedStream(artist, title);
+  if (dbCached?.streamUrl) {
+    const result: ResolveResult = {
+      success: true,
+      streamUrl: dbCached.streamUrl,
+      videoId: dbCached.videoId,
+      duration: dbCached.duration,
+      title, artist,
+      cover_url: dbCached.cover_url,
+    };
+    setCached(ck, result, 30 * 60 * 1000);
+    return result;
+  }
+
   await refreshInstances();
 
   console.log(`[resolve] searching for: ${artist} - ${title}`);
@@ -896,6 +911,13 @@ async function resolveStream(artist: string, title: string): Promise<ResolveResu
           cover_url: await resolveArtwork(artist, title),
       };
       setCached(ck, result, 45 * 60 * 1000); // cache resolved streams for 45 min
+      // Persist to DB so other users / cold-started workers get instant resolution
+      void writeDbCachedStream(artist, title, {
+        streamUrl: result.streamUrl!,
+        videoId: result.videoId,
+        duration: result.duration,
+        cover_url: result.cover_url,
+      });
       return result;
     }
   }
@@ -911,6 +933,11 @@ async function resolveStream(artist: string, title: string): Promise<ResolveResu
       fallback: true,
     };
     setCached(ck, fallback, 30 * 60 * 1000);
+    void writeDbCachedStream(artist, title, {
+      streamUrl: fallback.streamUrl!,
+      videoId: fallback.videoId,
+      cover_url: fallback.cover_url,
+    });
     return fallback;
   }
 
