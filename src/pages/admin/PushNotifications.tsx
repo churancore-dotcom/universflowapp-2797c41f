@@ -1,124 +1,151 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Bell, Send, Users, Clock, Target, BarChart3, Plus, Trash2, Edit2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, Send, Users, Clock, Target, BarChart3, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface Notification {
+type Audience = 'all' | 'premium' | 'free';
+type NotifType = 'info' | 'success' | 'warning';
+
+interface Announcement {
   id: string;
   title: string;
-  body: string;
-  targetAudience: 'all' | 'premium' | 'free' | 'inactive';
-  scheduledAt: Date | null;
-  status: 'draft' | 'scheduled' | 'sent';
-  sentCount: number;
-  clickCount: number;
-  createdAt: Date;
+  message: string;
+  type: NotifType;
+  target_audience: Audience;
+  is_active: boolean;
+  starts_at: string;
+  ends_at: string | null;
+  created_at: string;
 }
 
-const PushNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'New Music Alert! 🎵',
-      body: 'Check out the latest releases from your favorite artists',
-      targetAudience: 'all',
-      scheduledAt: null,
-      status: 'sent',
-      sentCount: 15420,
-      clickCount: 3245,
-      createdAt: new Date('2024-01-20'),
-    },
-    {
-      id: '2',
-      title: 'Premium Sale - 50% Off!',
-      body: 'Upgrade to Premium today and get unlimited access',
-      targetAudience: 'free',
-      scheduledAt: new Date('2024-02-01'),
-      status: 'scheduled',
-      sentCount: 0,
-      clickCount: 0,
-      createdAt: new Date('2024-01-25'),
-    }
-  ]);
+const audienceLabels: Record<Audience, string> = {
+  all: 'All Users',
+  premium: 'Premium Only',
+  free: 'Free Users',
+};
 
+const PushNotifications = () => {
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
-  const [newNotification, setNewNotification] = useState({
+  const [reach, setReach] = useState({ all: 0, premium: 0, free: 0 });
+  const [draft, setDraft] = useState({
     title: '',
-    body: '',
-    targetAudience: 'all' as const,
+    message: '',
+    target_audience: 'all' as Audience,
+    type: 'info' as NotifType,
   });
 
-  const handleSend = () => {
-    if (!newNotification.title || !newNotification.body) {
-      toast.error('Please fill in all fields');
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    const [annRes, profilesRes, premiumRes] = await Promise.all([
+      supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('user_subscriptions').select('user_id, status, subscription_type, expires_at')
+        .neq('subscription_type', 'free').eq('status', 'active'),
+    ]);
+    if (annRes.error) toast.error('Failed to load notifications');
+    setItems((annRes.data ?? []) as Announcement[]);
+
+    const totalUsers = profilesRes.count ?? 0;
+    const premiumActive = (premiumRes.data ?? []).filter(s =>
+      !s.expires_at || new Date(s.expires_at) > new Date()
+    ).length;
+    setReach({
+      all: totalUsers,
+      premium: premiumActive,
+      free: Math.max(totalUsers - premiumActive, 0),
+    });
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+    const ch = supabase.channel('announcements_admin')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, fetchAll)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchAll]);
+
+  const send = async () => {
+    if (!draft.title.trim() || !draft.message.trim()) {
+      toast.error('Title and message are required');
       return;
     }
-    
-    const notification: Notification = {
-      id: Date.now().toString(),
-      ...newNotification,
-      scheduledAt: null,
-      status: 'sent',
-      sentCount: Math.floor(Math.random() * 10000),
-      clickCount: 0,
-      createdAt: new Date(),
-    };
-    
-    setNotifications(prev => [notification, ...prev]);
-    setNewNotification({ title: '', body: '', targetAudience: 'all' });
+    setSaving(true);
+    const { error } = await supabase.from('announcements').insert({
+      title: draft.title.trim(),
+      message: draft.message.trim(),
+      type: draft.type,
+      target_audience: draft.target_audience,
+      is_active: true,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Sent to ${reach[draft.target_audience].toLocaleString()} users`);
+    setDraft({ title: '', message: '', target_audience: 'all', type: 'info' });
     setShowCompose(false);
-    toast.success('Push notification sent successfully!');
   };
+
+  const toggleActive = async (n: Announcement) => {
+    const { error } = await supabase.from('announcements')
+      .update({ is_active: !n.is_active }).eq('id', n.id);
+    if (error) toast.error(error.message);
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm('Delete this notification?')) return;
+    const { error } = await supabase.from('announcements').delete().eq('id', id);
+    if (error) toast.error(error.message); else toast.success('Deleted');
+  };
+
+  const totalReach = items
+    .filter(n => n.is_active)
+    .reduce((sum, n) => sum + (reach[n.target_audience] ?? 0), 0);
 
   const stats = [
-    { label: 'Total Sent', value: notifications.reduce((acc, n) => acc + n.sentCount, 0).toLocaleString(), icon: Send },
-    { label: 'Total Clicks', value: notifications.reduce((acc, n) => acc + n.clickCount, 0).toLocaleString(), icon: Target },
-    { label: 'Avg CTR', value: '21.3%', icon: BarChart3 },
-    { label: 'Scheduled', value: notifications.filter(n => n.status === 'scheduled').length, icon: Clock },
+    { label: 'Total Notifications', value: items.length.toLocaleString(), icon: Send },
+    { label: 'Active Now', value: items.filter(n => n.is_active).length.toLocaleString(), icon: Target },
+    { label: 'Cumulative Reach', value: totalReach.toLocaleString(), icon: BarChart3 },
+    { label: 'Total Users', value: reach.all.toLocaleString(), icon: Users },
   ];
-
-  const audienceLabels = {
-    all: 'All Users',
-    premium: 'Premium Only',
-    free: 'Free Users',
-    inactive: 'Inactive Users',
-  };
 
   return (
     <div className="p-4 md:p-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center justify-between">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
               <Bell className="w-8 h-8 text-primary" />
-              Push Notifications
+              Notifications
             </h1>
-            <p className="text-muted-foreground mt-1">Send and manage push notifications to your users</p>
+            <p className="text-muted-foreground mt-1">
+              In-app announcements delivered to targeted users in real time.
+            </p>
           </div>
-          <Button onClick={() => setShowCompose(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Notification
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchAll} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button onClick={() => setShowCompose(true)} className="gap-2">
+              <Plus className="w-4 h-4" /> New
+            </Button>
+          </div>
         </div>
       </motion.div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            className="glass rounded-xl p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
+          <motion.div key={stat.label} className="glass rounded-xl p-4"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <stat.icon className="w-5 h-5 text-primary mb-2" />
             <p className="text-xs text-muted-foreground">{stat.label}</p>
             <p className="text-xl font-bold">{stat.value}</p>
@@ -126,122 +153,101 @@ const PushNotifications = () => {
         ))}
       </div>
 
-      {/* Compose Modal */}
-      {showCompose && (
-        <motion.div
-          className="glass rounded-2xl p-6 mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Send className="w-5 h-5 text-primary" />
-            Compose Notification
-          </h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Title</label>
-              <Input
-                placeholder="Notification title"
-                value={newNotification.title}
-                onChange={(e) => setNewNotification(prev => ({ ...prev, title: e.target.value }))}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Message</label>
-              <Textarea
-                placeholder="Notification message"
-                value={newNotification.body}
-                onChange={(e) => setNewNotification(prev => ({ ...prev, body: e.target.value }))}
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Target Audience</label>
-              <div className="flex gap-2 flex-wrap">
-                {Object.entries(audienceLabels).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setNewNotification(prev => ({ ...prev, targetAudience: key as any }))}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      newNotification.targetAudience === key
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted hover:bg-muted/80'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+      <AnimatePresence>
+        {showCompose && (
+          <motion.div className="glass rounded-2xl p-6 mb-8"
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" /> Compose
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Title</label>
+                <Input placeholder="Notification title" value={draft.title}
+                  onChange={(e) => setDraft(p => ({ ...p, title: e.target.value }))} />
               </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setShowCompose(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={handleSend} className="flex-1 gap-2">
-                <Send className="w-4 h-4" />
-                Send Now
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Notification History */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Notification History</h2>
-        <div className="space-y-4">
-          {notifications.map((notification, index) => (
-            <motion.div
-              key={notification.id}
-              className="glass rounded-2xl p-5"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-bold text-lg">{notification.title}</h3>
-                  <p className="text-muted-foreground text-sm mt-1">{notification.body}</p>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Message</label>
+                <Textarea placeholder="Notification message" rows={3} value={draft.message}
+                  onChange={(e) => setDraft(p => ({ ...p, message: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Audience</label>
+                <div className="flex gap-2 flex-wrap">
+                  {(Object.keys(audienceLabels) as Audience[]).map((key) => (
+                    <button key={key} onClick={() => setDraft(p => ({ ...p, target_audience: key }))}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        draft.target_audience === key ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+                      }`}>
+                      {audienceLabels[key]} <span className="opacity-60">({reach[key].toLocaleString()})</span>
+                    </button>
+                  ))}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  notification.status === 'sent' ? 'bg-green-500/20 text-green-400' :
-                  notification.status === 'scheduled' ? 'bg-yellow-500/20 text-yellow-400' :
-                  'bg-muted text-muted-foreground'
-                }`}>
-                  {notification.status}
-                </span>
               </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Style</label>
+                <div className="flex gap-2 flex-wrap">
+                  {(['info', 'success', 'warning'] as NotifType[]).map(t => (
+                    <button key={t} onClick={() => setDraft(p => ({ ...p, type: t }))}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        draft.type === t ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+                      }`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowCompose(false)} className="flex-1">Cancel</Button>
+                <Button onClick={send} disabled={saving} className="flex-1 gap-2">
+                  <Send className="w-4 h-4" /> {saving ? 'Sending…' : 'Send Now'}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              <div className="flex items-center gap-6 text-sm">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  {audienceLabels[notification.targetAudience]}
-                </span>
-                {notification.status === 'sent' && (
-                  <>
-                    <span className="flex items-center gap-1.5 text-muted-foreground">
-                      <Send className="w-4 h-4" />
-                      {notification.sentCount.toLocaleString()} sent
-                    </span>
-                    <span className="flex items-center gap-1.5 text-muted-foreground">
-                      <Target className="w-4 h-4" />
-                      {notification.clickCount.toLocaleString()} clicks
-                    </span>
-                    <span className="text-primary font-medium">
-                      {((notification.clickCount / notification.sentCount) * 100).toFixed(1)}% CTR
-                    </span>
-                  </>
-                )}
-                {notification.scheduledAt && (
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    Scheduled: {notification.scheduledAt.toLocaleDateString()}
+      <div>
+        <h2 className="text-xl font-bold mb-4">History</h2>
+        <div className="space-y-4">
+          {loading ? (
+            <p className="text-center text-muted-foreground py-12">Loading…</p>
+          ) : items.length === 0 ? (
+            <p className="text-center text-muted-foreground py-12">No notifications yet.</p>
+          ) : items.map((n, index) => (
+            <motion.div key={n.id} className="glass rounded-2xl p-5"
+              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: Math.min(index * 0.03, 0.3) }}>
+              <div className="flex items-start justify-between mb-3 gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-lg">{n.title}</h3>
+                  <p className="text-muted-foreground text-sm mt-1">{n.message}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    n.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {n.is_active ? 'Active' : 'Disabled'}
                   </span>
-                )}
+                  <Button variant="ghost" size="sm" onClick={() => toggleActive(n)}>
+                    {n.is_active ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => remove(n.id)} className="text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 text-sm flex-wrap">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Users className="w-4 h-4" /> {audienceLabels[n.target_audience as Audience] ?? n.target_audience}
+                </span>
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Send className="w-4 h-4" /> Reach ~{(reach[n.target_audience as Audience] ?? 0).toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="w-4 h-4" /> {new Date(n.created_at).toLocaleString()}
+                </span>
               </div>
             </motion.div>
           ))}
