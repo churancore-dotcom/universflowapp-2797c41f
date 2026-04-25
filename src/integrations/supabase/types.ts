@@ -80,6 +80,48 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          permissions: string[]
+          usage_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          permissions?: string[]
+          usage_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          permissions?: string[]
+          usage_count?: number
+        }
+        Relationships: []
+      }
       app_reviews: {
         Row: {
           comment: string | null
@@ -167,6 +209,42 @@ export type Database = {
           name?: string
           photo_url?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          ip_address: string | null
+          severity: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -274,6 +352,86 @@ export type Database = {
           message?: string | null
           platform?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      experiment_assignments: {
+        Row: {
+          assigned_at: string
+          converted: boolean
+          converted_at: string | null
+          experiment_id: string
+          id: string
+          user_id: string
+          variant: string
+        }
+        Insert: {
+          assigned_at?: string
+          converted?: boolean
+          converted_at?: string | null
+          experiment_id: string
+          id?: string
+          user_id: string
+          variant: string
+        }
+        Update: {
+          assigned_at?: string
+          converted?: boolean
+          converted_at?: string | null
+          experiment_id?: string
+          id?: string
+          user_id?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiment_assignments_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experiments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string | null
+          id: string
+          name: string
+          starts_at: string | null
+          status: string
+          updated_at: string
+          variants: Json
+          winner: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          name: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          variants?: Json
+          winner?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          name?: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          variants?: Json
+          winner?: string | null
         }
         Relationships: []
       }
@@ -899,6 +1057,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_log_event: {
+        Args: { p_details?: Json; p_event_type: string; p_severity?: string }
+        Returns: string
+      }
+      expire_old_subscriptions: { Args: never; Returns: number }
       find_profile_by_share_code: {
         Args: { p_share_code: string }
         Returns: {

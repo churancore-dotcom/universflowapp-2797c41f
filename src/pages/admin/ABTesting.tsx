@@ -1,252 +1,250 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { FlaskConical, Play, Pause, Plus, BarChart3, Users, CheckCircle2, XCircle, Trophy } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TestTube, Plus, Play, Pause, Trophy, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface Variant { name: string; traffic: number }
 interface Experiment {
   id: string;
   name: string;
-  description: string;
-  status: 'running' | 'paused' | 'completed';
-  startDate: Date;
-  endDate?: Date;
-  variants: {
-    name: string;
-    traffic: number;
-    conversions: number;
-    users: number;
-  }[];
-  winner?: string;
+  description: string | null;
+  status: 'draft' | 'running' | 'paused' | 'completed';
+  variants: Variant[];
+  winner: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_at: string;
+}
+interface AssignmentStat {
+  variant: string;
+  users: number;
+  conversions: number;
 }
 
 const ABTesting = () => {
-  const [experiments, setExperiments] = useState<Experiment[]>([
-    {
-      id: '1',
-      name: 'Premium CTA Button Color',
-      description: 'Testing different colors for the premium upgrade button',
-      status: 'running',
-      startDate: new Date('2024-01-15'),
-      variants: [
-        { name: 'Control (Blue)', traffic: 50, conversions: 234, users: 5420 },
-        { name: 'Variant A (Green)', traffic: 50, conversions: 289, users: 5380 },
-      ],
-    },
-    {
-      id: '2',
-      name: 'Onboarding Flow',
-      description: 'Testing simplified vs detailed onboarding',
-      status: 'completed',
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-01-14'),
-      variants: [
-        { name: 'Control (Detailed)', traffic: 50, conversions: 1234, users: 4500 },
-        { name: 'Variant A (Simple)', traffic: 50, conversions: 1567, users: 4520 },
-      ],
-      winner: 'Variant A (Simple)',
-    },
-    {
-      id: '3',
-      name: 'Mini Player Position',
-      description: 'Testing bottom vs floating mini player',
-      status: 'paused',
-      startDate: new Date('2024-01-20'),
-      variants: [
-        { name: 'Control (Bottom)', traffic: 50, conversions: 890, users: 3200 },
-        { name: 'Variant A (Floating)', traffic: 50, conversions: 845, users: 3180 },
-      ],
-    }
-  ]);
-
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [stats, setStats] = useState<Record<string, AssignmentStat[]>>({});
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newVariants, setNewVariants] = useState('A,B');
 
-  const toggleExperiment = (id: string) => {
-    setExperiments(prev => prev.map(exp => {
-      if (exp.id === id) {
-        const newStatus = exp.status === 'running' ? 'paused' : 'running';
-        toast.success(`Experiment ${newStatus === 'running' ? 'resumed' : 'paused'}`);
-        return { ...exp, status: newStatus };
-      }
-      return exp;
-    }));
-  };
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    const { data: exps, error } = await supabase
+      .from('experiments').select('*').order('created_at', { ascending: false });
+    if (error) { toast.error('Failed to load experiments'); setLoading(false); return; }
 
-  const getConversionRate = (conversions: number, users: number) => {
-    return ((conversions / users) * 100).toFixed(2);
-  };
+    const list = (exps ?? []).map(e => ({
+      ...e, variants: (e.variants as unknown as Variant[]) ?? [],
+    })) as Experiment[];
+    setExperiments(list);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'running': return 'bg-green-500/20 text-green-400';
-      case 'paused': return 'bg-yellow-500/20 text-yellow-400';
-      case 'completed': return 'bg-blue-500/20 text-blue-400';
-      default: return 'bg-muted text-muted-foreground';
+    if (list.length) {
+      const ids = list.map(e => e.id);
+      const { data: asg } = await supabase
+        .from('experiment_assignments')
+        .select('experiment_id, variant, converted')
+        .in('experiment_id', ids);
+      const grouped: Record<string, AssignmentStat[]> = {};
+      list.forEach(exp => {
+        const rows = (asg ?? []).filter(a => a.experiment_id === exp.id);
+        grouped[exp.id] = exp.variants.map(v => ({
+          variant: v.name,
+          users: rows.filter(r => r.variant === v.name).length,
+          conversions: rows.filter(r => r.variant === v.name && r.converted).length,
+        }));
+      });
+      setStats(grouped);
     }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+    const ch = supabase.channel('experiments_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'experiments' }, fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'experiment_assignments' }, fetchAll)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchAll]);
+
+  const createExperiment = async () => {
+    if (!newName.trim()) { toast.error('Name required'); return; }
+    const variants = newVariants.split(',').map(s => s.trim()).filter(Boolean);
+    if (variants.length < 2) { toast.error('Need at least 2 variants'); return; }
+    const traffic = Math.floor(100 / variants.length);
+    const { error } = await supabase.from('experiments').insert({
+      name: newName.trim(),
+      description: newDesc.trim() || null,
+      status: 'draft',
+      variants: variants.map(v => ({ name: v, traffic })) as never,
+      starts_at: new Date().toISOString(),
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success('Experiment created');
+    setNewName(''); setNewDesc(''); setNewVariants('A,B'); setShowCreate(false);
   };
 
-  const stats = [
-    { label: 'Active Experiments', value: experiments.filter(e => e.status === 'running').length, icon: Play },
-    { label: 'Total Experiments', value: experiments.length, icon: FlaskConical },
-    { label: 'Users in Tests', value: experiments.reduce((acc, e) => acc + e.variants.reduce((a, v) => a + v.users, 0), 0).toLocaleString(), icon: Users },
-    { label: 'Completed', value: experiments.filter(e => e.status === 'completed').length, icon: CheckCircle2 },
-  ];
+  const setStatus = async (id: string, status: Experiment['status']) => {
+    const { error } = await supabase.from('experiments').update({ status }).eq('id', id);
+    if (error) toast.error(error.message); else toast.success(`Marked ${status}`);
+  };
+
+  const declareWinner = async (id: string, variant: string) => {
+    const { error } = await supabase.from('experiments')
+      .update({ winner: variant, status: 'completed', ends_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) toast.error(error.message); else toast.success(`Winner: ${variant}`);
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm('Delete this experiment and all assignments?')) return;
+    const { error } = await supabase.from('experiments').delete().eq('id', id);
+    if (error) toast.error(error.message); else toast.success('Deleted');
+  };
+
+  const totalUsers = Object.values(stats).flat().reduce((s, x) => s + x.users, 0);
+  const running = experiments.filter(e => e.status === 'running').length;
+  const completed = experiments.filter(e => e.status === 'completed').length;
 
   return (
     <div className="p-4 md:p-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
-              <FlaskConical className="w-8 h-8 text-primary" />
-              A/B Testing
-            </h1>
-            <p className="text-muted-foreground mt-1">Run experiments to optimize your app</p>
-          </div>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
+            <TestTube className="w-8 h-8 text-primary" />
+            A/B Testing
+          </h1>
+          <p className="text-muted-foreground mt-1">Real experiments backed by your database</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={fetchAll}><RefreshCw className="w-4 h-4" /></Button>
           <Button onClick={() => setShowCreate(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Experiment
+            <Plus className="w-4 h-4" /> New
           </Button>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            className="glass rounded-xl p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
-            <stat.icon className="w-5 h-5 text-primary mb-2" />
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
-            <p className="text-xl font-bold">{stat.value}</p>
-          </motion.div>
+        {[
+          { label: 'Total', value: experiments.length, icon: TestTube },
+          { label: 'Running', value: running, icon: Play },
+          { label: 'Completed', value: completed, icon: Trophy },
+          { label: 'Users in tests', value: totalUsers, icon: BarChart3 },
+        ].map(s => (
+          <div key={s.label} className="glass rounded-xl p-4">
+            <s.icon className="w-5 h-5 text-primary mb-2" />
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+            <p className="text-xl font-bold">{s.value}</p>
+          </div>
         ))}
       </div>
 
-      {/* Experiments List */}
-      <div className="space-y-6">
-        {experiments.map((experiment, index) => (
-          <motion.div
-            key={experiment.id}
-            className="glass rounded-2xl p-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="font-bold text-lg">{experiment.name}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(experiment.status)}`}>
-                    {experiment.status}
-                  </span>
-                  {experiment.winner && (
-                    <span className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                      <Trophy className="w-3 h-3" />
-                      Winner: {experiment.winner}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">{experiment.description}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Started: {experiment.startDate.toLocaleDateString()}
-                  {experiment.endDate && ` • Ended: ${experiment.endDate.toLocaleDateString()}`}
-                </p>
-              </div>
-              {experiment.status !== 'completed' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggleExperiment(experiment.id)}
-                  className="gap-2"
-                >
-                  {experiment.status === 'running' ? (
-                    <>
-                      <Pause className="w-4 h-4" />
-                      Pause
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Resume
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-
-            {/* Variants */}
-            <div className="space-y-4">
-              {experiment.variants.map((variant, vi) => {
-                const conversionRate = getConversionRate(variant.conversions, variant.users);
-                const isWinner = experiment.winner === variant.name;
-                const maxConversion = Math.max(...experiment.variants.map(v => parseFloat(getConversionRate(v.conversions, v.users))));
-                const isLeading = parseFloat(conversionRate) === maxConversion && experiment.status === 'running';
-                
-                return (
-                  <div
-                    key={vi}
-                    className={`p-4 rounded-xl ${isWinner ? 'bg-green-500/10 border border-green-500/30' : 'bg-muted/50'}`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{variant.name}</span>
-                        {isLeading && !experiment.winner && (
-                          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Leading</span>
-                        )}
-                        {isWinner && (
-                          <Trophy className="w-4 h-4 text-green-400" />
+      <div className="space-y-4">
+        <AnimatePresence>
+          {loading ? <p className="text-center text-muted-foreground py-12">Loading…</p>
+            : experiments.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">
+                No experiments yet. Click <strong>New</strong> to create your first A/B test.
+              </p>
+            ) : experiments.map((exp, i) => {
+              const expStats = stats[exp.id] ?? [];
+              const totalForExp = expStats.reduce((s, v) => s + v.users, 0);
+              return (
+                <motion.div key={exp.id} className="glass rounded-2xl p-6"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }} transition={{ delay: Math.min(i * 0.04, 0.3) }}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-lg">{exp.name}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          exp.status === 'running' ? 'bg-emerald-500/20 text-emerald-400' :
+                          exp.status === 'paused' ? 'bg-yellow-500/20 text-yellow-400' :
+                          exp.status === 'completed' ? 'bg-primary/20 text-primary' :
+                          'bg-muted text-muted-foreground'
+                        }`}>{exp.status}</span>
+                        {exp.winner && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary flex items-center gap-1">
+                            <Trophy className="w-3 h-3" /> {exp.winner}
+                          </span>
                         )}
                       </div>
-                      <span className="text-sm text-muted-foreground">{variant.traffic}% traffic</span>
+                      {exp.description && <p className="text-sm text-muted-foreground">{exp.description}</p>}
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-2xl font-bold">{variant.users.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">Users</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold">{variant.conversions.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">Conversions</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-primary">{conversionRate}%</p>
-                        <p className="text-xs text-muted-foreground">Conversion Rate</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3">
-                      <Progress value={parseFloat(conversionRate) * 10} className="h-2" />
+                    <div className="flex gap-1">
+                      {exp.status === 'draft' && (
+                        <Button variant="ghost" size="sm" onClick={() => setStatus(exp.id, 'running')}>
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {exp.status === 'running' && (
+                        <Button variant="ghost" size="sm" onClick={() => setStatus(exp.id, 'paused')}>
+                          <Pause className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {exp.status === 'paused' && (
+                        <Button variant="ghost" size="sm" onClick={() => setStatus(exp.id, 'running')}>
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => remove(exp.id)} className="text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Statistical Significance */}
-            {experiment.status === 'running' && (
-              <div className="mt-4 p-3 rounded-lg bg-muted/30 flex items-center gap-3">
-                <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Statistical Significance: 87%</p>
-                  <p className="text-xs text-muted-foreground">Need 95% confidence to declare a winner</p>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {expStats.map(v => {
+                      const rate = v.users ? (v.conversions / v.users * 100) : 0;
+                      const share = totalForExp ? (v.users / totalForExp * 100) : 0;
+                      return (
+                        <div key={v.variant} className="bg-muted/30 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">Variant {v.variant}</span>
+                            <span className="text-sm text-muted-foreground">{rate.toFixed(1)}% CR</span>
+                          </div>
+                          <Progress value={share} className="h-1.5 mb-2" />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{v.users} users</span>
+                            <span>{v.conversions} conversions</span>
+                          </div>
+                          {exp.status !== 'completed' && v.users > 10 && (
+                            <Button variant="ghost" size="sm" className="mt-2 w-full text-xs"
+                              onClick={() => declareWinner(exp.id, v.variant)}>
+                              Declare winner
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              );
+            })}
+        </AnimatePresence>
       </div>
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Experiment</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <Input placeholder="Experiment name" value={newName} onChange={e => setNewName(e.target.value)} />
+            <Textarea placeholder="What are you testing?" value={newDesc} onChange={e => setNewDesc(e.target.value)} />
+            <Input placeholder="Variants, comma-separated (e.g. A,B,C)"
+              value={newVariants} onChange={e => setNewVariants(e.target.value)} />
+            <Button onClick={createExperiment} className="w-full">Create</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

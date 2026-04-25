@@ -1,233 +1,209 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, AlertTriangle, CheckCircle2, XCircle, Eye, Key, Users, Activity, Globe, Clock } from 'lucide-react';
+import {
+  Shield, AlertTriangle, CheckCircle2, XCircle, RefreshCw,
+  LogIn, LogOut, KeyRound, Activity, Clock,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface SecurityEvent {
+interface AuditLog {
   id: string;
-  type: 'login' | 'failed_login' | 'password_change' | 'suspicious' | 'blocked';
-  user: string;
-  ip: string;
-  location: string;
-  timestamp: Date;
-  details: string;
+  event_type: string;
+  severity: string;
+  user_id: string | null;
+  user_email: string | null;
+  ip_address: string | null;
+  details: Record<string, unknown>;
+  created_at: string;
 }
 
-interface SecuritySetting {
-  id: string;
-  name: string;
-  description: string;
-  enabled: boolean;
-  category: string;
-}
+const eventIcon = (type: string) => {
+  if (type.includes('login_success')) return LogIn;
+  if (type.includes('login_failed')) return XCircle;
+  if (type.includes('logout')) return LogOut;
+  if (type.includes('password')) return KeyRound;
+  if (type.includes('suspicious')) return AlertTriangle;
+  if (type.includes('admin')) return Shield;
+  if (type.includes('subscription')) return Clock;
+  return Activity;
+};
+
+const severityColor = (sev: string) => {
+  switch (sev) {
+    case 'critical': return 'text-red-500 bg-red-500/10';
+    case 'error': return 'text-red-400 bg-red-500/10';
+    case 'warn': return 'text-yellow-400 bg-yellow-500/10';
+    default: return 'text-emerald-400 bg-emerald-500/10';
+  }
+};
+
+const formatTimeAgo = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  return `${Math.floor(hr / 24)}d ago`;
+};
 
 const SecurityCenter = () => {
-  const [securityScore, setSecurityScore] = useState(85);
-  const [events, setEvents] = useState<SecurityEvent[]>([
-    {
-      id: '1',
-      type: 'login',
-      user: 'admin@example.com',
-      ip: '192.168.1.100',
-      location: 'New York, US',
-      timestamp: new Date(),
-      details: 'Successful login'
-    },
-    {
-      id: '2',
-      type: 'failed_login',
-      user: 'user@example.com',
-      ip: '10.0.0.55',
-      location: 'London, UK',
-      timestamp: new Date(Date.now() - 3600000),
-      details: 'Invalid password attempt'
-    },
-    {
-      id: '3',
-      type: 'suspicious',
-      user: 'test@example.com',
-      ip: '203.0.113.0',
-      location: 'Unknown',
-      timestamp: new Date(Date.now() - 7200000),
-      details: 'Multiple login attempts from different locations'
-    },
-    {
-      id: '4',
-      type: 'blocked',
-      user: 'attacker@spam.com',
-      ip: '192.0.2.1',
-      location: 'China',
-      timestamp: new Date(Date.now() - 10800000),
-      details: 'Blocked due to suspicious activity'
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [score, setScore] = useState(95);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) {
+      toast.error('Failed to load audit logs');
+      setLoading(false);
+      return;
     }
-  ]);
+    setLogs((data ?? []) as AuditLog[]);
 
-  const [settings, setSettings] = useState<SecuritySetting[]>([
-    { id: '1', name: 'Two-Factor Authentication', description: 'Require 2FA for all admin accounts', enabled: true, category: 'Authentication' },
-    { id: '2', name: 'Session Timeout', description: 'Automatically log out inactive users after 30 minutes', enabled: true, category: 'Session' },
-    { id: '3', name: 'IP Whitelisting', description: 'Restrict admin access to approved IP addresses', enabled: false, category: 'Access' },
-    { id: '4', name: 'Brute Force Protection', description: 'Block IPs after 5 failed login attempts', enabled: true, category: 'Security' },
-    { id: '5', name: 'Rate Limiting', description: 'Limit API requests per minute', enabled: true, category: 'API' },
-    { id: '6', name: 'Audit Logging', description: 'Log all admin actions for review', enabled: true, category: 'Monitoring' },
-  ]);
+    const dayAgo = Date.now() - 24 * 3600 * 1000;
+    const recent = (data ?? []).filter(l => new Date(l.created_at).getTime() > dayAgo);
+    const failed = recent.filter(l => l.event_type === 'login_failed').length;
+    const suspicious = recent.filter(l => l.severity === 'warn' || l.severity === 'error' || l.severity === 'critical').length;
+    setScore(Math.max(40, 100 - failed * 2 - suspicious * 5));
+    setLoading(false);
+  }, []);
 
-  const toggleSetting = (id: string) => {
-    setSettings(prev => prev.map(s => 
-      s.id === id ? { ...s, enabled: !s.enabled } : s
-    ));
-    toast.success('Security setting updated');
-  };
+  useEffect(() => {
+    fetchLogs();
+    const channel = supabase
+      .channel('audit_logs_live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+        (payload) => {
+          setLogs(prev => [payload.new as AuditLog, ...prev].slice(0, 200));
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchLogs]);
 
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'login': return <CheckCircle2 className="w-5 h-5 text-green-400" />;
-      case 'failed_login': return <XCircle className="w-5 h-5 text-yellow-400" />;
-      case 'suspicious': return <AlertTriangle className="w-5 h-5 text-orange-400" />;
-      case 'blocked': return <Shield className="w-5 h-5 text-red-400" />;
-      default: return <Activity className="w-5 h-5 text-muted-foreground" />;
+  const filtered = logs.filter(l => {
+    if (severityFilter !== 'all' && l.severity !== severityFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return l.event_type.toLowerCase().includes(q) ||
+             (l.user_email ?? '').toLowerCase().includes(q);
     }
-  };
+    return true;
+  });
 
-  const stats = [
-    { label: 'Security Score', value: `${securityScore}%`, icon: Shield, color: securityScore >= 80 ? 'text-green-400' : 'text-yellow-400' },
-    { label: 'Active Sessions', value: '24', icon: Users, color: 'text-primary' },
-    { label: 'Blocked Attempts', value: '156', icon: Lock, color: 'text-red-400' },
-    { label: 'Alerts Today', value: '3', icon: AlertTriangle, color: 'text-orange-400' },
-  ];
+  const stats = {
+    total: logs.length,
+    failed: logs.filter(l => l.event_type === 'login_failed').length,
+    suspicious: logs.filter(l => l.severity === 'warn' || l.severity === 'error').length,
+    last24h: logs.filter(l => Date.now() - new Date(l.created_at).getTime() < 86400000).length,
+  };
 
   return (
     <div className="p-4 md:p-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="mb-8 flex items-center justify-between"
       >
-        <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
-          <Shield className="w-8 h-8 text-primary" />
-          Security Center
-        </h1>
-        <p className="text-muted-foreground mt-1">Monitor and manage platform security</p>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
+            <Shield className="w-8 h-8 text-primary" />
+            Security Center
+          </h1>
+          <p className="text-muted-foreground mt-1">Real-time audit logs and security events</p>
+        </div>
+        <Button onClick={fetchLogs} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </Button>
       </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            className="glass rounded-xl p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
-            <stat.icon className={`w-5 h-5 mb-2 ${stat.color}`} />
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
-            <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+      <motion.div
+        className="glass rounded-2xl p-6 mb-6 flex items-center justify-between"
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+      >
+        <div>
+          <p className="text-sm text-muted-foreground">Security Score</p>
+          <p className="text-4xl font-bold mt-1">{score}/100</p>
+        </div>
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${score >= 80 ? 'bg-emerald-500/20' : score >= 60 ? 'bg-yellow-500/20' : 'bg-red-500/20'}`}>
+          {score >= 80 ? <CheckCircle2 className="w-8 h-8 text-emerald-400" /> :
+            <AlertTriangle className="w-8 h-8 text-yellow-400" />}
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Events', value: stats.total, icon: Activity },
+          { label: 'Failed Logins', value: stats.failed, icon: XCircle },
+          { label: 'Suspicious', value: stats.suspicious, icon: AlertTriangle },
+          { label: 'Last 24h', value: stats.last24h, icon: Clock },
+        ].map((s, i) => (
+          <motion.div key={s.label} className="glass rounded-xl p-4"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}>
+            <s.icon className="w-5 h-5 text-primary mb-2" />
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+            <p className="text-xl font-bold">{s.value}</p>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Security Settings */}
-        <motion.div
-          className="glass rounded-2xl p-6"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <h2 className="text-lg font-display font-bold mb-4 flex items-center gap-2">
-            <Lock className="w-5 h-5 text-primary" />
-            Security Settings
-          </h2>
-          <div className="space-y-4">
-            {settings.map((setting) => (
-              <div
-                key={setting.id}
-                className="flex items-center justify-between p-4 rounded-xl bg-muted/50"
-              >
-                <div className="flex-1">
-                  <p className="font-medium">{setting.name}</p>
-                  <p className="text-sm text-muted-foreground">{setting.description}</p>
-                </div>
-                <Switch
-                  checked={setting.enabled}
-                  onCheckedChange={() => toggleSetting(setting.id)}
-                />
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Recent Security Events */}
-        <motion.div
-          className="glass rounded-2xl p-6"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <h2 className="text-lg font-display font-bold mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-accent" />
-            Recent Security Events
-          </h2>
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-start gap-3 p-3 rounded-xl bg-muted/50"
-              >
-                {getEventIcon(event.type)}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium truncate">{event.user}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {event.timestamp.toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{event.details}</p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Globe className="w-3 h-3" />
-                      {event.ip}
-                    </span>
-                    <span>{event.location}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+      <div className="flex gap-2 mb-4">
+        <Input placeholder="Search events / emails…" value={search}
+          onChange={e => setSearch(e.target.value)} className="flex-1" />
+        <Select value={severityFilter} onValueChange={setSeverityFilter}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All severities</SelectItem>
+            <SelectItem value="info">Info</SelectItem>
+            <SelectItem value="warn">Warning</SelectItem>
+            <SelectItem value="error">Error</SelectItem>
+            <SelectItem value="critical">Critical</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Security Recommendations */}
-      <motion.div
-        className="glass rounded-2xl p-6 mt-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h2 className="text-lg font-display font-bold mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-orange-400" />
-          Security Recommendations
-        </h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
-            <Key className="w-5 h-5 text-orange-400" />
-            <div className="flex-1">
-              <p className="font-medium">Enable IP Whitelisting</p>
-              <p className="text-sm text-muted-foreground">Restrict admin access to known IP addresses for enhanced security</p>
-            </div>
-            <Button size="sm">Enable</Button>
+      <div className="space-y-2">
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            No events yet. Login activity and admin actions will appear here in real-time.
           </div>
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/30">
-            <CheckCircle2 className="w-5 h-5 text-green-400" />
-            <div className="flex-1">
-              <p className="font-medium">Two-Factor Authentication Active</p>
-              <p className="text-sm text-muted-foreground">All admin accounts are protected with 2FA</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+        ) : filtered.map((log, i) => {
+          const Icon = eventIcon(log.event_type);
+          return (
+            <motion.div key={log.id}
+              className="glass rounded-xl p-4 flex items-center gap-4"
+              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: Math.min(i * 0.02, 0.4) }}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${severityColor(log.severity)}`}>
+                <Icon className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium capitalize">{log.event_type.replace(/_/g, ' ')}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {log.user_email ?? 'system'} · {formatTimeAgo(log.created_at)}
+                  {log.ip_address && ` · ${log.ip_address}`}
+                </p>
+              </div>
+              <span className={`text-xs px-2 py-1 rounded-full ${severityColor(log.severity)}`}>
+                {log.severity}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
     </div>
   );
 };

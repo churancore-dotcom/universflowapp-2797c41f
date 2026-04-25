@@ -91,18 +91,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error: new Error(getAuthError(error)) };
+      if (error) {
+        const { auditLog } = await import('@/lib/auditLog');
+        auditLog.loginFailed(email, error.message);
+        return { error: new Error(getAuthError(error)) };
+      }
 
       if (data.user) {
         await ensureUserProfile(data.user);
-        
-        // Check if user is banned or suspended
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('status')
           .eq('user_id', data.user.id)
           .maybeSingle();
-        
+
         if (profile?.status === 'banned') {
           await supabase.auth.signOut();
           return { error: new Error('Your account has been banned. Contact support for help.') };
@@ -111,6 +114,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await supabase.auth.signOut();
           return { error: new Error('Your account is temporarily suspended. Please try again later.') };
         }
+
+        // Auto-expire premium if past expires_at (client-side belt-and-suspenders alongside cron)
+        try {
+          const { data: sub } = await supabase
+            .from('user_subscriptions')
+            .select('id, status, expires_at, subscription_type')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+          if (sub?.status === 'active' && sub.expires_at && new Date(sub.expires_at) < new Date()
+              && sub.subscription_type !== 'free') {
+            await supabase.from('user_subscriptions')
+              .update({ status: 'expired' }).eq('id', sub.id);
+          }
+        } catch { /* non-fatal */ }
+
+        const { auditLog } = await import('@/lib/auditLog');
+        auditLog.loginSuccess(email);
       }
 
       const admin = data.user ? await checkAdminRole(data.user.id) : false;
