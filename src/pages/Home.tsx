@@ -15,6 +15,7 @@ import BottomNav from '@/components/BottomNav';
 import LockScreenPlayer from '@/components/LockScreenPlayer';
 import EqualizerModal from '@/components/EqualizerModal';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import AnnouncementBell from '@/components/AnnouncementBell';
 import { TabTransition } from '@/components/PageTransition';
 import { Music, Lock, ListMusic, Sliders, Headphones } from 'lucide-react';
 import { triggerHaptic } from '@/hooks/useHaptics';
@@ -190,6 +191,7 @@ const Home = () => {
             </div>
             
             <div className="flex items-center gap-1.5">
+              <AnnouncementBell />
               {[
                 { icon: ListMusic, action: () => setShowQueue(true) },
                 { icon: Sliders, action: () => setShowEqualizer(true) },

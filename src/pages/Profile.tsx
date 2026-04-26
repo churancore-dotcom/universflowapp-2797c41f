@@ -10,6 +10,7 @@ import ListeningStats from '@/components/ListeningStats';
 import RedeemCodeModal from '@/components/RedeemCodeModal';
 import ReviewModal from '@/components/ReviewModal';
 import ReviewsSheet from '@/components/ReviewsSheet';
+import AnnouncementBell from '@/components/AnnouncementBell';
 import { TabTransition } from '@/components/PageTransition';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -127,7 +128,10 @@ const Profile = () => {
             WebkitBackdropFilter: 'blur(40px)',
           }}
         >
-          <h1 className="text-xl font-bold">Profile</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold">Profile</h1>
+            <AnnouncementBell />
+          </div>
         </header>
 
         {/* Content */}
