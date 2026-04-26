@@ -28,18 +28,30 @@ const audienceLabels: Record<Audience, string> = {
   free: 'Free Users',
 };
 
+interface KPI { delivered: number; opened: number; clicked: number; }
+
 const PushNotifications = () => {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
   const [reach, setReach] = useState({ all: 0, premium: 0, free: 0 });
+  const [kpi, setKpi] = useState<Record<string, KPI>>({});
   const [draft, setDraft] = useState({
-    title: '',
-    message: '',
-    target_audience: 'all' as Audience,
-    type: 'info' as NotifType,
+    title: '', message: '', target_audience: 'all' as Audience, type: 'info' as NotifType,
   });
+
+  const fetchKPIs = useCallback(async () => {
+    const { data } = await supabase.from('announcement_events').select('announcement_id, event_type');
+    const map: Record<string, KPI> = {};
+    (data || []).forEach((row: any) => {
+      const k = map[row.announcement_id] ||= { delivered: 0, opened: 0, clicked: 0 };
+      if (row.event_type === 'delivered') k.delivered++;
+      else if (row.event_type === 'opened') k.opened++;
+      else if (row.event_type === 'clicked') k.clicked++;
+    });
+    setKpi(map);
+  }, []);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -57,20 +69,21 @@ const PushNotifications = () => {
       !s.expires_at || new Date(s.expires_at) > new Date()
     ).length;
     setReach({
-      all: totalUsers,
-      premium: premiumActive,
+      all: totalUsers, premium: premiumActive,
       free: Math.max(totalUsers - premiumActive, 0),
     });
+    await fetchKPIs();
     setLoading(false);
-  }, []);
+  }, [fetchKPIs]);
 
   useEffect(() => {
     fetchAll();
     const ch = supabase.channel('announcements_admin')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, fetchAll)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcement_events' }, fetchKPIs)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchAll]);
+  }, [fetchAll, fetchKPIs]);
 
   const send = async () => {
     if (!draft.title.trim() || !draft.message.trim()) {
@@ -238,16 +251,32 @@ const PushNotifications = () => {
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-6 text-sm flex-wrap">
+              <div className="flex items-center gap-4 text-xs flex-wrap mb-2">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Users className="w-4 h-4" /> {audienceLabels[n.target_audience as Audience] ?? n.target_audience}
+                  <Users className="w-3.5 h-3.5" /> {audienceLabels[n.target_audience as Audience] ?? n.target_audience}
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Send className="w-4 h-4" /> Reach ~{(reach[n.target_audience as Audience] ?? 0).toLocaleString()}
+                  <Send className="w-3.5 h-3.5" /> Reach ~{(reach[n.target_audience as Audience] ?? 0).toLocaleString()}
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Clock className="w-4 h-4" /> {new Date(n.created_at).toLocaleString()}
+                  <Clock className="w-3.5 h-3.5" /> {new Date(n.created_at).toLocaleString()}
                 </span>
+              </div>
+              {/* Live KPIs */}
+              <div className="grid grid-cols-3 gap-2 mt-2 pt-3 border-t border-border/40">
+                {(['delivered','opened','clicked'] as const).map(k => {
+                  const v = kpi[n.id]?.[k] ?? 0;
+                  const denom = k === 'delivered' ? Math.max(reach[n.target_audience as Audience] ?? 0, 1) : Math.max(kpi[n.id]?.delivered ?? 0, 1);
+                  const pct = Math.min(100, Math.round((v / denom) * 100));
+                  const colors = { delivered: 'hsl(195 100% 55%)', opened: 'hsl(145 80% 50%)', clicked: 'hsl(var(--primary))' } as const;
+                  return (
+                    <div key={k} className="rounded-lg p-2 bg-muted/30">
+                      <p className="text-[10px] uppercase text-muted-foreground tracking-wide">{k}</p>
+                      <p className="text-lg font-bold" style={{ color: colors[k] }}>{v.toLocaleString()}</p>
+                      <p className="text-[10px] text-muted-foreground">{pct}%</p>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           ))}
