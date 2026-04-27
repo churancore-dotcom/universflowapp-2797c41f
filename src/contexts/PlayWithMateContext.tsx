@@ -14,6 +14,7 @@ interface SessionSongPayload {
   cover_url?: string;
   audio_url: string;
   duration?: number;
+  source?: string;
 }
 
 interface PlaybackStatePayload {
