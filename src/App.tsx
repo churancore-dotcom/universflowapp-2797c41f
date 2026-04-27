@@ -29,6 +29,7 @@ import Search from "./pages/Search";
 import Library from "./pages/Library";
 import Profile from "./pages/Profile";
 import OfflinePlayerShell from "./components/OfflinePlayerShell";
+import OfflineGate from "./components/OfflineGate";
 
 // These are visited less often — keep lazy to keep initial bundle small.
 const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
@@ -115,6 +116,7 @@ const AnimatedRoutes = () => {
 
   return (
     <NavDirectionProvider>
+    <OfflineGate />
     <Suspense fallback={<LazyFallback />}>
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
