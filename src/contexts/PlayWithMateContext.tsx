@@ -321,14 +321,8 @@ export const PlayWithMateProvider = ({ children }: { children: ReactNode }) => {
           seek(remotePosition);
         }
 
-        if (payload.isPlaying) {
-          const p = play();
-          if (p && typeof (p as any).catch === 'function') {
-            (p as Promise<void>).catch(() => { /* autoplay blocked */ });
-          }
-        } else {
-          pause();
-        }
+        if (payload.isPlaying) play();
+        else pause();
         clearFlag();
       } catch {
         clearFlag();
