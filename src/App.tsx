@@ -297,21 +297,23 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <PlayerProvider>
-            <PlayWithMateProvider>
-              <DownloadProvider>
-                <TooltipProvider>
-                  <AppContent />
-                </TooltipProvider>
-              </DownloadProvider>
-            </PlayWithMateProvider>
-          </PlayerProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <SentryErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <PlayerProvider>
+              <PlayWithMateProvider>
+                <DownloadProvider>
+                  <TooltipProvider>
+                    <AppContent />
+                  </TooltipProvider>
+                </DownloadProvider>
+              </PlayWithMateProvider>
+            </PlayerProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </SentryErrorBoundary>
   );
 };
 
