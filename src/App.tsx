@@ -31,6 +31,7 @@ import Library from "./pages/Library";
 import Profile from "./pages/Profile";
 import OfflinePlayerShell from "./components/OfflinePlayerShell";
 import OfflineGate from "./components/OfflineGate";
+import { SentryErrorBoundary } from "./components/SentryErrorBoundary";
 
 // These are visited less often — keep lazy to keep initial bundle small.
 const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
