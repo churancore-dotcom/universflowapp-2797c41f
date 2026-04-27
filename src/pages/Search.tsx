@@ -54,17 +54,14 @@ const Search = () => {
     const trimmedQuery = query.trim();
 
     if (trimmedQuery.length < 2) {
-      if (!activeFilter) {
-        setResults([]);
-        setIndexedResults([]);
-      }
+      setResults([]);
+      setIndexedResults([]);
       return;
     }
 
     let cancelled = false;
     const timer = setTimeout(async () => {
       setSearching(true);
-      setActiveFilter(null);
 
       const [libraryResponse, indexedResponse] = await Promise.allSettled([
         searchSongs(trimmedQuery),
@@ -76,7 +73,6 @@ const Search = () => {
       setResults(libraryResponse.status === 'fulfilled' ? libraryResponse.value : []);
       setIndexedResults(indexedResponse.status === 'fulfilled' ? indexedResponse.value : []);
       setSearching(false);
-      // Refresh history snapshot (current play might have been added)
       setSearchHistory(getSongHistory());
     }, 300);
 
@@ -84,7 +80,7 @@ const Search = () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, activeFilter]);
+  }, [query]);
 
   useEffect(() => {
     indexedResults.slice(0, 6).forEach((track) => {
@@ -136,47 +132,11 @@ const Search = () => {
     }
   }, [playSong]);
 
-  const searchByGenre = async (genre: string) => {
-    setQuery(''); setActiveFilter({ type: 'genre', value: genre }); setSearching(true); setIndexedResults([]);
-    // Catalog + Streaming in parallel
-    const queries = GENRE_QUERIES[genre] || [genre];
-    const [catalogRes, streamRes] = await Promise.allSettled([
-      supabase.from('songs').select('*, artists(id, name, photo_url)')
-        .eq('is_visible', true).ilike('genre', `%${genre}%`).limit(30),
-      searchMultiQuery(queries, 12),
-    ]);
-    if (catalogRes.status === 'fulfilled' && catalogRes.value.data) {
-      setResults(catalogRes.value.data.map(mapSongRow));
-    }
-    if (streamRes.status === 'fulfilled') setIndexedResults(streamRes.value);
-    setSearching(false);
-  };
-
-  const searchByMood = async (mood: string) => {
-    setQuery(''); setActiveFilter({ type: 'mood', value: mood }); setSearching(true); setIndexedResults([]);
-    const queries = MOOD_QUERIES[mood] || [mood];
-    const [catalogRes, streamRes] = await Promise.allSettled([
-      supabase.from('songs').select('*, artists(id, name, photo_url)')
-        .eq('is_visible', true).ilike('mood', `%${mood}%`).limit(30),
-      searchMultiQuery(queries, 12),
-    ]);
-    if (catalogRes.status === 'fulfilled' && catalogRes.value.data) {
-      setResults(catalogRes.value.data.map(mapSongRow));
-    }
-    if (streamRes.status === 'fulfilled') setIndexedResults(streamRes.value);
-    setSearching(false);
-  };
-
-  const clearFilter = () => {
-    setActiveFilter(null); setQuery('');
-    setResults([]); setIndexedResults([]);
-  };
-
   const libraryResults: Song[] = source === 'indexer' ? [] : results;
 
   const visibleIndexedResults = source === 'all' || source === 'indexer' ? indexedResults : [];
 
-  const hasQuery = query.length > 1 || activeFilter;
+  const hasQuery = query.length > 1;
 
   return (
     <TabTransition>
