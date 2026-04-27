@@ -109,6 +109,7 @@ const parseSessionSong = (value: unknown): SessionSongPayload | null => {
     audio_url: record.audio_url,
     cover_url: typeof record.cover_url === 'string' ? record.cover_url : undefined,
     duration: typeof record.duration === 'number' ? record.duration : undefined,
+    source: typeof record.source === 'string' ? record.source : undefined,
   };
 };
 
