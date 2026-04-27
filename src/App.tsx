@@ -142,6 +142,7 @@ const AnimatedRoutes = () => {
           <Route path="/offline" element={<ProtectedRoute><Offline /></ProtectedRoute>} />
           <Route path="/listen-together" element={<ProtectedRoute><PlayWithMate /></ProtectedRoute>} />
           <Route path="/artists" element={<ProtectedRoute><AllArtists /></ProtectedRoute>} />
+          <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
           
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
