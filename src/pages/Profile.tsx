@@ -259,6 +259,28 @@ const Profile = () => {
             })}
           </div>
 
+          {/* Rewind 2026 banner */}
+          <motion.button
+            onClick={() => navigate('/rewind')}
+            whileTap={{ scale: 0.97 }}
+            className="w-full relative overflow-hidden rounded-2xl p-4 text-left flex items-center gap-3 mb-1"
+            style={{
+              background: 'linear-gradient(135deg, #ff2d55 0%, #8b00ff 60%, #1e1b4b 100%)',
+              boxShadow: '0 14px 40px -14px rgba(255,45,85,0.6)',
+            }}
+          >
+            <div className="absolute -top-10 -right-6 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none" />
+            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
+              <Music className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0 relative">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">Universflow</p>
+              <p className="text-lg font-black text-white leading-tight">Rewind 2026</p>
+              <p className="text-xs text-white/85">Your year in music — tap to play</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white relative" />
+          </motion.button>
+
           {/* Menu Items */}
           <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(28, 28, 30, 0.8)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
             {isAdmin && (
