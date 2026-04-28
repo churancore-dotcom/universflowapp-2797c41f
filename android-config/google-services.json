@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "258212982105",
+    "project_id": "universflow-df51c",
+    "storage_bucket": "universflow-df51c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258212982105:android:068b20f7164927172af048",
+        "android_client_info": {
+          "package_name": "app.lovable.id5acaae55bbc847a7bd32f3924d8ef986"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFMYPMDL6Vpr3YkWzIwx3GG9cgHurGFh0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
