@@ -464,6 +464,17 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
       }
       haptics.success();
       setStep('success');
+      // Fire-and-forget Telegram notification
+      supabase.functions.invoke('telegram-notify', {
+        body: {
+          event: 'payment_submitted',
+          email: user.email,
+          user_id: user.id,
+          plan,
+          amount_inr: Math.round(amountPaise / 100),
+          utr: cleanUtr,
+        },
+      }).catch(() => {});
     } catch {
       toast({ title: 'Something went wrong', variant: 'destructive' });
     } finally { setSubmitting(false); }
