@@ -64,6 +64,7 @@ export default function PaymentRequests() {
 
   const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
     setBusyId(id);
+    const req = requests.find(r => r.id === id);
     const { error } = await supabase
       .from('payment_requests')
       .update({ status, reviewed_at: new Date().toISOString() })
@@ -74,6 +75,19 @@ export default function PaymentRequests() {
       return;
     }
     toast({ title: status === 'approved' ? '✓ Premium granted' : 'Rejected' });
+    // Telegram notify
+    if (req) {
+      supabase.functions.invoke('telegram-notify', {
+        body: {
+          event: status === 'approved' ? 'premium_granted' : 'payment_rejected',
+          email: req.user_email ?? undefined,
+          user_id: req.user_id,
+          plan: req.plan,
+          amount_inr: Math.round(req.amount_paise / 100),
+          utr: req.utr_number,
+        },
+      }).catch(() => {});
+    }
     load();
   };
 
