@@ -110,9 +110,34 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, isLoading } = useAuth();
-  if (isLoading) return <LazyFallback />;
+  // Server-side re-verification on every admin mount. Cached `isAdmin` from
+  // context is not trusted on its own — we hit the SECURITY DEFINER RPC
+  // (`has_role`) which queries the `user_roles` table directly. If the role
+  // was revoked mid-session, this catches it immediately.
+  const [verified, setVerified] = useState<null | boolean>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) { setVerified(false); return; }
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin',
+        });
+        if (!cancelled) setVerified(!error && !!data);
+      } catch {
+        if (!cancelled) setVerified(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  if (isLoading || verified === null) return <LazyFallback />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) return <Navigate to="/home" replace />;
+  // Cloak: if not admin (cached OR re-verified), render 404 instead of
+  // redirecting. URL guessing reveals nothing about /admin existence.
+  if (!isAdmin || !verified) return <NotFound />;
   return <>{children}</>;
 };
 
