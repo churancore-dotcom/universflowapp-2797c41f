@@ -131,11 +131,19 @@ const Settings = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm">Crossfade</span>
-                    <Switch checked={cfEnabled} onCheckedChange={toggleCrossfade} className="data-[state=checked]:bg-primary scale-75" />
+                    {!isPremium && <Crown className="w-3 h-3 text-primary" fill="currentColor" />}
+                    <Switch
+                      checked={isPremium && cfEnabled}
+                      onCheckedChange={(v) => {
+                        if (!isPremium) { navigate('/premium'); return; }
+                        toggleCrossfade();
+                      }}
+                      className="data-[state=checked]:bg-primary scale-75"
+                    />
                   </div>
-                  <span className="text-sm text-primary font-medium">{cfDuration}s</span>
+                  <span className="text-sm text-primary font-medium">{isPremium && cfEnabled ? `${cfDuration}s` : 'Off'}</span>
                 </div>
-                {cfEnabled && (
+                {isPremium && cfEnabled && (
                   <Slider value={[cfDuration]} onValueChange={([val]) => setCrossfadeDuration(val)} max={12} step={1} className="[&_[role=slider]]:w-5 [&_[role=slider]]:h-5" />
                 )}
               </div>

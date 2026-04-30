@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Sparkles, X, Wand2, Music2, Moon, Sun, Zap, Heart, Loader2 } from 'lucide-react';
 import { iosSpring } from '@/lib/animations';
 import { toast } from 'sonner';
+import { usePremium } from '@/hooks/usePremium';
+import PremiumLockOverlay from './PremiumLockOverlay';
 
 interface AIPlaylistGeneratorProps {
   isOpen: boolean;
