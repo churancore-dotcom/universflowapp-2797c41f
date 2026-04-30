@@ -479,6 +479,20 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
 
   if (!isOpen) return null;
 
+  // Premium gate
+  if (!premiumLoading && !isPremium) {
+    return (
+      <AnimatePresence>
+        <PremiumLockOverlay
+          title="Studio-grade Equalizer"
+          description="Shape every frequency with the 8-band EQ, bass boost, reverb and spatial audio. Available on Premium."
+          onClose={onClose}
+        />
+      </AnimatePresence>
+    );
+  }
+
+
   const speedMarks = [0.5, 1, 1.5, 2];
 
   return (

@@ -6,6 +6,8 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { iosSpring, iosBounce } from '@/lib/animations';
 import { useAudioSettings } from '@/hooks/useAudioSettings';
+import { usePremium } from '@/hooks/usePremium';
+import PremiumLockOverlay from './PremiumLockOverlay';
 
 interface AdvancedAudioSettingsProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ const AdvancedAudioSettings = memo(function AdvancedAudioSettings({
   onClose 
 }: AdvancedAudioSettingsProps) {
   const { settings, updateSetting } = useAudioSettings();
+  const { isPremium, isLoading: premiumLoading } = usePremium();
   
   const selectedPreset = settings.selectedPreset;
   const selectedQuality = settings.selectedQuality;
