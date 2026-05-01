@@ -2,7 +2,7 @@ import { memo, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Crown, Check, Sparkles, Download, Headphones,
-  Zap, Gift, Copy, Loader2, ShieldCheck, Users, Sliders, Music2, Infinity as InfinityIcon,
+  Zap, Gift, Copy, Loader2, ShieldCheck, Users, Sliders, Music2, Infinity as InfinityIcon, Clock,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
