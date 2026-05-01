@@ -152,7 +152,6 @@ const Home = () => {
   });
 
   const [resolvingExtId, setResolvingExtId] = useState<string | null>(null);
-  const { playSong } = usePlayer();
   const handlePlayExternal = useCallback(async (track: Song, queue: Song[]) => {
     setResolvingExtId(track.id);
     try {
