@@ -653,8 +653,10 @@ export const PlayWithMateProvider = ({ children }: { children: ReactNode }) => {
         });
         toast.success('Joined the room — playback will stay synced automatically');
         triggerHaptic('success');
-      } catch {
-        toast.error('Could not join this room');
+      } catch (e: any) {
+        console.error('[PlayWithMate] joinSession failed:', e);
+        const msg = e?.message || 'Could not join this room';
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
