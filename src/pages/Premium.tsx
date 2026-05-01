@@ -348,7 +348,7 @@ const PremiumPage = memo(function PremiumPage() {
           </motion.section>
 
           {/* Closing CTA */}
-          {!isPremium && (
+          {!isPremium && !pending && (
             <motion.section
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ ...iosSpring, delay: 0.6 }}
