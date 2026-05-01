@@ -55,8 +55,28 @@ public class MediaNotificationService extends Service {
     private boolean isPlaying = false;
     private Bitmap currentArt = null;
     private String loadedArtUrl = null;
+    private PowerManager.WakeLock wakeLock = null;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    private void acquireWakeLockIfNeeded() {
+        if (wakeLock != null && wakeLock.isHeld()) return;
+        try {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (pm == null) return;
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "UniversFlow:MediaPlayback");
+            wakeLock.setReferenceCounted(false);
+            // Safety cap — Android allows long-held wake locks but we re-acquire on each track
+            wakeLock.acquire(60L * 60L * 1000L);
+        } catch (Exception ignore) {}
+    }
+
+    private void releaseWakeLock() {
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+        } catch (Exception ignore) {}
+        wakeLock = null;
+    }
 
     @Override
     public void onCreate() {
