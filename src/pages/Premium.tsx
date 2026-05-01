@@ -2,7 +2,7 @@ import { memo, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Crown, Check, Sparkles, Download, Headphones,
-  Zap, Gift, Copy, Loader2, ShieldCheck, Users, Sliders, Music2, Infinity,
+  Zap, Gift, Copy, Loader2, ShieldCheck, Users, Sliders, Music2, Infinity as InfinityIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
@@ -31,7 +31,7 @@ const FEATURES = [
   { icon: Download,    title: 'Unlimited Downloads',     desc: 'Save anything. Listen offline. Anywhere.' },
   { icon: Users,       title: 'Listen Together',         desc: 'Sync rooms with friends in real time.' },
   { icon: Music2,      title: 'AI Playlist Generator',   desc: 'Mood-matched playlists, made instantly.' },
-  { icon: Infinity,    title: 'Crossfade & Gapless',     desc: 'Seamless transitions, end to end.' },
+  { icon: InfinityIcon, title: 'Crossfade & Gapless',     desc: 'Seamless transitions, end to end.' },
   { icon: Sparkles,    title: 'Premium-Only Tracks',     desc: 'Early drops and exclusive releases.' },
   { icon: Crown,       title: 'Premium Badge',           desc: 'A subtle mark of support across the app.' },
   { icon: ShieldCheck, title: 'Priority Support',        desc: 'Skip the line — we answer first.' },
