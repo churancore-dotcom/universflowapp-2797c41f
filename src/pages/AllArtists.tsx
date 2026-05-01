@@ -79,6 +79,7 @@ ArtistRow.displayName = 'ArtistRow';
 
 const AllArtists = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { playSong, currentSong, isPlaying } = usePlayer();
   const [allArtists, setAllArtists] = useState<ArtistEntry[]>([]);
@@ -93,6 +94,7 @@ const AllArtists = () => {
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const enrichmentTriggered = useRef<Set<string>>(new Set());
+  const focusHandledRef = useRef<string | null>(null);
 
   // Tags used to fetch *real* artist directories from Last.fm with Deezer PFPs.
   // Each category maps to one or more Last.fm tags so we get rich, themed lists.
