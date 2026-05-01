@@ -380,7 +380,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     let appResumeRemove: (() => void) | null = null;
     (async () => {
       try {
-        const mod: any = await import('@capacitor/app').catch(() => null);
+        const modName = '@capacitor/app';
+        const mod: any = await import(/* @vite-ignore */ modName).catch(() => null);
         if (!mod?.App) return;
         const handle = await mod.App.addListener('appStateChange', (state: { isActive: boolean }) => {
           if (!state?.isActive) return;
