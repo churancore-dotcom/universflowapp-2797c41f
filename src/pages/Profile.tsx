@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { User, Mail, Settings, LogOut, Shield, Music, Heart, Clock, ChevronRight, BarChart3, Crown, Edit2, Check, X, Star, MessageSquare } from 'lucide-react';
+import { User, Mail, Settings, LogOut, Shield, Music, Heart, Clock, ChevronRight, Crown, Edit2, Check, X, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePremium } from '@/hooks/usePremium';
 import BottomNav from '@/components/BottomNav';
-import ListeningStats from '@/components/ListeningStats';
 import RedeemCodeModal from '@/components/RedeemCodeModal';
 import ReviewModal from '@/components/ReviewModal';
 import ReviewsSheet from '@/components/ReviewsSheet';
@@ -24,11 +22,9 @@ const Profile = () => {
   const { isPremium } = usePremium();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ likedSongs: 0, recentPlays: 0, playlists: 0 });
-  const [showStats, setShowStats] = useState(false);
   const [showRedeemCode, setShowRedeemCode] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showReviewsList, setShowReviewsList] = useState(false);
-  const [hasReviewed, setHasReviewed] = useState<boolean>(() => Boolean(localStorage.getItem('uf_reviewed')));
   const [profileData, setProfileData] = useState<ProfileData>({ username: null, username_changed: false });
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -128,7 +124,6 @@ const Profile = () => {
   return (
     <TabTransition>
       <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
-        {/* Header */}
         <header
           className="flex-shrink-0 z-30 px-4 pt-3 pb-2 safe-area-pt"
           style={{
@@ -142,7 +137,6 @@ const Profile = () => {
           </div>
         </header>
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto px-4 pt-3 pb-32" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Profile Card */}
           <div
@@ -259,28 +253,6 @@ const Profile = () => {
             })}
           </div>
 
-          {/* Rewind 2026 banner */}
-          <motion.button
-            onClick={() => navigate('/rewind')}
-            whileTap={{ scale: 0.97 }}
-            className="w-full relative overflow-hidden rounded-2xl p-4 text-left flex items-center gap-3 mb-1"
-            style={{
-              background: 'linear-gradient(135deg, #ff2d55 0%, #8b00ff 60%, #1e1b4b 100%)',
-              boxShadow: '0 14px 40px -14px rgba(255,45,85,0.6)',
-            }}
-          >
-            <div className="absolute -top-10 -right-6 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none" />
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
-              <Music className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0 relative">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">Universflow</p>
-              <p className="text-lg font-black text-white leading-tight">Rewind 2026</p>
-              <p className="text-xs text-white/85">Your year in music — tap to play</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-white relative" />
-          </motion.button>
-
           {/* Menu Items */}
           <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(28, 28, 30, 0.8)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
             {isAdmin && (
@@ -290,11 +262,6 @@ const Profile = () => {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
             )}
-            <button onClick={() => setShowStats(true)} className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-white/[0.06] active:bg-white/5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20"><BarChart3 className="w-4 h-4 text-purple-400" /></div>
-              <span className="flex-1 text-sm font-medium">Your Stats</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
             <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-white/[0.06] active:bg-white/5">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10"><Settings className="w-4 h-4 text-foreground" /></div>
               <span className="flex-1 text-sm font-medium">Settings</span>
@@ -310,23 +277,11 @@ const Profile = () => {
               className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-white/[0.06] active:bg-white/5"
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-yellow-500/20">
-                {hasReviewed ? <MessageSquare className="w-4 h-4 text-yellow-400" /> : <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />}
+                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
               </div>
               <span className="flex-1 text-sm font-medium">Reviews</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
-            {!hasReviewed && (
-              <button
-                onClick={() => setShowReview(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-white/[0.06] active:bg-white/5"
-              >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
-                  <Star className="w-4 h-4 text-primary fill-primary" />
-                </div>
-                <span className="flex-1 text-sm font-medium">Share Your Experience</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-white/5">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-destructive/20"><LogOut className="w-4 h-4 text-destructive" /></div>
               <span className="flex-1 text-sm font-medium text-destructive">Sign Out</span>
@@ -355,10 +310,13 @@ const Profile = () => {
         </main>
 
         <BottomNav />
-        {showStats && <ListeningStats isOpen={showStats} onClose={() => setShowStats(false)} />}
         {showRedeemCode && <RedeemCodeModal isOpen={showRedeemCode} onClose={() => setShowRedeemCode(false)} />}
-        <ReviewModal isOpen={showReview} onClose={() => setShowReview(false)} onSubmitted={() => setHasReviewed(true)} />
-        <ReviewsSheet isOpen={showReviewsList} onClose={() => setShowReviewsList(false)} />
+        <ReviewModal isOpen={showReview} onClose={() => setShowReview(false)} />
+        <ReviewsSheet
+          isOpen={showReviewsList}
+          onClose={() => setShowReviewsList(false)}
+          onWriteReview={() => { setShowReviewsList(false); setTimeout(() => setShowReview(true), 250); }}
+        />
       </div>
     </TabTransition>
   );

@@ -24,6 +24,7 @@ interface ReactionState {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  onWriteReview?: () => void;
 }
 
 const timeAgo = (iso: string) => {
@@ -38,7 +39,7 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString();
 };
 
-const ReviewsSheet = ({ isOpen, onClose }: Props) => {
+const ReviewsSheet = ({ isOpen, onClose, onWriteReview }: Props) => {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reactions, setReactions] = useState<Record<string, ReactionState>>({});
@@ -162,6 +163,21 @@ const ReviewsSheet = ({ isOpen, onClose }: Props) => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {onWriteReview && (
+                <button
+                  onClick={() => { triggerHaptic('selection'); onWriteReview(); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-2xl active:scale-[0.98] transition-transform"
+                  style={{ background: 'linear-gradient(135deg, #FF2D55, #FF6482)' }}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Star className="w-5 h-5 text-white fill-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold text-white">Share your experience</p>
+                    <p className="text-[11px] text-white/80">Rate Universflow & help us grow</p>
+                  </div>
+                </button>
+              )}
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />

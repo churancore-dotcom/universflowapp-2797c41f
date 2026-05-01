@@ -429,28 +429,51 @@ const Library = () => {
                 ) : (
                   <div className="space-y-0.5">
                     {playlists.map((playlist, i) => (
-                      <motion.button
+                      <motion.div
                         key={playlist.id}
-                        className="w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left active:scale-[0.98] transition-transform"
-                        onClick={() => navigate(`/playlist/${playlist.id}`)}
+                        className="w-full flex items-center gap-2.5 p-2.5 rounded-xl active:scale-[0.98] transition-transform"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}
                       >
-                        <div
-                          className="w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden"
-                          style={{
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '0.5px solid rgba(255,255,255,0.06)',
-                          }}
+                        <button
+                          className="flex-1 flex items-center gap-2.5 text-left min-w-0"
+                          onClick={() => navigate(`/playlist/${playlist.id}`)}
                         >
-                          {playlist.cover_url ? <img src={playlist.cover_url} alt="" className="w-full h-full object-cover" /> : <ListMusic className="w-4 h-4 text-muted-foreground" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm truncate">{playlist.title}</p>
-                          <p className="text-xs text-muted-foreground">Playlist</p>
-                        </div>
-                      </motion.button>
+                          <div
+                            className="w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
+                            style={{
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '0.5px solid rgba(255,255,255,0.06)',
+                            }}
+                          >
+                            {playlist.cover_url ? <img src={playlist.cover_url} alt="" className="w-full h-full object-cover" /> : <ListMusic className="w-4 h-4 text-muted-foreground" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{playlist.title}</p>
+                            <p className="text-xs text-muted-foreground">Playlist</p>
+                          </div>
+                        </button>
+                        {user && (playlist as any).user_id === user.id && (
+                          <button
+                            aria-label={`Delete ${playlist.title}`}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!window.confirm(`Delete "${playlist.title}"? This cannot be undone.`)) return;
+                              const { error } = await supabase.from('playlists').delete().eq('id', playlist.id).eq('user_id', user.id);
+                              if (error) { toast.error('Could not delete playlist'); return; }
+                              queryClient.setQueryData(libraryQueryKey, (prev: any) =>
+                                prev ? { ...prev, playlists: prev.playlists.filter((p: any) => p.id !== playlist.id) } : prev,
+                              );
+                              toast.success('Playlist deleted');
+                            }}
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-destructive flex-shrink-0"
+                            style={{ background: 'hsl(var(--destructive) / 0.12)' }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </motion.div>
                     ))}
                   </div>
                 )}

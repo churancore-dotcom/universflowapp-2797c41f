@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User, Music, Loader2, Radio, Heart, Search as SearchIcon, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -79,6 +79,7 @@ ArtistRow.displayName = 'ArtistRow';
 
 const AllArtists = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { playSong, currentSong, isPlaying } = usePlayer();
   const [allArtists, setAllArtists] = useState<ArtistEntry[]>([]);
@@ -93,6 +94,7 @@ const AllArtists = () => {
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const enrichmentTriggered = useRef<Set<string>>(new Set());
+  const focusHandledRef = useRef<string | null>(null);
 
   // Tags used to fetch *real* artist directories from Last.fm with Deezer PFPs.
   // Each category maps to one or more Last.fm tags so we get rich, themed lists.
@@ -305,6 +307,20 @@ const AllArtists = () => {
     }
     setLoadingSongs(false);
   }, [navigate]);
+
+  // Auto-open artist from ?focus= query (from Home featured / Library artist click)
+  useEffect(() => {
+    const focusName = searchParams.get('focus');
+    if (!focusName || loading || focusHandledRef.current === focusName) return;
+    const match = allArtists.find(a => a.name.toLowerCase() === focusName.toLowerCase());
+    if (match) {
+      focusHandledRef.current = focusName;
+      handleOpenArtist(match);
+      const next = new URLSearchParams(searchParams);
+      next.delete('focus');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, allArtists, loading, handleOpenArtist, setSearchParams]);
 
   const handlePlayTrack = useCallback(async (track: IndexedTrack) => {
     setResolvingId(track.id);

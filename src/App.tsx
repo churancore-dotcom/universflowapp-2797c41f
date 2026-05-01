@@ -42,7 +42,6 @@ const Offline = lazy(() => import("./pages/Offline"));
 const PlayWithMate = lazy(() => import("./pages/PlayWithMate"));
 const AllArtists = lazy(() => import("./pages/AllArtists"));
 const ManageSubscription = lazy(() => import("./pages/ManageSubscription"));
-const Wrapped = lazy(() => import("./pages/Wrapped"));
 const Premium = lazy(() => import("./pages/Premium"));
 
 const DownloadQueuePanel = lazy(() => import("./components/DownloadQueuePanel"));
@@ -173,8 +172,7 @@ const AnimatedRoutes = () => {
           <Route path="/artists" element={<ProtectedRoute><AllArtists /></ProtectedRoute>} />
           <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
           <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
-          <Route path="/rewind" element={<ProtectedRoute><Wrapped /></ProtectedRoute>} />
-          
+
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
             <Route path="upload" element={<UploadMusic />} />
