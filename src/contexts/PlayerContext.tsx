@@ -1096,25 +1096,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const playSong = useCallback((song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
-    // Use cached premium status - don't await async call which causes pause
-    // Only show ads to non-premium users
-    if (!isPremiumUser) {
-      const shouldShowAd = songsPlayedSinceAd >= AD_FREQUENCY - 1;
-      
-      if (shouldShowAd) {
-        // Store pending song and show ad
-        setPendingSong({ song, offlineUrl, songsQueue });
-        setAdType('start');
-        setShowPrerollAd(true);
-        setSongsPlayedSinceAd(0);
-        return;
-      }
-    }
-    
-    // Play directly (premium or not ad time yet)
-    setSongsPlayedSinceAd(prev => prev + 1);
+    // Spotify-like behavior: a tap must start playback immediately. Ads/premium
+    // checks must never block the audio pipeline.
     playActualSong(song, offlineUrl, songsQueue);
-  }, [songsPlayedSinceAd, playActualSong, isPremiumUser]);
+  }, [playActualSong]);
 
   const onPrerollAdComplete = useCallback(() => {
     setShowPrerollAd(false);
