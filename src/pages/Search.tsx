@@ -130,7 +130,7 @@ const Search = () => {
       duration: item.duration,
       source: 'indexed' as const,
     })));
-  }, [playSong]);
+  }, [playSong, visibleIndexedResults]);
 
   const libraryResults: Song[] = source === 'indexer' ? [] : results;
 
