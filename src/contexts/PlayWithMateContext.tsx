@@ -151,6 +151,11 @@ export const PlayWithMateProvider = ({ children }: { children: ReactNode }) => {
   const persistIntervalRef = useRef<number | null>(null);
   const restoringRef = useRef(false);
   const applyingRemoteStateRef = useRef(false);
+  const progressRef = useRef(progress);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   const clearRealtime = useCallback(() => {
     if (broadcastIntervalRef.current) {
@@ -230,39 +235,31 @@ export const PlayWithMateProvider = ({ children }: { children: ReactNode }) => {
     (): PlaybackStatePayload => ({
       song: buildSongPayload(currentSong),
       isPlaying,
-      playbackPosition: Math.max(audioElement?.currentTime ?? 0, progress),
+      playbackPosition: Math.max(audioElement?.currentTime ?? 0, progressRef.current),
       syncedAt: Date.now(),
     }),
-    [audioElement, buildSongPayload, currentSong, isPlaying, progress],
+    [audioElement, buildSongPayload, currentSong, isPlaying],
   );
 
   const applyRemoteState = useCallback(
     async (payload: PlaybackStatePayload | null | undefined) => {
       if (!payload?.song?.audio_url) return;
 
-      // For non-library sources (YouTube/Audius/indexed streams), the host's
-      // resolved URL may be short-lived or instance-specific. Mark it as
-      // 'resolving' so the guest's player re-resolves a fresh stream URL via
-      // the music indexer (resolveAudioUrl in PlayerContext).
       const hostSource = payload.song.source;
-      const isStreamSource =
-        !!hostSource && hostSource !== 'library' && hostSource !== 'upload';
 
       const remoteSong: Song = {
         id: payload.song.id,
         title: payload.song.title,
         artist: payload.song.artist,
         cover_url: payload.song.cover_url,
-        audio_url: isStreamSource ? 'resolving' : payload.song.audio_url,
+        audio_url: payload.song.audio_url,
         duration: payload.song.duration,
         source: (hostSource as any) || 'indexed',
       };
 
       const sameSong =
         currentSong?.id === remoteSong.id &&
-        // Treat as same song even if local URL is the resolved one
-        (currentSong?.audio_url === remoteSong.audio_url ||
-          (isStreamSource && !!currentSong?.audio_url));
+        currentSong?.audio_url === remoteSong.audio_url;
       const remotePosition = Number(payload.playbackPosition) || 0;
       const localPosition = audioElement?.currentTime ?? progress;
 
@@ -522,21 +519,21 @@ export const PlayWithMateProvider = ({ children }: { children: ReactNode }) => {
     const syncTimer = window.setTimeout(() => {
       void broadcastPlaybackState();
       void persistSessionState(room.sessionId);
-    }, 120);
+    }, 180);
 
     return () => window.clearTimeout(syncTimer);
-  }, [broadcastPlaybackState, currentSong?.audio_url, currentSong?.id, isPlaying, persistSessionState, progress, room?.role, room?.sessionId]);
+  }, [broadcastPlaybackState, currentSong?.audio_url, currentSong?.id, isPlaying, persistSessionState, room?.role, room?.sessionId]);
 
   useEffect(() => {
     if (room?.role !== 'host' || !room.sessionId) return;
 
     broadcastIntervalRef.current = window.setInterval(() => {
       void broadcastPlaybackState();
-    }, 800);
+    }, 2000);
 
     persistIntervalRef.current = window.setInterval(() => {
       void persistSessionState(room.sessionId);
-    }, 2200);
+    }, 10000);
 
     return () => {
       if (broadcastIntervalRef.current) {

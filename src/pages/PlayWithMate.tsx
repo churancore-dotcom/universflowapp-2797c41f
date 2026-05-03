@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, Heart, Users, Copy, Share2, Crown, Music, Loader2, LogOut,
+  ChevronLeft, Heart, Users, Copy, Share2, Music, Loader2, LogOut,
   Radio, Disc3, Sparkles, Minimize2, Link2, UserMinus, QrCode, Lightbulb, Check, X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,6 @@ import PageTransition from '@/components/PageTransition';
 import BottomNav from '@/components/BottomNav';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { usePremium } from '@/hooks/usePremium';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { usePlayWithMate } from '@/contexts/PlayWithMateContext';
 import { triggerHaptic } from '@/hooks/useHaptics';
@@ -19,7 +18,6 @@ const QUICK_REACTIONS = ['❤️', '🔥', '😂', '🎶', '🥹', '🙌'];
 
 const PlayWithMate = () => {
   const navigate = useNavigate();
-  const { isPremium } = usePremium();
   const { currentSong } = usePlayer();
   const {
     isConnected, loading, room, participants, reactions, inviteUrl, suggestions,
@@ -60,32 +58,6 @@ const PlayWithMate = () => {
   const qrUrl = inviteUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(inviteUrl)}`
     : null;
-
-  if (!isPremium) {
-    return (
-      <PageTransition>
-        <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
-          <header className="flex-shrink-0 z-30 px-2 pt-3 pb-2 flex items-center safe-area-pt bg-background/90 backdrop-blur-xl">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1 px-2 py-2 -ml-1 text-primary">
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm">Back</span>
-            </button>
-          </header>
-          <main className="flex-1 flex items-center justify-center px-6">
-            <div className="text-center">
-              <div className="w-20 h-20 rounded-3xl mx-auto mb-4 flex items-center justify-center bg-primary/15">
-                <Crown className="w-10 h-10 text-primary" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">Premium Feature</h2>
-              <p className="text-sm text-muted-foreground mb-6">Upgrade to host synced rooms and listen together anywhere.</p>
-              <Button onClick={() => navigate('/premium')} className="rounded-xl">Upgrade to Premium</Button>
-            </div>
-          </main>
-          <BottomNav />
-        </div>
-      </PageTransition>
-    );
-  }
 
   return (
     <PageTransition>

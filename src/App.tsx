@@ -148,8 +148,7 @@ const AnimatedRoutes = () => {
     <NavDirectionProvider>
     <OfflineGate />
     <Suspense fallback={<LazyFallback />}>
-      <AnimatePresence mode="wait" initial={false}>
-        <Routes location={location} key={location.pathname}>
+        <Routes location={location}>
           <Route path="/" element={
             user ? <Navigate to="/home" replace /> : 
             <Navigate to="/auth" replace />
@@ -208,7 +207,6 @@ const AnimatedRoutes = () => {
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </AnimatePresence>
     </Suspense>
     </NavDirectionProvider>
   );

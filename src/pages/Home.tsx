@@ -19,12 +19,11 @@ import LockScreenPlayer from '@/components/LockScreenPlayer';
 import EqualizerModal from '@/components/EqualizerModal';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { TabTransition } from '@/components/PageTransition';
-import { Music, Lock, ListMusic, Sliders, Headphones, Loader2 } from 'lucide-react';
+import { Music, Lock, ListMusic, Sliders, Headphones } from 'lucide-react';
 import { triggerHaptic } from '@/hooks/useHaptics';
 import appLogo from '@/assets/app-logo.png';
 import { HomeSkeleton } from '@/components/PageSkeletons';
-import { getTopIndexedTracks, resolveIndexedTrack } from '@/lib/musicIndexer';
-import { toast } from 'sonner';
+import { getTopIndexedTracks } from '@/lib/musicIndexer';
 
 // Simple empty state
 const EmptyState = memo(() => (
@@ -151,20 +150,8 @@ const Home = () => {
     enabled: !isOffline,
   });
 
-  const [resolvingExtId, setResolvingExtId] = useState<string | null>(null);
-  const handlePlayExternal = useCallback(async (track: Song, queue: Song[]) => {
-    setResolvingExtId(track.id);
-    try {
-      const r = await resolveIndexedTrack(track.artist, track.title);
-      if (!r.streamUrl) throw new Error('Stream unavailable');
-      const resolved: Song = { ...track, audio_url: r.streamUrl, cover_url: r.cover_url || track.cover_url, duration: r.duration || track.duration };
-      const resolvedQueue = queue.map((q) => q.id === track.id ? resolved : q);
-      playSong(resolved, undefined, resolvedQueue);
-    } catch (e: any) {
-      toast.error(e?.message || 'Could not play track');
-    } finally {
-      setResolvingExtId(null);
-    }
+  const handlePlayExternal = useCallback((track: Song, queue: Song[]) => {
+    playSong(track, undefined, queue);
   }, [playSong]);
 
   const allSongs = useMemo(() => songs, [songs]);
@@ -425,11 +412,7 @@ const Home = () => {
                                 <Music className="w-7 h-7 text-muted-foreground" />
                               </div>
                             )}
-                            {resolvingExtId === song.id && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                                <Loader2 className="w-5 h-5 text-white animate-spin" />
-                              </div>
-                            )}
+                            {currentSong?.id === song.id && <div className="absolute inset-0 bg-primary/10" />}
                           </div>
                           <p className="text-[13px] font-bold truncate text-foreground leading-tight">{song.title}</p>
                           <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">{song.artist}</p>

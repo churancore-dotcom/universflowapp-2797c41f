@@ -19,6 +19,16 @@ function readStored(): StoredEQ {
   return {};
 }
 
+function hasActiveProcessing(s: StoredEQ) {
+  return Boolean(
+    s.bands?.some((gain) => Math.abs(gain) >= 0.5) ||
+    (s.bassBoost ?? 0) > 0 ||
+    (s.reverb ?? 0) > 0 ||
+    s.spatialAudio ||
+    (typeof s.playbackSpeed === 'number' && s.playbackSpeed !== 1)
+  );
+}
+
 /**
  * Mount once at app root. Connects the engine to the live <audio> element
  * and re-applies persisted EQ settings whenever the source changes.
@@ -28,9 +38,14 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     if (!audioElement) return;
 
     const reapply = () => {
+      const s = readStored();
+      if (!hasActiveProcessing(s)) {
+        audioElement.playbackRate = 1;
+        return;
+      }
+
       const ok = connectAudioElement(audioElement);
       if (!ok) return;
-      const s = readStored();
       setBands(s.bands ?? [0, 0, 0, 0, 0, 0, 0, 0], s.bassBoost ?? 0);
       setReverb(s.reverb ?? 0);
       setSpatial(!!s.spatialAudio);

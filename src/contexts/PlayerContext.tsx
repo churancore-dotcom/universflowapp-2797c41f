@@ -113,6 +113,12 @@ const configureAudioElementSource = (audio: HTMLAudioElement, sourceUrl: string)
 // Hosts that already deliver proper CORS headers — safe to play & EQ-process directly
 const DIRECT_PLAYABLE_HOST_SNIPPETS = [
   'supabase.co',
+  'private.coffee',
+  'piped.video',
+  'piped.privacydev.net',
+  'piped.kavin.rocks',
+  'piped.adminforge.de',
+  'tokhmi.xyz',
 ];
 
 const shouldProxyStreamUrl = (sourceUrl: string) => {
@@ -427,7 +433,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearInterval(crossfadeIntervalRef.current);
       }
       if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+        window.clearInterval(animationFrameRef.current);
       }
     };
   }, []);
@@ -445,22 +451,24 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useGlobalAudioEngine(audioElement);
 
 
-  // Progress update loop using requestAnimationFrame for smooth updates
+  // Throttled progress loop. Updating React state every animation frame was
+  // making the whole app feel laggy while music played.
   useEffect(() => {
     const updateProgress = () => {
       if (audioRef.current && !audioRef.current.paused && !isCrossfading.current) {
-        setProgress(audioRef.current.currentTime);
+        const next = audioRef.current.currentTime;
+        setProgress((prev) => (Math.abs(prev - next) > 0.2 ? next : prev));
       }
-      animationFrameRef.current = requestAnimationFrame(updateProgress);
     };
 
     if (isPlaying) {
-      animationFrameRef.current = requestAnimationFrame(updateProgress);
+      updateProgress();
+      animationFrameRef.current = window.setInterval(updateProgress, 250);
     }
 
     return () => {
       if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+        window.clearInterval(animationFrameRef.current);
       }
     };
   }, [isPlaying]);
@@ -801,16 +809,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (nextIdx !== null && queue.length > 0) {
         const nextSong = queue[nextIdx];
         
-        // Check premium and show end-of-song ad for non-premium
-        if (!isPremiumUser && songsPlayedSinceAd >= AD_FREQUENCY - 1) {
-          setPendingSong({ song: nextSong, offlineUrl: null, songsQueue: queue });
-          setAdType('end');
-          setShowPrerollAd(true);
-          setSongsPlayedSinceAd(0);
-          return;
-        }
-        
-        setSongsPlayedSinceAd(prev => prev + 1);
         // Play next song immediately without any async delay
         playSongAtIndex(nextIdx, queue);
       } else if (repeat === 'off' && queue.length > 0) {
@@ -887,7 +885,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('error', handleAudioError);
     };
-  }, [currentIndex, queue, shuffle, repeat, crossfade, crossfadeDuration, getNextIndex, playSongAtIndex, isPremiumUser, songsPlayedSinceAd]);
+  }, [currentIndex, queue, shuffle, repeat, crossfade, crossfadeDuration, getNextIndex, playSongAtIndex]);
 
   // Crossfade implementation
   const startCrossfade = useCallback(() => {
@@ -1098,25 +1096,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const playSong = useCallback((song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
-    // Use cached premium status - don't await async call which causes pause
-    // Only show ads to non-premium users
-    if (!isPremiumUser) {
-      const shouldShowAd = songsPlayedSinceAd >= AD_FREQUENCY - 1;
-      
-      if (shouldShowAd) {
-        // Store pending song and show ad
-        setPendingSong({ song, offlineUrl, songsQueue });
-        setAdType('start');
-        setShowPrerollAd(true);
-        setSongsPlayedSinceAd(0);
-        return;
-      }
-    }
-    
-    // Play directly (premium or not ad time yet)
-    setSongsPlayedSinceAd(prev => prev + 1);
+    // Spotify-like behavior: a tap must start playback immediately. Ads/premium
+    // checks must never block the audio pipeline.
     playActualSong(song, offlineUrl, songsQueue);
-  }, [songsPlayedSinceAd, playActualSong, isPremiumUser]);
+  }, [playActualSong]);
 
   const onPrerollAdComplete = useCallback(() => {
     setShowPrerollAd(false);
