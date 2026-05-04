@@ -1373,7 +1373,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             artist: currentSong.artist,
             cover: currentSong.cover_url,
             album: currentSong.album,
-            duration: duration || currentSong.duration,
+            duration: liveDuration || currentSong.duration,
           },
           isPlaying,
         );
