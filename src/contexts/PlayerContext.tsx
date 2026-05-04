@@ -1335,6 +1335,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     },
   }), [currentSong, queue, currentIndex, shuffle, repeat, getNextIndex, playSongAtIndex]);
 
+  const { progress: liveProgress, duration: liveDuration } = usePlayerProgress();
+
   useMediaSession({
     song: currentSong,
     isPlaying,
@@ -1343,8 +1345,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     onNext: mediaSessionCallbacks.onNext,
     onPrev: mediaSessionCallbacks.onPrev,
     onSeek: mediaSessionCallbacks.onSeek,
-    duration,
-    progress,
+    duration: liveDuration,
+    progress: liveProgress,
   });
 
   // Native Android music controls (lockscreen + notification on APK).
