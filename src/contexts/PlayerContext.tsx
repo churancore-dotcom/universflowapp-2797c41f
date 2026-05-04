@@ -1382,7 +1382,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     })();
     return () => { cancelled = true; };
-  }, [currentSong?.id, isPlaying, duration, mediaSessionCallbacks]);
+  }, [currentSong?.id, isPlaying, liveDuration, mediaSessionCallbacks]);
 
   // Track each played song into local song-history (Spotify-style search history)
   useEffect(() => {
