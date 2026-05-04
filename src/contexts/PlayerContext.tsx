@@ -228,8 +228,6 @@ const loadYouTubeIframeApi = (): Promise<typeof window.YT> => {
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
   const [queue, setQueueState] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
