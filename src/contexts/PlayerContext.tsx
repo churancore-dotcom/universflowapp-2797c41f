@@ -814,6 +814,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleTimeUpdate = () => {
+      // Push progress to the external store (no React rerender of consumers
+      // that don't use usePlayerProgress()).
+      if (!isCrossfading.current) {
+        playerProgressStore.setProgress(audio.currentTime);
+      }
       // Crossfade logic
       if (crossfade && isPremiumUser && !isEqProcessingEnabled() && queue.length > 1 && audio.duration && !isCrossfading.current) {
         const timeLeft = audio.duration - audio.currentTime;
