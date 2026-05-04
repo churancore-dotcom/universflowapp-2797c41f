@@ -61,8 +61,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
   const {
     currentSong,
     isPlaying,
-    progress,
-    duration,
     volume,
     shuffle,
     repeat,
