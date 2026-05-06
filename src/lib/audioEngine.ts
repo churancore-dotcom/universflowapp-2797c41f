@@ -243,7 +243,9 @@ export function connectAudioElement(el: HTMLAudioElement): boolean {
   // Same element + same source => already wired
   if (engine.el === el && engine.signature === sig && sig !== null) {
     if (ctx.state === 'suspended') ctx.resume().catch(() => { });
-    return engine.mode === 'processed';
+    if (engine.mode === 'processed') return true;
+    // If the caller now wants processing after a previous bypass/direct path,
+    // fall through and rebuild the processed chain for the same source.
   }
 
   // Need to (re)wire. Disconnect first.
