@@ -17,13 +17,15 @@ const GlobalTopTracksSection = () => {
   const [loading, setLoading] = useState(true);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const { playSong, currentSong, isPlaying } = usePlayer();
+  const country = useMemo(() => detectCountry(), []);
+  const regionLabel = country && REGION_LABEL[country] ? `Top 30 in ${REGION_LABEL[country]}` : 'Global Top 30';
 
   useEffect(() => {
     let cancelled = false;
 
     const loadTopTracks = async () => {
       try {
-        const data = await getTopIndexedTracks(30);
+        const data = await getTopIndexedTracks(30, country);
         if (!cancelled) {
           setTracks(data);
         }
