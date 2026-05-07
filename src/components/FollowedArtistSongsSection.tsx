@@ -12,7 +12,7 @@ interface Props {
 }
 
 const normalize = (value?: string | null) => value?.trim().toLowerCase() || '';
-const sectionShell = 'rounded-3xl border border-border/50 bg-card/70 p-3';
+const tileShadow = { boxShadow: '0 6px 18px rgba(0,0,0,0.45)' } as const;
 
 const FollowedArtistSongsSection = memo(function FollowedArtistSongsSection({ songs }: Props) {
   const { user } = useAuth();
