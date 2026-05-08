@@ -647,45 +647,54 @@ async function getTopTracks(limit = 30, country?: string) {
   const cc = (country || '').toUpperCase().slice(0, 2);
   const geoTags = GEO_TAGS[cc] || [];
   const rotation = Math.floor(Date.now() / (5 * 60 * 1000));
-  const ck = `top-rotated:${cc || 'global'}:${limit}:${rotation}`;
+  const ck = `viral-rotated:${cc || 'global'}:${limit}:${rotation}`;
   const c = getCached<IndexedTrack[]>(ck);
   if (c) return c;
 
-  // Build buckets: bias toward geo tags when present
-  const tagPool = geoTags.length ? [...geoTags, ...GLOBAL_TAGS.slice(0, 2)] : [...GLOBAL_TAGS].sort(() => Math.random() - 0.5).slice(0, 3);
-  const perBucket = Math.ceil(limit / Math.max(tagPool.length, 1)) + 4;
+  // Viral-first: tag.gettoptracks for viral / tiktok / trending tags.
+  // Each Last.fm tag list comes pre-ranked by popularity for that tag.
+  const viralTags = ['viral', 'tiktok', 'trending', 'new'];
+  const tagPool = geoTags.length
+    ? [...viralTags, ...geoTags.slice(0, 2)]
+    : viralTags;
+  const perBucket = Math.max(limit, 30);
 
-  const fetches: Promise<LastFmTrack[]>[] = [
-    // Global chart slice (smaller weight when geo bias active)
-    fetchJson(buildLastFmUrl('chart.gettoptracks', { limit: String(geoTags.length ? 6 : perBucket), page: String((rotation % 3) + 1) }))
-      .then((d) => (Array.isArray(d?.tracks?.track) ? d.tracks.track : []))
-      .catch(() => []),
-    // Geo country chart (Last.fm geo.gettoptracks)
-    ...(cc ? [
-      fetchJson(`https://ws.audioscrobbler.com/2.0/?method=geo.gettoptracks&country=${encodeURIComponent(countryCodeToName(cc))}&api_key=${LASTFM_API_KEY}&format=json&limit=${perBucket}&page=${(rotation % 3) + 1}`)
-        .then((d: any) => (Array.isArray(d?.tracks?.track) ? d.tracks.track : []))
-        .catch(() => []),
-    ] : []),
-    ...tagPool.map((tag) =>
-      fetchJson(buildLastFmUrl('tag.gettoptracks', { tag, limit: String(perBucket), page: String((rotation % 4) + 1) }))
+  const buckets: LastFmTrack[][] = await Promise.all(
+    tagPool.map((tag) =>
+      fetchJson(buildLastFmUrl('tag.gettoptracks', {
+        tag,
+        limit: String(perBucket),
+        page: String((rotation % 2) + 1),
+      }))
         .then((d) => (Array.isArray(d?.tracks?.track) ? d.tracks.track : []))
-        .catch(() => []),
-    ),
-  ];
+        .catch(() => [])
+    )
+  );
 
-  const buckets = await Promise.all(fetches);
-  const merged: LastFmTrack[] = [];
-  const maxLen = Math.max(...buckets.map((b) => b.length));
+  // Preserve Last.fm rank: first-position tracks across buckets win.
+  const ranked: { track: LastFmTrack; rank: number }[] = [];
+  const seen = new Set<string>();
+  const maxLen = Math.max(0, ...buckets.map((b) => b.length));
   for (let i = 0; i < maxLen; i += 1) {
-    for (const bucket of buckets) if (bucket[i]) merged.push(bucket[i]);
+    for (const bucket of buckets) {
+      const t = bucket[i];
+      if (!t?.name) continue;
+      const key = `${getArtistName(t.artist)}::${t.name}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ranked.push({ track: t, rank: i + 1 });
+    }
   }
+  ranked.sort((a, b) => a.rank - b.rank);
 
-  const enriched = await Promise.all(merged.slice(0, limit + 8).map(async (t) => {
-    const info = t.name ? await getTrackInfo(getArtistName(t.artist), t.name) : null;
-    const mapped = mapTrack(t, info);
-    return mapped ? hydrateTrackArtwork(mapped) : null;
-  }));
-  const unique = uniqueTracks(enriched).sort(() => Math.random() - 0.25);
+  const enriched = await Promise.all(
+    ranked.slice(0, limit + 8).map(async ({ track }) => {
+      const info = track.name ? await getTrackInfo(getArtistName(track.artist), track.name) : null;
+      const mapped = mapTrack(track, info);
+      return mapped ? hydrateTrackArtwork(mapped) : null;
+    })
+  );
+  const unique = uniqueTracks(enriched);
   const results = unique.slice(0, limit).map((t, i) => ({ ...t, rank: i + 1 }));
   setCached(ck, results, 5 * 60 * 1000);
   return results;
