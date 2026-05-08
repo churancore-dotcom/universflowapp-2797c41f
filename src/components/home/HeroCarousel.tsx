@@ -16,21 +16,42 @@ function HeroCarouselComponent() {
   const [slides, setSlides] = useState<IndexedTrack[]>([]);
   const [active, setActive] = useState(0);
   const [country, setCountry] = useState('');
-  const { playSong, currentSong } = usePlayer();
+  const { playSong } = usePlayer();
+
+  const loadSlides = useCallback(async (cc: string, force = false) => {
+    try {
+      if (force) invalidateTopTracksCache();
+      const res = await getTopIndexedTracks(8, cc || undefined, force ? { force: true } : undefined);
+      setSlides(res.slice(0, 5));
+    } catch {/* */}
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const g = await getGeo();
       const cc = g?.country_code || '';
-      if (!cancelled) setCountry(cc);
-      try {
-        const res = await getTopIndexedTracks(8, cc || undefined);
-        if (!cancelled) setSlides(res.slice(0, 5));
-      } catch {/* */}
+      if (cancelled) return;
+      setCountry(cc);
+      await loadSlides(cc);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [loadSlides]);
+
+  // Realtime: refresh hero whenever the viral chart updates.
+  useEffect(() => {
+    const channel = supabase
+      .channel('viral-hero-refresh')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'viral_chart_refreshes' }, (payload) => {
+        const row = (payload.new || payload.old) as any;
+        if (!row) return;
+        if (row.scope === 'global' || (row.scope === 'country' && row.country_code === country)) {
+          loadSlides(country, true);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [country, loadSlides]);
 
   // Auto-rotate every 5s
   useEffect(() => {
