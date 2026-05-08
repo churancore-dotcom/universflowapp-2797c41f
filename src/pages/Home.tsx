@@ -81,7 +81,7 @@ const MOOD_CHIPS = [
 
 const Home = () => {
   const navigate = useNavigate();
-  const { currentSong, isPlaying, togglePlay, playSong } = usePlayer();
+  const { currentSong, isPlaying, togglePlay, setExpanded } = usePlayer();
   const { cachedSongs, updateCache } = useSongCache();
   const { isOffline, user } = useAuth() as any;
   const { downloads } = useDownloads();
