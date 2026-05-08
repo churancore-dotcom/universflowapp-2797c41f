@@ -43,6 +43,7 @@ const PlayWithMate = lazy(() => import("./pages/PlayWithMate"));
 const AllArtists = lazy(() => import("./pages/AllArtists"));
 const ManageSubscription = lazy(() => import("./pages/ManageSubscription"));
 const Premium = lazy(() => import("./pages/Premium"));
+const Collection = lazy(() => import("./pages/Collection"));
 
 const DownloadQueuePanel = lazy(() => import("./components/DownloadQueuePanel"));
 const PrerollAd = lazy(() => import("./components/ads/PrerollAd"));
@@ -171,6 +172,7 @@ const AnimatedRoutes = () => {
           <Route path="/artists" element={<ProtectedRoute><AllArtists /></ProtectedRoute>} />
           <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
           <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+          <Route path="/collection/:slug" element={<ProtectedRoute><Collection /></ProtectedRoute>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
