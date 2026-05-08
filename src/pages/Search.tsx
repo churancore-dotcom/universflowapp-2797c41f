@@ -60,11 +60,19 @@ const Search = () => {
       return;
     }
 
+    // YouTube-like behavior: strip generic filler words so "chill songs" → "chill".
+    const FILLER = /\b(songs?|musics?|tracks?|audios?|tunes?|playlists?|albums?|official|video|hd|hq|lyrics?|mix|the\s+best|best\s+of|top|new|latest)\b/gi;
+    const cleaned = trimmedQuery.replace(FILLER, ' ').replace(/\s+/g, ' ').trim();
+
     let cancelled = false;
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const indexedResponse = await searchIndexedTracks(trimmedQuery, 50);
+        let indexedResponse = await searchIndexedTracks(trimmedQuery, 50);
+        // Retry with cleaned query if the original returned nothing.
+        if (indexedResponse.length === 0 && cleaned && cleaned !== trimmedQuery) {
+          indexedResponse = await searchIndexedTracks(cleaned, 50);
+        }
         if (cancelled) return;
         setIndexedResults(indexedResponse);
         setSearchHistory(getSongHistory().filter(entry => !isCatalogSongId(entry.id)));
