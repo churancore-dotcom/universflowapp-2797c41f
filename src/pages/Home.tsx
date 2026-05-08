@@ -507,7 +507,7 @@ const NewReleaseCard = memo(({ song, active, isPlaying, onPlay, onAddToPlaylist 
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
             className="w-9 h-9 rounded-full bg-black/55 backdrop-blur-md flex items-center justify-center"
           >
-            <LikeButton song={song} size="sm" />
+            <LikeButton songId={song.id} song={song} size="sm" />
           </div>
           <button
             onClick={(e) => {
