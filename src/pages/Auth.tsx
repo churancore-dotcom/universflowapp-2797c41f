@@ -4,14 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { FadeTransition } from '@/components/PageTransition';
 import appLogo from '@/assets/app-logo.png';
 
+function detectCountryCode(): string | undefined {
+  try {
+    const locale = (Intl.DateTimeFormat().resolvedOptions().locale || '').toUpperCase();
+    const m = locale.match(/-([A-Z]{2})\b/);
+    return m?.[1];
+  } catch { return undefined; }
+}
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
