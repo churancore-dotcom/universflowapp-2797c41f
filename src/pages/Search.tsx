@@ -13,6 +13,7 @@ import { prefetchIndexedTrack, searchIndexedTracks, getTagTopTracks, searchYouTu
 import { isCatalogSongId } from '@/lib/songSupport';
 import { detectMoodAndLanguage } from '@/lib/moodKeywords';
 import FollowedArtistsRail from '@/components/FollowedArtistsRail';
+import { getCached, setCached } from '@/lib/searchCache';
 import {
   getSongHistory,
   removeSongFromHistory,
@@ -21,6 +22,40 @@ import {
 } from '@/lib/songHistory';
 
 type SearchSource = 'all' | 'indexer';
+
+const normalizeText = (value = '') => value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const cleanIdentity = (value = '') => normalizeText(value).replace(/\b(official|lyrics?|video|audio|hd|4k|topic|vevo|records|music)\b/g, '').replace(/\s+/g, ' ').trim();
+const resultKey = (track: IndexedTrack) => `${cleanIdentity(track.artist)}::${cleanIdentity(track.title)}`;
+const queryTokens = (query: string) => normalizeText(query).split(' ').filter((token) => token.length > 1 && !['song', 'songs', 'music', 'track', 'tracks', 'best', 'top', 'latest', 'new'].includes(token));
+
+function rankAndDedupeResults(query: string, youtube: IndexedTrack[], literal: IndexedTrack[], tagSets: IndexedTrack[][]) {
+  const tokens = queryTokens(query);
+  const rows = new Map<string, { track: IndexedTrack; score: number; firstSeen: number; sourcePriority: number }>();
+  let firstSeen = 0;
+
+  const add = (track: IndexedTrack, base: number, index: number, sourcePriority: number) => {
+    const key = resultKey(track);
+    if (!key || key === '::') return;
+    const haystack = normalizeText(`${track.title} ${track.artist} ${track.album || ''}`);
+    const tokenHits = tokens.reduce((sum, token) => sum + (haystack.includes(token) ? 1 : 0), 0);
+    const allTokens = tokens.length > 0 && tokenHits === tokens.length;
+    const phraseHit = normalizeText(query).length > 2 && haystack.includes(normalizeText(query));
+    const popularity = Math.min(40, Math.log10(Math.max(1, track.listeners || 0)) * 8);
+    const score = base + (phraseHit ? 180 : 0) + (allTokens ? 120 : 0) + tokenHits * 26 + popularity - index * 0.5;
+    const existing = rows.get(key);
+    if (!existing || score > existing.score || (score === existing.score && sourcePriority > existing.sourcePriority)) {
+      rows.set(key, { track, score, firstSeen: existing?.firstSeen ?? firstSeen++, sourcePriority });
+    }
+  };
+
+  youtube.forEach((track, index) => add(track, 700, index, 3));
+  literal.forEach((track, index) => add(track, 360, index, 2));
+  tagSets.forEach((set, setIndex) => set.forEach((track, index) => add(track, 260 + setIndex * 40, index, 1)));
+
+  return Array.from(rows.values())
+    .sort((a, b) => b.score - a.score || b.sourcePriority - a.sourcePriority || a.firstSeen - b.firstSeen || a.track.title.localeCompare(b.track.title) || a.track.artist.localeCompare(b.track.artist))
+    .map(({ track }) => track);
+}
 
 const Search = () => {
   const [query, setQuery] = useState('');
