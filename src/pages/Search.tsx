@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { SearchSkeleton } from '@/components/PageSkeletons';
 import { prefetchIndexedTrack, searchIndexedTracks, getTagTopTracks, type IndexedTrack } from '@/lib/musicIndexer';
 import { isCatalogSongId } from '@/lib/songSupport';
-import { detectMoodTag } from '@/lib/moodKeywords';
+import { detectMoodAndLanguage } from '@/lib/moodKeywords';
 import FollowedArtistsRail from '@/components/FollowedArtistsRail';
 import {
   getSongHistory,
@@ -51,23 +51,48 @@ const Search = () => {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        // YouTube-style: detect mood/genre keywords (e.g. "chill songs",
-        // "sad music") and pull the matching Last.fm tag chart in parallel
-        // with the literal text search. Then merge + dedupe so users get the
-        // actual vibe-matching tracks instead of just title hits.
-        const moodTag = detectMoodTag(trimmedQuery);
-        const [literal, tagTracks] = await Promise.all([
-          searchIndexedTracks(trimmedQuery, 200),
-          moodTag ? getTagTopTracks(moodTag, 60) : Promise.resolve([] as IndexedTrack[]),
-        ]);
+        // YouTube-style: detect mood + language separately. e.g. "hindi sad
+        // song" → language=hindi, mood=sad. We then fetch BOTH tag charts and
+        // intersect by artist (or rank by overlap) so users actually get sad
+        // Hindi tracks, not English songs whose title contains "sad".
+        const { mood, language, pureBrowse } = detectMoodAndLanguage(trimmedQuery);
+        const tagJobs: Promise<IndexedTrack[]>[] = [];
+        if (language) tagJobs.push(getTagTopTracks(language, 100));
+        if (mood) tagJobs.push(getTagTopTracks(mood, 100));
+        // Skip the literal text search when the query is just mood/language
+        // words (e.g. "hindi sad song") — it would just return English title hits.
+        const literalJob = pureBrowse
+          ? Promise.resolve([] as IndexedTrack[])
+          : searchIndexedTracks(trimmedQuery, 200);
+
+        const [literal, ...tagSets] = await Promise.all([literalJob, ...tagJobs]);
         if (cancelled) return;
 
-        const seen = new Set<string>();
+        // Score each track by how many of the requested tags it appeared in.
+        const score = new Map<string, { track: IndexedTrack; hits: number }>();
+        const norm = (t: IndexedTrack) =>
+          `${t.artist?.toLowerCase().trim()}::${t.title?.toLowerCase().trim()}`;
+
+        tagSets.forEach((set) => {
+          set.forEach((t) => {
+            const k = norm(t);
+            if (!k) return;
+            const cur = score.get(k);
+            if (cur) cur.hits += 1;
+            else score.set(k, { track: t, hits: 1 });
+          });
+        });
+
+        // When BOTH mood + language matched, prefer tracks present in BOTH sets.
+        const tagMerged = Array.from(score.values())
+          .sort((a, b) => b.hits - a.hits)
+          .map((e) => e.track);
+
         const merged: IndexedTrack[] = [];
-        // Mood/tag results lead when a mood was detected — they match intent better
-        const ordered = moodTag ? [...tagTracks, ...literal] : [...literal, ...tagTracks];
+        const seen = new Set<string>();
+        const ordered = (mood || language) ? [...tagMerged, ...literal] : [...literal, ...tagMerged];
         for (const t of ordered) {
-          const key = `${t.artist?.toLowerCase().trim()}::${t.title?.toLowerCase().trim()}`;
+          const key = norm(t);
           if (!key || seen.has(key)) continue;
           seen.add(key);
           merged.push(t);
