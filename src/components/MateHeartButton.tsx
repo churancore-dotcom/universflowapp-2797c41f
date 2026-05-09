@@ -4,15 +4,18 @@ import { Heart, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePlayWithMate } from '@/contexts/PlayWithMateContext';
 import { triggerHaptic } from '@/hooks/useHaptics';
+import { usePremium } from '@/hooks/usePremium';
 
 const MateHeartButton = memo(function MateHeartButton() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isConnected, participants, reactions } = usePlayWithMate();
+  const { isPremium } = usePremium();
 
   // Hide on the room page itself or on auth/splash
   const hide =
     !isConnected ||
+    !isPremium ||
     location.pathname.startsWith('/listen-together') ||
     location.pathname.startsWith('/auth') ||
     location.pathname.startsWith('/admin');
