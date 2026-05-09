@@ -132,7 +132,7 @@ const Search = () => {
       artist: track.artist,
       album: track.album,
       cover_url: track.cover_url,
-      audio_url: 'resolving',
+      audio_url: track.audio_url || 'resolving',
       duration: track.duration,
       source: 'indexed',
     };
@@ -142,7 +142,7 @@ const Search = () => {
       artist: item.artist,
       album: item.album,
       cover_url: item.cover_url,
-      audio_url: 'resolving',
+      audio_url: item.audio_url || 'resolving',
       duration: item.duration,
       source: 'indexed' as const,
     })));
