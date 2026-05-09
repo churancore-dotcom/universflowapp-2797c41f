@@ -84,8 +84,6 @@ const CountryViralSection = memo(function CountryViralSection() {
     else playSong(song, undefined, queueAsSongs);
   }, [queueAsSongs, currentSong?.id, togglePlay, playSong]);
 
-  const countryName = country ? COUNTRY_NAMES[country] || 'your country' : 'your country';
-
   if (!loading && tracks.length === 0) return null;
 
   return (
@@ -93,7 +91,7 @@ const CountryViralSection = memo(function CountryViralSection() {
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4" style={{ color: '#FF6B2D' }} />
-          <h2 className="text-sm font-bold text-foreground">Viral in {countryName}</h2>
+          <h2 className="text-sm font-bold text-foreground">Viral Right Now</h2>
         </div>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Live</span>
       </div>
