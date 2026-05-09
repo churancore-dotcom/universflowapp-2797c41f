@@ -1,23 +1,21 @@
 /**
- * Global audio engine — single AudioContext, single source per <audio>,
- * smooth parameter changes via setTargetAtTime.
+ * Global audio engine — single AudioContext, single source per <audio>.
  *
- * Graph: source -> [lowshelf, peaking x6, highshelf] -> masterGain -> limiter
- *                  -> dryGain ─┐
- *                  -> convolver -> wetGain ─┴-> destination
+ * Graph:
+ *   <audio> -> MediaElementSource -> [8x BiquadFilter EQ] -> preGain
+ *           -> dryGain ─────────────────────┐
+ *           -> convolver -> wetGain ────────┤-> stereoPanner -> limiter -> destination
  *
- * Public API:
-  *   connectAudioElement(el)      // idempotent; reuses MediaElementSource
-  *   bypassAudioElement(el)       // smooth direct path when EQ/effects are off
- *   setBands(gainsDb[])          // 8 values, smoothed
- *   setBassBoost(percent)        // 0-100, adds to lowest 3 bands
- *   setReverb(percent)           // 0-100 wet mix
- *   setSpatial(enabled)          // gentle auto-pan
- *   getState()                   // 'idle' | 'processed' | 'direct' | 'unsupported'
- *   resume()                     // resumes suspended ctx
+ * 8D audio = a slow sine LFO driving stereoPanner.pan, plus a touch of reverb
+ * to simulate room cues. Works on every stream (CORS-safe or not, because
+ * StereoPanner is a regular AudioNode after MediaElementSource has been built).
+ *
+ * All parameter changes use setTargetAtTime() for click-free transitions.
  */
 
-const SMOOTH = 0.05; // 50ms — per spec
+const SMOOTH = 0.05;        // 50ms — smooths gain knobs
+const SPATIAL_RATE_HZ = 0.18; // ~5.5s per full L↔R orbit
+const SPATIAL_DEPTH = 0.92;  // 0..1 — how far the LFO swings the pan
 
 type Mode = 'idle' | 'processed' | 'direct' | 'unsupported';
 
@@ -25,53 +23,52 @@ interface Engine {
   ctx: AudioContext | null;
   source: MediaElementAudioSourceNode | null;
   filters: BiquadFilterNode[];
-  master: GainNode | null;
-  compressor: DynamicsCompressorNode | null;
+  preGain: GainNode | null;
   dryGain: GainNode | null;
   wetGain: GainNode | null;
   convolver: ConvolverNode | null;
-  panner: PannerNode | null;
+  stereoPanner: StereoPannerNode | null;
+  panLfo: OscillatorNode | null;
+  panLfoGain: GainNode | null;
+  limiter: DynamicsCompressorNode | null;
   el: HTMLAudioElement | null;
   signature: string | null;
   mode: Mode;
-  spatialRaf: number | null;
-  spatialAngle: number;
+  spatialEnabled: boolean;
   listeners: Set<(m: Mode) => void>;
+  cachedIR: AudioBuffer | null;
 }
 
 const engine: Engine = {
   ctx: null,
   source: null,
   filters: [],
-  master: null,
-  compressor: null,
+  preGain: null,
   dryGain: null,
   wetGain: null,
   convolver: null,
-  panner: null,
+  stereoPanner: null,
+  panLfo: null,
+  panLfoGain: null,
+  limiter: null,
   el: null,
   signature: null,
   mode: 'idle',
-  spatialRaf: null,
-  spatialAngle: 0,
+  spatialEnabled: false,
   listeners: new Set(),
+  cachedIR: null,
 };
 
-// One MediaElementSource per element — Web Audio forbids creating it twice.
 const sourceCache = new WeakMap<HTMLAudioElement, MediaElementAudioSourceNode>();
 
-const BAND_DEFS: Array<{
-  freq: number;
-  type: BiquadFilterType;
-  q: number;
-}> = [
-  { freq: 60, type: 'lowshelf', q: 0.7 },
-  { freq: 170, type: 'peaking', q: 1.0 },
-  { freq: 310, type: 'peaking', q: 1.0 },
-  { freq: 600, type: 'peaking', q: 1.0 },
-  { freq: 1000, type: 'peaking', q: 1.0 },
-  { freq: 3000, type: 'peaking', q: 1.0 },
-  { freq: 6000, type: 'peaking', q: 1.0 },
+const BAND_DEFS: Array<{ freq: number; type: BiquadFilterType; q: number }> = [
+  { freq: 60,    type: 'lowshelf',  q: 0.7 },
+  { freq: 170,   type: 'peaking',   q: 1.0 },
+  { freq: 310,   type: 'peaking',   q: 1.0 },
+  { freq: 600,   type: 'peaking',   q: 1.0 },
+  { freq: 1000,  type: 'peaking',   q: 1.0 },
+  { freq: 3000,  type: 'peaking',   q: 1.0 },
+  { freq: 6000,  type: 'peaking',   q: 1.0 },
   { freq: 12000, type: 'highshelf', q: 0.7 },
 ];
 
@@ -96,7 +93,7 @@ function isCorsSafe(el: HTMLAudioElement): boolean {
     const u = new URL(src, window.location.href);
     if (u.origin === window.location.origin) return true;
     if (u.hostname.endsWith('supabase.co')) return true;
-  } catch { }
+  } catch { /* ignore */ }
   return false;
 }
 
@@ -106,36 +103,43 @@ function signature(el: HTMLAudioElement): string | null {
   return `${src}::${el.crossOrigin || 'none'}`;
 }
 
-function makeReverbIR(ctx: AudioContext, duration = 2, decay = 2): AudioBuffer {
+/** Deterministic exponential-decay stereo IR — generated once and cached. */
+function getReverbIR(ctx: AudioContext): AudioBuffer {
+  if (engine.cachedIR && engine.cachedIR.sampleRate === ctx.sampleRate) return engine.cachedIR;
+  const duration = 1.6;
   const length = Math.floor(ctx.sampleRate * duration);
   const buf = ctx.createBuffer(2, length, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const data = buf.getChannelData(ch);
+    // Seeded pseudo-random for determinism
+    let seed = (ch + 1) * 9301;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
     for (let i = 0; i < length; i++) {
-      const t = i / ctx.sampleRate;
-      const envelope = Math.pow(1 - i / length, decay) * 0.18;
-      data[i] = (Math.sin(t * 431 + ch * 0.7) + Math.sin(t * 997 + ch * 1.9) * 0.45) * envelope;
+      const decay = Math.pow(1 - i / length, 2.2);
+      data[i] = (rand() * 2 - 1) * decay * 0.5;
     }
   }
+  engine.cachedIR = buf;
   return buf;
 }
 
 function disconnectAll() {
-  const nodes = [
-    engine.source,
-    ...engine.filters,
-    engine.master,
-    engine.compressor,
-    engine.dryGain,
-    engine.wetGain,
-    engine.convolver,
-    engine.panner,
+  const nodes: (AudioNode | null)[] = [
+    engine.source, ...engine.filters, engine.preGain,
+    engine.dryGain, engine.wetGain, engine.convolver,
+    engine.stereoPanner, engine.panLfoGain, engine.limiter,
   ];
   for (const n of nodes) {
     if (!n) continue;
-    try {
-      n.disconnect();
-    } catch { }
+    try { n.disconnect(); } catch { /* ignore */ }
+  }
+  if (engine.panLfo) {
+    try { engine.panLfo.stop(); } catch { /* ignore */ }
+    try { engine.panLfo.disconnect(); } catch { /* ignore */ }
+    engine.panLfo = null;
   }
 }
 
@@ -143,13 +147,12 @@ function setMode(m: Mode) {
   if (engine.mode === m) return;
   engine.mode = m;
   for (const cb of engine.listeners) {
-    try {
-      cb(m);
-    } catch { }
+    try { cb(m); } catch { /* ignore */ }
   }
 }
 
 function buildProcessedChain(ctx: AudioContext, source: MediaElementAudioSourceNode) {
+  // EQ bands
   const filters = BAND_DEFS.map((def) => {
     const f = ctx.createBiquadFilter();
     f.type = def.type;
@@ -159,15 +162,8 @@ function buildProcessedChain(ctx: AudioContext, source: MediaElementAudioSourceN
     return f;
   });
 
-  const master = ctx.createGain();
-  master.gain.value = 0.86;
-
-  const compressor = ctx.createDynamicsCompressor();
-  compressor.threshold.value = -6;
-  compressor.knee.value = 1;
-  compressor.ratio.value = 20;
-  compressor.attack.value = 0.003;
-  compressor.release.value = 0.16;
+  const preGain = ctx.createGain();
+  preGain.gain.value = 0.92;
 
   const dryGain = ctx.createGain();
   dryGain.gain.value = 1;
@@ -176,50 +172,63 @@ function buildProcessedChain(ctx: AudioContext, source: MediaElementAudioSourceN
   wetGain.gain.value = 0;
 
   const convolver = ctx.createConvolver();
-  convolver.buffer = makeReverbIR(ctx);
+  convolver.buffer = getReverbIR(ctx);
 
-  const panner = ctx.createPanner();
-  panner.panningModel = 'HRTF';
-  panner.distanceModel = 'inverse';
-  panner.refDistance = 1;
-  panner.maxDistance = 4;
-  panner.rolloffFactor = 0.35;
-  panner.positionX.value = 0;
-  panner.positionY.value = 0;
-  panner.positionZ.value = 1;
+  const stereoPanner = ctx.createStereoPanner();
+  stereoPanner.pan.value = 0;
 
-  // Wire chain: source -> filters -> master -> compressor -> [dry + reverb->wet] -> panner -> destination
+  // True brick-wall limiter — prevents clipping warble at high EQ gains
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -1;
+  limiter.knee.value = 0;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.003;
+  limiter.release.value = 0.1;
+
+  // Wire graph
   source.connect(filters[0]);
   for (let i = 0; i < filters.length - 1; i++) filters[i].connect(filters[i + 1]);
-  filters[filters.length - 1].connect(master);
-  master.connect(compressor);
-  compressor.connect(dryGain);
-  compressor.connect(convolver);
+  filters[filters.length - 1].connect(preGain);
+
+  preGain.connect(dryGain);
+  preGain.connect(convolver);
   convolver.connect(wetGain);
-  dryGain.connect(panner);
-  wetGain.connect(panner);
-  panner.connect(ctx.destination);
+
+  dryGain.connect(stereoPanner);
+  wetGain.connect(stereoPanner);
+  stereoPanner.connect(limiter);
+  limiter.connect(ctx.destination);
 
   engine.source = source;
   engine.filters = filters;
-  engine.master = master;
-  engine.compressor = compressor;
+  engine.preGain = preGain;
   engine.dryGain = dryGain;
   engine.wetGain = wetGain;
   engine.convolver = convolver;
-  engine.panner = panner;
+  engine.stereoPanner = stereoPanner;
+  engine.limiter = limiter;
+  engine.panLfo = null;
+  engine.panLfoGain = null;
+
+  // Re-apply the persisted spatial state on the fresh chain
+  if (engine.spatialEnabled) startSpatialLfo();
 }
 
 function buildDirectChain(source: MediaElementAudioSourceNode, ctx: AudioContext) {
   source.connect(ctx.destination);
   engine.source = source;
   engine.filters = [];
-  engine.master = null;
-  engine.compressor = null;
+  engine.preGain = null;
   engine.dryGain = null;
   engine.wetGain = null;
   engine.convolver = null;
-  engine.panner = null;
+  engine.stereoPanner = null;
+  engine.limiter = null;
+  if (engine.panLfo) {
+    try { engine.panLfo.stop(); } catch { /* ignore */ }
+    engine.panLfo = null;
+  }
+  engine.panLfoGain = null;
 }
 
 function getOrCreateSource(ctx: AudioContext, el: HTMLAudioElement): MediaElementAudioSourceNode | null {
@@ -236,31 +245,18 @@ function getOrCreateSource(ctx: AudioContext, el: HTMLAudioElement): MediaElemen
   }
 }
 
-/**
- * Connect (or reconnect) the global engine to this audio element.
- * Safe to call repeatedly — only rebuilds when the source URL/CORS mode changes.
- * Returns true if the EQ chain is active (processed mode), false if direct/unsupported.
- */
+/** Connect (or reconnect) the global engine to this audio element. */
 export function connectAudioElement(el: HTMLAudioElement): boolean {
   const ctx = ensureCtx();
-  if (!ctx) {
-    setMode('unsupported');
-    return false;
-  }
+  if (!ctx) { setMode('unsupported'); return false; }
 
   const sig = signature(el);
-  // Same element + same source => already wired
   if (engine.el === el && engine.signature === sig && sig !== null) {
     if (ctx.state === 'suspended') ctx.resume().catch(() => { });
     if (engine.mode === 'processed') return true;
-    // If the caller now wants processing after a previous bypass/direct path,
-    // fall through and rebuild the processed chain for the same source.
   }
 
-  // Need to (re)wire. Disconnect first.
   disconnectAll();
-
-  // Get/create the source. NEVER re-create one for the same element.
   const source = getOrCreateSource(ctx, el);
   if (!source) return false;
 
@@ -274,19 +270,27 @@ export function connectAudioElement(el: HTMLAudioElement): boolean {
     return false;
   }
 
-  buildProcessedChain(ctx, source);
-  setMode('processed');
-  if (ctx.state === 'suspended') ctx.resume().catch(() => { });
-  return true;
+  try {
+    buildProcessedChain(ctx, source);
+    setMode('processed');
+    if (ctx.state === 'suspended') ctx.resume().catch(() => { });
+    return true;
+  } catch (e) {
+    // CORS / tainted source slipped past the check — fall back to direct
+    console.warn('[audioEngine] Failed to build processed chain, falling back to direct', e);
+    disconnectAll();
+    buildDirectChain(source, ctx);
+    setMode('direct');
+    return false;
+  }
 }
 
-/** Keep audio routed without EQ/effects. Avoids expensive filters while preserving sound after a MediaElementSource exists. */
+/** Direct path — no EQ/effects. Used when EQ is off to save CPU. */
 export function bypassAudioElement(el: HTMLAudioElement): boolean {
   if (engine.el !== el && !sourceCache.has(el)) {
     setMode('idle');
     return true;
   }
-
   const ctx = ensureCtx();
   if (!ctx) return false;
   const source = getOrCreateSource(ctx, el);
@@ -298,71 +302,98 @@ export function bypassAudioElement(el: HTMLAudioElement): boolean {
   engine.signature = signature(el);
   buildDirectChain(source, ctx);
   setMode('direct');
-  if (ctx.state === 'suspended' && document.visibilityState === 'visible') ctx.resume().catch(() => { });
+  if (ctx.state === 'suspended' && document.visibilityState === 'visible') {
+    ctx.resume().catch(() => { });
+  }
   return true;
 }
 
-/** Apply 8 band gains in dB (-12..+12). Smoothed via setTargetAtTime(0.05). */
+/** Apply 8 band gains in dB. Smoothed via setTargetAtTime. Clamped ±6dB for safety. */
 export function setBands(gainsDb: number[], bassBoostPercent = 0) {
   if (engine.mode !== 'processed' || !engine.ctx || !engine.filters.length) return;
   const ctx = engine.ctx;
   const now = ctx.currentTime;
-  const boost = (Math.min(60, Math.max(0, bassBoostPercent)) / 60) * 4; // safe +4dB max on lowest band
+  const boost = (Math.min(60, Math.max(0, bassBoostPercent)) / 60) * 4; // safe +4dB max
 
   for (let i = 0; i < engine.filters.length; i++) {
     let g = gainsDb[i] ?? 0;
     if (i === 0) g += boost;
     else if (i === 1) g += boost * 0.6;
     else if (i === 2) g += boost * 0.25;
-    g = Math.max(-8, Math.min(8, g));
+    g = Math.max(-6, Math.min(6, g));
     const param = engine.filters[i].gain;
     param.cancelScheduledValues(now);
     param.setTargetAtTime(g, now, SMOOTH);
   }
 }
 
-/** 0..100 wet mix. */
+/** 0..100 wet mix. Capped at 35% wet so vocals stay intelligible. */
 export function setReverb(percent: number) {
   if (engine.mode !== 'processed' || !engine.ctx || !engine.dryGain || !engine.wetGain) return;
   const ctx = engine.ctx;
   const now = ctx.currentTime;
-  const wet = Math.max(0, Math.min(0.45, percent / 100));
-  // Keep vocals intelligible: subtle room blend instead of washing the track.
-  const dry = 1 - wet * 0.2;
-  const w = wet * 0.32;
+  const wet = Math.max(0, Math.min(0.35, percent / 100 * 0.45));
+  const dry = 1 - wet * 0.4;
   engine.dryGain.gain.cancelScheduledValues(now);
   engine.wetGain.gain.cancelScheduledValues(now);
   engine.dryGain.gain.setTargetAtTime(dry, now, SMOOTH);
-  engine.wetGain.gain.setTargetAtTime(w, now, SMOOTH);
+  engine.wetGain.gain.setTargetAtTime(wet, now, SMOOTH);
 }
 
-export function setSpatial(enabled: boolean) {
-  if (engine.spatialRaf !== null) {
-    cancelAnimationFrame(engine.spatialRaf);
-    engine.spatialRaf = null;
+function startSpatialLfo() {
+  if (!engine.ctx || !engine.stereoPanner) return;
+  const ctx = engine.ctx;
+  if (engine.panLfo) {
+    try { engine.panLfo.stop(); } catch { /* ignore */ }
+    try { engine.panLfo.disconnect(); } catch { /* ignore */ }
   }
-  if (!engine.panner || !engine.ctx) return;
-  if (!enabled) {
+  if (engine.panLfoGain) {
+    try { engine.panLfoGain.disconnect(); } catch { /* ignore */ }
+  }
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.value = SPATIAL_RATE_HZ;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = SPATIAL_DEPTH;
+  lfo.connect(lfoGain);
+  lfoGain.connect(engine.stereoPanner.pan);
+  lfo.start();
+  engine.panLfo = lfo;
+  engine.panLfoGain = lfoGain;
+
+  // Add a touch of reverb for the "room" cue
+  if (engine.dryGain && engine.wetGain) {
+    const now = ctx.currentTime;
+    engine.wetGain.gain.cancelScheduledValues(now);
+    engine.dryGain.gain.cancelScheduledValues(now);
+    engine.wetGain.gain.setTargetAtTime(0.22, now, SMOOTH);
+    engine.dryGain.gain.setTargetAtTime(0.85, now, SMOOTH);
+  }
+}
+
+function stopSpatialLfo() {
+  if (engine.panLfo) {
+    try { engine.panLfo.stop(); } catch { /* ignore */ }
+    try { engine.panLfo.disconnect(); } catch { /* ignore */ }
+    engine.panLfo = null;
+  }
+  if (engine.panLfoGain) {
+    try { engine.panLfoGain.disconnect(); } catch { /* ignore */ }
+    engine.panLfoGain = null;
+  }
+  if (engine.ctx && engine.stereoPanner) {
     const now = engine.ctx.currentTime;
-    engine.panner.positionX.cancelScheduledValues(now);
-    engine.panner.positionY.cancelScheduledValues(now);
-    engine.panner.positionZ.cancelScheduledValues(now);
-    engine.panner.positionX.setTargetAtTime(0, now, SMOOTH);
-    engine.panner.positionY.setTargetAtTime(0, now, SMOOTH);
-    engine.panner.positionZ.setTargetAtTime(1, now, SMOOTH);
-    return;
+    engine.stereoPanner.pan.cancelScheduledValues(now);
+    engine.stereoPanner.pan.setTargetAtTime(0, now, SMOOTH);
   }
-  const tick = () => {
-    if (!engine.panner || !engine.ctx) return;
-    engine.spatialAngle += 0.012;
-    const x = Math.sin(engine.spatialAngle) * 0.75;
-    const z = 0.85 + Math.cos(engine.spatialAngle) * 0.28;
-    engine.panner.positionX.setTargetAtTime(x, engine.ctx.currentTime, 0.16);
-    engine.panner.positionY.setTargetAtTime(0, engine.ctx.currentTime, 0.16);
-    engine.panner.positionZ.setTargetAtTime(z, engine.ctx.currentTime, 0.16);
-    engine.spatialRaf = requestAnimationFrame(tick);
-  };
-  engine.spatialRaf = requestAnimationFrame(tick);
+}
+
+/** Toggle 8D auto-rotating spatial mode. Single boolean — no extra knobs. */
+export function setSpatial(enabled: boolean) {
+  engine.spatialEnabled = enabled;
+  if (engine.mode !== 'processed') return;
+  if (enabled) startSpatialLfo();
+  else stopSpatialLfo();
 }
 
 export function resume() {
