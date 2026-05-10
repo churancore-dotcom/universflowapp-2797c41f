@@ -402,6 +402,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_verifications: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          email: string
+          expires_at: string
+          last_sent_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          email: string
+          expires_at: string
+          last_sent_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          last_sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       experiment_assignments: {
         Row: {
           assigned_at: string
@@ -720,6 +750,8 @@ export type Database = {
           country_code: string | null
           created_at: string
           email: string | null
+          email_verified: boolean
+          email_verified_at: string | null
           id: string
           is_admin: boolean
           share_code: string | null
@@ -734,6 +766,8 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           email?: string | null
+          email_verified?: boolean
+          email_verified_at?: string | null
           id?: string
           is_admin?: boolean
           share_code?: string | null
@@ -748,6 +782,8 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           email?: string | null
+          email_verified?: boolean
+          email_verified_at?: string | null
           id?: string
           is_admin?: boolean
           share_code?: string | null
