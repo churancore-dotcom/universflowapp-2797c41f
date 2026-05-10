@@ -127,6 +127,16 @@ const SongCard = memo(({ song, index = 0, sectionSongs }: SongCardProps) => {
             size="sm"
             className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md"
           />
+          <PinToViralButton
+            song={{
+              track_id: song.id,
+              title: song.title,
+              artist: song.artist,
+              cover_url: song.cover_url,
+              audio_url: song.audio_url,
+              source: (song as any).source,
+            }}
+          />
           <button
             onClick={handleAddToPlaylist}
             className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-foreground/80 active:bg-black/70 transition-colors"
