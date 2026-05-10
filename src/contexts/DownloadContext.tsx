@@ -196,7 +196,10 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isIndexedDBSupported, setIsIndexedDBSupported] = useState(true);
   const [downloadQueue, setDownloadQueue] = useState<QueuedSong[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const [currentDownloadId, setCurrentDownloadId] = useState<string | null>(null);
   const processingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const cancelledIdsRef = useRef<Set<string>>(new Set());
 
   // Load downloads from IndexedDB on mount
   useEffect(() => {
