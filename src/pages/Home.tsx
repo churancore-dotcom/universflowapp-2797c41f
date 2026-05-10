@@ -366,12 +366,10 @@ const Home = () => {
                   {/* Artist discovery */}
                   <FeaturedArtistsSection />
 
-                  <FollowedArtistSongsSection songs={allSongs} />
-
                   {/* Real per-country viral chart (Last.fm geo.getTopTracks) */}
                   <CountryViralSection />
 
-                  {/* Global Top Tracks */}
+                  {/* Top 30 from your followed artists */}
                   <GlobalTopTracksSection />
                 </>
               )}

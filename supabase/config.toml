@@ -9,9 +9,6 @@ verify_jwt = false
 [functions.yt-music-search]
 verify_jwt = false
 
-[functions.gemma-chat]
-verify_jwt = false
-
 [functions.music-indexer]
 verify_jwt = false
 
