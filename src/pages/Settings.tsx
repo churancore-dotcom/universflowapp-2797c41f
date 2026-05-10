@@ -9,6 +9,7 @@ import { usePremium } from '@/hooks/usePremium';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
 import SupportChatModal from '@/components/SupportChatModal';
+import EmailVerificationCard from '@/components/EmailVerificationCard';
 
 import { applyTheme, type ThemeMode } from '@/lib/themeBoot';
 
@@ -118,6 +119,17 @@ const Settings = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 pt-3 pb-32 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Account / Email verification */}
+          <section>
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'hsl(212 100% 50% / 0.9)' }}>
+                <Info className="w-3 h-3 text-white" />
+              </div>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase">Account</h2>
+            </div>
+            <EmailVerificationCard />
+          </section>
+
           {/* Playback */}
           <section>
             <div className="flex items-center gap-2 mb-2 px-1">

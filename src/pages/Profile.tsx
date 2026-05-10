@@ -9,6 +9,7 @@ import RedeemCodeModal from '@/components/RedeemCodeModal';
 import ReviewModal from '@/components/ReviewModal';
 import ReviewsSheet from '@/components/ReviewsSheet';
 import { TabTransition } from '@/components/PageTransition';
+import EmailVerificationCard from '@/components/EmailVerificationCard';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -138,6 +139,11 @@ const Profile = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 pt-3 pb-32" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Email verification status */}
+          <div className="mb-4">
+            <EmailVerificationCard />
+          </div>
+
           {/* Profile Card */}
           <div
             className="rounded-2xl p-4 mb-4"

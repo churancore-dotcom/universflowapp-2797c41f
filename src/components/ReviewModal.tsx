@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Star, X, Loader2, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmailVerified } from '@/hooks/useEmailVerified';
 import { triggerHaptic } from '@/hooks/useHaptics';
 import { toast } from 'sonner';
 
@@ -14,6 +15,7 @@ interface Props {
 
 const ReviewModal = ({ isOpen, onClose, onSubmitted }: Props) => {
   const { user } = useAuth();
+  const { requireVerified } = useEmailVerified();
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState('');
@@ -38,6 +40,7 @@ const ReviewModal = ({ isOpen, onClose, onSubmitted }: Props) => {
 
   const handleSubmit = async () => {
     if (!user) return;
+    if (!requireVerified('post a review')) return;
     if (rating === 0) {
       toast.error('Please pick a star rating');
       return;

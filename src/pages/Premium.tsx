@@ -14,6 +14,7 @@ import { usePremium } from '@/hooks/usePremium';
 import { useHaptics } from '@/hooks/useHaptics';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmailVerified } from '@/hooks/useEmailVerified';
 import { toast } from '@/hooks/use-toast';
 
 type PlanId = 'monthly' | 'quarterly';
@@ -476,6 +477,7 @@ type Step = 'pay' | 'confirm' | 'verifying';
 const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClose, onRedeem }: CheckoutProps) {
   const haptics = useHaptics();
   const { user } = useAuth();
+  const { requireVerified } = useEmailVerified();
   const { refetch: refetchPremium } = usePremium();
   const [step, setStep] = useState<Step>('pay');
   const [utr, setUtr] = useState('');
@@ -502,6 +504,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
 
   const submitUtr = async () => {
     if (!user) { toast({ title: 'Please sign in first', variant: 'destructive' }); return; }
+    if (!requireVerified('submit a payment')) return;
     const cleanUtr = utr.trim();
     if (cleanUtr.length < 6) { toast({ title: 'Enter a valid UTR / transaction ID', variant: 'destructive' }); return; }
     setSubmitting(true);
