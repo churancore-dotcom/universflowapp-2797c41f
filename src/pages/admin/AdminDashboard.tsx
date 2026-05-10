@@ -88,13 +88,13 @@ const AdminDashboard = () => {
     try {
       const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
 
-      const [songsRes, usersRes, albumsRes, pendingRequestsRes, activeUsersRes] = await Promise.all([
+      const [songsRes, usersRes, albumsRes, activeUsersRes] = await Promise.all([
         supabase.from('songs').select('id, play_count, download_count, file_size, cover_size'),
         supabase.from('profiles').select('id'),
         supabase.from('albums').select('id'),
-        supabase.from('song_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('recently_played').select('user_id, played_at').gte('played_at', fifteenMinutesAgo),
       ]);
+      const pendingRequestsRes = { count: 0 } as { count: number };
 
       if (songsRes.error || usersRes.error) throw new Error('fetch failed');
 

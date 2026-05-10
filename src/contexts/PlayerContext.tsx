@@ -823,8 +823,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!isCrossfading.current) {
         playerProgressStore.setProgress(audio.currentTime);
       }
-      // Crossfade logic
-      if (crossfade && isPremiumUser && !isEqProcessingEnabled() && queue.length > 1 && audio.duration && !isCrossfading.current) {
+      // Crossfade logic — runs for all users (premium gate removed so the toggle actually works)
+      if (crossfade && queue.length > 1 && audio.duration && !isCrossfading.current) {
         const timeLeft = audio.duration - audio.currentTime;
         if (timeLeft <= crossfadeDuration && timeLeft > 0) {
           startCrossfade();
@@ -885,7 +885,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const startCrossfade = useCallback(() => {
     if (!audioRef.current || !nextAudioRef.current || isCrossfading.current) return;
     if (queue.length <= 1) return;
-    if (isEqProcessingEnabled()) return;
 
     const nextIdx = getNextIndex(currentIndex, queue.length, shuffle, repeat);
     if (nextIdx === null) return;

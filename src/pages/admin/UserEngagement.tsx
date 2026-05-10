@@ -47,8 +47,6 @@ const UserEngagement = () => {
         { data: recentPlays14 },
         { count: librarySize },
         { count: playlistCount },
-        { count: songRequestCount },
-        { count: donationCount },
         { count: reportCount },
         { count: likesToday },
         { count: likesYesterday },
@@ -61,8 +59,6 @@ const UserEngagement = () => {
         supabase.from('recently_played').select('user_id, played_at').gte('played_at', fourteenDaysAgo),
         supabase.from('user_library').select('*', { count: 'exact', head: true }),
         supabase.from('playlists').select('*', { count: 'exact', head: true }),
-        supabase.from('song_requests').select('*', { count: 'exact', head: true }),
-        supabase.from('donations').select('*', { count: 'exact', head: true }),
         supabase.from('content_reports').select('*', { count: 'exact', head: true }),
         supabase.from('user_library').select('*', { count: 'exact', head: true }).gte('added_at', yesterday),
         supabase.from('user_library').select('*', { count: 'exact', head: true })
@@ -138,13 +134,11 @@ const UserEngagement = () => {
       setAvgSessionTime(weightedAvg ? `${Math.floor(weightedAvg / 60) ? `${Math.floor(weightedAvg / 60)}h ` : ''}${weightedAvg % 60}m` : '0m');
 
       // Feature usage = relative scale across the platform
-      const max = Math.max(plays.length, librarySize || 0, playlistCount || 0, songRequestCount || 0, donationCount || 0, reportCount || 0, 1);
+      const max = Math.max(plays.length, librarySize || 0, playlistCount || 0, reportCount || 0, 1);
       setTopFeatures([
         { name: 'Music Playback', usage: Math.round((plays.length / max) * 100) },
         { name: 'Library / Likes', usage: Math.round(((librarySize || 0) / max) * 100) },
         { name: 'Playlists', usage: Math.round(((playlistCount || 0) / max) * 100) },
-        { name: 'Song Requests', usage: Math.round(((songRequestCount || 0) / max) * 100) },
-        { name: 'Donations', usage: Math.round(((donationCount || 0) / max) * 100) },
         { name: 'Content Reports', usage: Math.round(((reportCount || 0) / max) * 100) },
       ]);
 

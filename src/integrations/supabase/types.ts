@@ -402,42 +402,6 @@ export type Database = {
         }
         Relationships: []
       }
-      donations: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          email: string | null
-          id: string
-          is_anonymous: boolean
-          message: string | null
-          platform: string
-          user_id: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency?: string
-          email?: string | null
-          id?: string
-          is_anonymous?: boolean
-          message?: string | null
-          platform: string
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          email?: string | null
-          id?: string
-          is_anonymous?: boolean
-          message?: string | null
-          platform?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       experiment_assignments: {
         Row: {
           assigned_at: string
@@ -719,6 +683,7 @@ export type Database = {
           id: string
           is_featured: boolean
           is_public: boolean
+          share_token: string | null
           title: string
           updated_at: string
           user_id: string | null
@@ -730,6 +695,7 @@ export type Database = {
           id?: string
           is_featured?: boolean
           is_public?: boolean
+          share_token?: string | null
           title: string
           updated_at?: string
           user_id?: string | null
@@ -741,6 +707,7 @@ export type Database = {
           id?: string
           is_featured?: boolean
           is_public?: boolean
+          share_token?: string | null
           title?: string
           updated_at?: string
           user_id?: string | null
@@ -1004,51 +971,6 @@ export type Database = {
           title?: string
           track_id?: string
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      song_requests: {
-        Row: {
-          artist: string
-          audio_url: string
-          cover_url: string | null
-          created_at: string
-          genre: string | null
-          id: string
-          mood: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          title: string
-          user_id: string
-        }
-        Insert: {
-          artist: string
-          audio_url: string
-          cover_url?: string | null
-          created_at?: string
-          genre?: string | null
-          id?: string
-          mood?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          title: string
-          user_id: string
-        }
-        Update: {
-          artist?: string
-          audio_url?: string
-          cover_url?: string | null
-          created_at?: string
-          genre?: string | null
-          id?: string
-          mood?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          title?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -1479,6 +1401,10 @@ export type Database = {
           username: string
         }[]
       }
+      get_or_create_playlist_share_token: {
+        Args: { p_playlist_id: string }
+        Returns: string
+      }
       get_user_count: { Args: never; Returns: number }
       get_viral_song_events: {
         Args: {
@@ -1512,6 +1438,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      import_shared_playlist: {
+        Args: { p_share_token: string }
+        Returns: string
       }
       is_premium_user: { Args: { _user_id: string }; Returns: boolean }
       is_session_host: {

@@ -30,26 +30,19 @@ import {
   Globe
 } from 'lucide-react';
 
-import { 
-  Inbox,
-  Bot,
-  MessageCircle
-} from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Upload, label: 'Upload Music', path: '/admin/upload' },
-  { icon: Inbox, label: 'Song Requests', path: '/admin/song-requests' },
   { icon: Music, label: 'Manage Songs', path: '/admin/songs' },
   { icon: Users, label: 'Manage Artists', path: '/admin/artists' },
   { icon: Disc, label: 'Manage Albums', path: '/admin/albums' },
   { icon: ListMusic, label: 'Playlists', path: '/admin/playlists' },
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: Crown, label: 'Subscriptions', path: '/admin/subscriptions' },
-  { icon: Heart, label: 'Donations', path: '/admin/donations' },
   { icon: Gift, label: 'Promo Codes', path: '/admin/promo-codes' },
   { icon: Crown, label: 'Payment Requests', path: '/admin/payments' },
-  { icon: DollarSign, label: 'Revenue', path: '/admin/revenue' },
   { icon: Zap, label: 'Engagement', path: '/admin/engagement' },
   { icon: Bell, label: 'Push Notifications', path: '/admin/notifications' },
   { icon: FlaskConical, label: 'A/B Testing', path: '/admin/ab-testing' },
@@ -67,7 +60,6 @@ const navItems = [
   { icon: BarChart3, label: 'Backup', path: '/admin/backup' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
   { icon: MessageCircle, label: 'Support Inbox', path: '/admin/support' },
-  { icon: Bot, label: 'Gemma 4 AI', path: '/admin/ai-assistant' },
 ];
 
 const AdminLayout = () => {
@@ -209,7 +201,8 @@ const AdminLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
-        <Outlet />
+        {/* key forces remount per route — guarantees no stale sidebar/sheet state leaks across pages */}
+        <Outlet key={location.pathname} />
       </main>
     </div>
   );
