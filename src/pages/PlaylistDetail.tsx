@@ -16,6 +16,9 @@ import DownloadAllButton from '@/components/DownloadAllButton';
 import AddSongsToPlaylistModal from '@/components/AddSongsToPlaylistModal';
 import { TabTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { iosSpring, iosBounce } from '@/lib/animations';
 import { toast } from 'sonner';
 import { loadPlaylistSongs } from '@/lib/streamSongs';
