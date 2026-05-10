@@ -104,9 +104,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('status')
+          .select('status, email_verified')
           .eq('user_id', data.user.id)
           .maybeSingle();
+
+        // Email-verification gate: block sign-in until they confirm via the link
+        if (profile && profile.email_verified === false) {
+          await supabase.auth.signOut();
+          return { error: new Error('EMAIL_NOT_VERIFIED') };
+        }
 
         if (profile?.status === 'banned') {
           await supabase.auth.signOut();

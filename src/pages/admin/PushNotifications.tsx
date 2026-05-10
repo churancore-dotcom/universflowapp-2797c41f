@@ -256,6 +256,18 @@ const PushNotifications = () => {
     if (error) toast.error(error.message); else toast.success('Deleted');
   };
 
+  const removePushHistory = async (id: string) => {
+    if (!confirm('Delete this push history entry?')) return;
+    const { error } = await supabase.from('push_history').delete().eq('id', id);
+    if (error) toast.error(error.message); else toast.success('Push deleted');
+  };
+
+  const clearAllPushHistory = async () => {
+    if (!confirm('Delete ALL push history entries? This cannot be undone.')) return;
+    const { error } = await supabase.from('push_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) toast.error(error.message); else toast.success('Push history cleared');
+  };
+
   const totalReach = items
     .filter(n => n.is_active)
     .reduce((sum, n) => sum + (reach[n.target_audience] ?? 0), 0);
@@ -496,14 +508,19 @@ const PushNotifications = () => {
 
       {pushHistory.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-primary" /> Push History
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-primary" /> Push History
+            </h2>
+            <Button variant="ghost" size="sm" onClick={clearAllPushHistory} className="text-destructive">
+              <Trash2 className="w-4 h-4 mr-1.5" /> Clear all
+            </Button>
+          </div>
           <div className="space-y-3">
             {pushHistory.map((p) => (
               <div key={p.id} className="glass rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-semibold">{p.title}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{p.body}</p>
                     {p.deep_link && (
@@ -525,6 +542,15 @@ const PushNotifications = () => {
                     </p>
                     <p className="text-xs text-muted-foreground capitalize">{p.target_audience}</p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removePushHistory(p.id)}
+                    className="text-destructive shrink-0 self-start"
+                    aria-label="Delete push entry"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             ))}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, AtSign } from 'lucide-react';
@@ -40,22 +41,36 @@ const Auth = () => {
     try {
       if (isLogin) {
         const { error, isAdmin } = await signIn(email, password);
-        if (error) { toast.error(error.message); return; }
+        if (error) {
+          // If unverified, AuthContext returns a special marker so we redirect.
+          if ((error as Error & { code?: string }).message === 'EMAIL_NOT_VERIFIED') {
+            toast.error('Please confirm your email to sign in');
+            // Resend the link & route to check-email
+            try {
+              await supabase.functions.invoke('send-verification-link', { body: { email } });
+            } catch { /* non-fatal */ }
+            navigate('/check-email', { state: { email } });
+            return;
+          }
+          toast.error(error.message);
+          return;
+        }
         toast.success('Welcome back!');
         navigate(isAdmin ? '/admin' : '/home');
       } else {
         const { error } = await signUp(email, password, username, detectCountryCode());
         if (error) { toast.error(error.message); return; }
         localStorage.setItem('uf_just_signed_up', '1');
-        // Auto sign-in after signup (auto-confirm is enabled)
-        const { error: signInError } = await signIn(email, password);
-        if (signInError) {
-          toast.success('Account created — please sign in');
-          setIsLogin(true);
-          return;
+        // Send verification link via Resend, then route to check-email screen
+        try {
+          await supabase.functions.invoke('send-verification-link', {
+            body: { email, username },
+          });
+        } catch (e) {
+          console.warn('verification email failed:', e);
         }
-        toast.success('Welcome to Universflow!');
-        navigate('/home');
+        toast.success('Account created — check your email');
+        navigate('/check-email', { state: { email, username } });
       }
     } catch {
       toast.error('Something went wrong. Please try again.');

@@ -1,36 +1,32 @@
-import { useState, useEffect, memo, forwardRef } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Upload, 
-  Music, 
-  Disc, 
-  ListMusic, 
-  Users, 
-  Settings, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Upload,
+  Music,
+  Disc,
+  ListMusic,
+  Users,
+  Settings,
+  BarChart3,
   LogOut,
   ChevronLeft,
   Menu,
   X,
   Crown,
-  Heart,
   Palette,
   ToggleLeft,
   Bell,
   Shield,
   Gift,
   Key,
-  DollarSign,
   Zap,
   FlaskConical,
   Lock,
-  Globe
+  MessageCircle,
 } from 'lucide-react';
-
-import { MessageCircle } from 'lucide-react';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -62,14 +58,94 @@ const navItems = [
   { icon: MessageCircle, label: 'Support Inbox', path: '/admin/support' },
 ];
 
+interface SidebarContentProps {
+  currentPath: string;
+  onNavigate: (path: string) => void;
+  onClose: () => void;
+  onLogout: () => void;
+  showCloseButton: boolean;
+}
+
+// IMPORTANT: SidebarContent is defined OUTSIDE the AdminLayout component so it
+// keeps a stable component identity across renders. Defining it inside caused
+// the desktop sidebar to remount on every state change and the mobile drawer
+// to "blink" or appear to re-open after navigation.
+const SidebarContent = memo(({ currentPath, onNavigate, onClose, onLogout, showCloseButton }: SidebarContentProps) => (
+  <div className="flex flex-col h-full">
+    <div className="p-4 md:p-6 border-b border-white/5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+            <Music className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="font-display font-bold text-lg">Univers Flow</h1>
+            <p className="text-xs text-muted-foreground">Admin Panel</p>
+          </div>
+        </div>
+        {showCloseButton && (
+          <button
+            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+    </div>
+
+    <nav className="flex-1 p-3 md:p-4 space-y-1 overflow-y-auto">
+      {navItems.map((item) => {
+        const isActive = currentPath === item.path;
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.path}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              isActive
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-white/5 hover:text-foreground active:scale-[0.98]'
+            }`}
+            onClick={() => onNavigate(item.path)}
+          >
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span className="truncate">{item.label}</span>
+            {isActive && (
+              <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+            )}
+          </button>
+        );
+      })}
+    </nav>
+
+    <div className="p-3 md:p-4 border-t border-white/5 space-y-2">
+      <button
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:bg-white/5 hover:text-foreground transition-all active:scale-[0.98]"
+        onClick={() => onNavigate('/home')}
+      >
+        <ChevronLeft className="w-5 h-5 flex-shrink-0" />
+        <span>Back to App</span>
+      </button>
+      <button
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all active:scale-[0.98]"
+        onClick={onLogout}
+      >
+        <LogOut className="w-5 h-5 flex-shrink-0" />
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+));
+SidebarContent.displayName = 'SidebarContent';
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // DEFENSIVE: any time the path changes, force-close the mobile sheet.
-  // Without this, animation re-mounts in the page can resurrect it.
+  // Close drawer ONLY when the path actually changes (not on every render).
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -81,76 +157,10 @@ const AdminLayout = () => {
 
   const handleNavigation = (path: string) => {
     setSidebarOpen(false);
-    navigate(path);
+    if (path !== location.pathname) navigate(path);
   };
 
-  const SidebarContent = forwardRef<HTMLDivElement>((_, ref) => (
-    <div ref={ref} className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 md:p-6 border-b border-white/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Music className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-lg">Univers Flow</h1>
-              <p className="text-xs text-muted-foreground">Admin Panel</p>
-            </div>
-          </div>
-          <button
-            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-3 md:p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.path}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-white/5 hover:text-foreground active:scale-[0.98]'
-              }`}
-              onClick={() => handleNavigation(item.path)}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              <span className="truncate">{item.label}</span>
-              {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-3 md:p-4 border-t border-white/5 space-y-2">
-        <button
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:bg-white/5 hover:text-foreground transition-all active:scale-[0.98]"
-          onClick={() => handleNavigation('/home')}
-        >
-          <ChevronLeft className="w-5 h-5 flex-shrink-0" />
-          <span>Back to App</span>
-        </button>
-        <button
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all active:scale-[0.98]"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  ));
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -165,6 +175,7 @@ const AdminLayout = () => {
         <button
           className="p-2 rounded-lg hover:bg-white/10 transition-colors"
           onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -175,20 +186,28 @@ const AdminLayout = () => {
         {sidebarOpen && (
           <>
             <motion.div
+              key="backdrop"
               className="md:hidden fixed inset-0 bg-black/60 z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSidebarOpen(false)}
+              onClick={closeSidebar}
             />
             <motion.aside
+              key="drawer"
               className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-background border-r border-white/5 z-50 flex flex-col safe-area-pt safe-area-pb"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             >
-              <SidebarContent />
+              <SidebarContent
+                currentPath={location.pathname}
+                onNavigate={handleNavigation}
+                onClose={closeSidebar}
+                onLogout={handleLogout}
+                showCloseButton
+              />
             </motion.aside>
           </>
         )}
@@ -196,12 +215,17 @@ const AdminLayout = () => {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 glass-strong border-r border-white/5 flex-col flex-shrink-0">
-        <SidebarContent />
+        <SidebarContent
+          currentPath={location.pathname}
+          onNavigate={handleNavigation}
+          onClose={closeSidebar}
+          onLogout={handleLogout}
+          showCloseButton={false}
+        />
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
-        {/* key forces remount per route — guarantees no stale sidebar/sheet state leaks across pages */}
         <Outlet key={location.pathname} />
       </main>
     </div>

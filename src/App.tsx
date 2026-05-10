@@ -20,6 +20,8 @@ import { NavDirectionProvider } from "./components/PageTransition";
 import GlobalPlayerLayer from "./components/GlobalPlayerLayer";
 import SEOHead from "./components/SEOHead";
 import Auth from "./pages/Auth";
+import VerifyEmail from "./pages/VerifyEmail";
+import CheckEmail from "./pages/CheckEmail";
 import NotFound from "./pages/NotFound";
 import { usePushRegistration } from "./hooks/usePushRegistration";
 
@@ -155,6 +157,8 @@ const AnimatedRoutes = () => {
             user ? <Navigate to="/home" replace /> : 
             <Auth />
           } />
+          <Route path="/verify" element={<VerifyEmail />} />
+          <Route path="/check-email" element={<CheckEmail />} />
           <Route path="/offline-player" element={<OfflinePlayerShell />} />
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
