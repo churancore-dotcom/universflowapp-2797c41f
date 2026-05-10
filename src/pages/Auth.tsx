@@ -27,18 +27,58 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const codeRef = useRef<HTMLInputElement>(null);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  useEffect(() => {
+    if (pendingEmail) setTimeout(() => codeRef.current?.focus(), 200);
+  }, [pendingEmail]);
+
+  const sendCode = async (showToast = true) => {
+    const { error } = await supabase.functions.invoke('send-verification-code');
+    if (error) {
+      const msg = (error as any)?.context?.error || error.message || 'Failed to send code';
+      toast.error(msg);
+      return false;
+    }
+    if (showToast) toast.success('Code sent — check your inbox');
+    setCooldown(30);
+    return true;
+  };
+
   const handleResend = async () => {
-    if (!pendingEmail || resending) return;
+    if (resending || cooldown > 0) return;
     setResending(true);
+    try { await sendCode(); } finally { setResending(false); }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6 || verifying) return;
+    setVerifying(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: pendingEmail });
-      if (error) toast.error(error.message);
-      else toast.success('Verification email sent again');
+      const { error } = await supabase.functions.invoke('verify-email-code', { body: { code } });
+      if (error) {
+        const msg = (error as any)?.context?.error || error.message || 'Verification failed';
+        toast.error(msg);
+        setCode('');
+        return;
+      }
+      toast.success('Email verified!');
+      setPendingEmail(null);
+      navigate('/home');
     } finally {
-      setResending(false);
+      setVerifying(false);
     }
   };
 
@@ -55,27 +95,33 @@ const Auth = () => {
     try {
       if (isLogin) {
         const { error, isAdmin } = await signIn(email, password);
-        if (error) {
-          const msg = (error.message || '').toLowerCase();
-          if (msg.includes('not confirmed') || msg.includes('confirm')) {
+        if (error) { toast.error(error.message); return; }
+        // Check our own verification flag
+        const { data: userRes } = await supabase.auth.getUser();
+        const uid = userRes.user?.id;
+        if (uid) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('email_verified')
+            .eq('user_id', uid)
+            .maybeSingle();
+          if (!prof?.email_verified) {
             setPendingEmail(email);
-            toast.error('Please verify your email to sign in');
-          } else {
-            toast.error(error.message);
+            await sendCode(false);
+            toast.message('Verify your email to continue', { description: 'We sent a 6-digit code to your inbox.' });
+            return;
           }
-        } else {
-          toast.success('Welcome back!');
-          navigate(isAdmin ? '/admin' : '/home');
         }
+        toast.success('Welcome back!');
+        navigate(isAdmin ? '/admin' : '/home');
       } else {
         const { error } = await signUp(email, password, username, detectCountryCode());
-        if (error) {
-          toast.error(error.message);
-        } else {
-          // Mark this session as fresh signup so the artist picker triggers later
-          localStorage.setItem('uf_just_signed_up', '1');
-          setPendingEmail(email);
-        }
+        if (error) { toast.error(error.message); return; }
+        localStorage.setItem('uf_just_signed_up', '1');
+        setPendingEmail(email);
+        // Send code via our custom flow
+        await sendCode(false);
+        toast.success('Account created — check your email for a 6-digit code');
       }
     } catch {
       toast.error('Something went wrong. Please try again.');
