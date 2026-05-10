@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Music, Loader2, Crown, Play, Download, ChevronLeft } from 'lucide-react';
+import { Music, Loader2, Play, ChevronLeft, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePremium } from '@/hooks/usePremium';
+import { usePlayer, Song } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
 import SEOHead from '@/components/SEOHead';
 
@@ -16,28 +16,15 @@ interface PlaylistRow {
   user_id: string | null;
 }
 
-interface PlaylistSongRow {
-  song_id: string;
-  position: number;
-  track_source: string;
-}
-
-interface SongRow {
-  id: string;
-  title: string;
-  artist: string;
-  cover_url: string | null;
-}
-
 const SharedPlaylist = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isPremium } = usePremium();
+  const { playSong, setQueue } = usePlayer();
   const [loading, setLoading] = useState(true);
   const [playlist, setPlaylist] = useState<PlaylistRow | null>(null);
-  const [songs, setSongs] = useState<SongRow[]>([]);
-  const [importing, setImporting] = useState(false);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -57,32 +44,33 @@ const SharedPlaylist = () => {
         .select('song_id, position, track_source')
         .eq('playlist_id', pl.id)
         .order('position');
-      const ids = (rows as PlaylistSongRow[] | null)?.filter(r => r.track_source === 'library').map(r => r.song_id) || [];
+      const ids = (rows || []).filter((r: any) => r.track_source === 'library').map((r: any) => r.song_id);
       if (ids.length) {
         const { data: songRows } = await supabase
           .from('songs')
-          .select('id, title, artist, cover_url')
+          .select('id, title, artist, album, cover_url, audio_url, duration')
           .in('id', ids);
-        if (!cancelled) setSongs((songRows || []) as SongRow[]);
+        if (!cancelled) setSongs((songRows || []) as Song[]);
       }
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [token]);
 
-  const handleImport = async () => {
+  const handlePlayAll = () => {
+    if (songs.length === 0) return;
+    setQueue(songs);
+    playSong(songs[0]);
+  };
+
+  const handleSaveCopy = async () => {
     if (!user) { navigate(`/auth?redirect=/p/${token}`); return; }
-    if (!isPremium) {
-      toast.error('Importing shared playlists is a Premium feature.');
-      navigate('/premium');
-      return;
-    }
     if (!token) return;
-    setImporting(true);
+    setSaving(true);
     const { data, error } = await supabase.rpc('import_shared_playlist', { p_share_token: token });
-    setImporting(false);
-    if (error) { toast.error(error.message || 'Import failed'); return; }
-    toast.success('Playlist saved to your library');
+    setSaving(false);
+    if (error) { toast.error(error.message || 'Could not save'); return; }
+    toast.success('Saved to your library');
     navigate(`/playlist/${data}`);
   };
 
@@ -132,29 +120,38 @@ const SharedPlaylist = () => {
         {playlist.description && <p className="mt-1 text-sm text-muted-foreground">{playlist.description}</p>}
         <p className="mt-2 text-xs text-muted-foreground">{songs.length} songs</p>
 
-        <button
-          onClick={handleImport}
-          disabled={importing}
-          className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-[15px]"
-          style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
-            color: 'hsl(var(--primary-foreground))',
-            boxShadow: '0 14px 40px -10px hsl(var(--primary) / 0.6)',
-          }}
-        >
-          {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-          Save to my library
-        </button>
-        {!isPremium && (
-          <p className="mt-3 text-[11px] text-muted-foreground inline-flex items-center gap-1.5 justify-center">
-            <Crown className="w-3 h-3 text-primary" /> Premium feature
-          </p>
-        )}
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <button
+            onClick={handlePlayAll}
+            disabled={songs.length === 0}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-[15px] disabled:opacity-50"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
+              color: 'hsl(var(--primary-foreground))',
+              boxShadow: '0 14px 40px -10px hsl(var(--primary) / 0.6)',
+            }}
+          >
+            <Play className="w-5 h-5" fill="currentColor" />
+            Play
+          </button>
+          <button
+            onClick={handleSaveCopy}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-full font-semibold text-[14px] bg-white/10"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Save
+          </button>
+        </div>
       </div>
 
       <div className="px-4 space-y-1">
         {songs.map((s, i) => (
-          <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-xl">
+          <button
+            key={s.id}
+            onClick={() => { setQueue(songs); playSong(s); }}
+            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left active:bg-white/5"
+          >
             <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 flex items-center justify-center">
               {s.cover_url ? <img src={s.cover_url} alt="" className="w-full h-full object-cover" /> : <Music className="w-4 h-4 text-muted-foreground" />}
             </div>
@@ -163,7 +160,7 @@ const SharedPlaylist = () => {
               <p className="text-xs text-muted-foreground truncate">{s.artist}</p>
             </div>
             <span className="text-[11px] text-muted-foreground tabular-nums">{i + 1}</span>
-          </div>
+          </button>
         ))}
       </div>
     </div>
