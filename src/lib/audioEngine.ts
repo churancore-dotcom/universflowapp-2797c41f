@@ -292,6 +292,8 @@ function buildProcessedChain(ctx: AudioContext, source: MediaElementAudioSourceN
 
   // Re-apply the persisted spatial state on the fresh chain
   if (engine.spatialEnabled) startSpatialLfo();
+  // Re-apply the persisted Studio Space on the fresh chain
+  if (currentSpaceId !== 'off') setStudioSpace(currentSpaceId);
 }
 
 function buildDirectChain(source: MediaElementAudioSourceNode, ctx: AudioContext) {
