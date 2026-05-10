@@ -719,7 +719,6 @@ async function searchForCandidates(artist: string, title: string): Promise<Recor
   if (candidates.length >= 4) return candidates.slice(0, 8);
 
   // Fallback to YouTube Data API (most reliable search)
-  if (YOUTUBE_API_KEY) {
   if (YOUTUBE_API_KEYS.length > 0) {
     for (const key of YOUTUBE_API_KEYS) {
       try {
