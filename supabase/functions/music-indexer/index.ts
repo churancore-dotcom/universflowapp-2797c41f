@@ -102,6 +102,8 @@ function hostnameMatchesAllowedSuffix(hostname: string): boolean {
 
 const LASTFM_API_KEY = Deno.env.get('LASTFM_API_KEY') || '';
 const YOUTUBE_API_KEY = Deno.env.get('YOUTUBE_API_KEY') || '';
+const YOUTUBE_API_KEY_2 = Deno.env.get('YOUTUBE_API_KEY_2') || '';
+const YOUTUBE_API_KEYS = [YOUTUBE_API_KEY, YOUTUBE_API_KEY_2].filter(Boolean);
 const LASTFM_BASE_URL = 'https://ws.audioscrobbler.com/2.0/';
 
 // ── Instance lists (pruned to actually-working ones, April 2026) ──
@@ -718,24 +720,28 @@ async function searchForCandidates(artist: string, title: string): Promise<Recor
 
   // Fallback to YouTube Data API (most reliable search)
   if (YOUTUBE_API_KEY) {
-    try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=6&key=${YOUTUBE_API_KEY}`;
-      const ytData = await fetchJson(ytUrl, 6000);
-      const ytItems = Array.isArray(ytData?.items) ? ytData.items : [];
-      for (const item of ytItems) {
-        const vid = item?.id?.videoId;
-        if (vid) {
-          addCandidate({
-            videoId: vid,
-            title: item?.snippet?.title || '',
-            author: item?.snippet?.channelTitle || '',
-            _source: 'youtube-api',
-          });
+  if (YOUTUBE_API_KEYS.length > 0) {
+    for (const key of YOUTUBE_API_KEYS) {
+      try {
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=6&key=${key}`;
+        const ytData = await fetchJson(ytUrl, 6000);
+        const ytItems = Array.isArray(ytData?.items) ? ytData.items : [];
+        for (const item of ytItems) {
+          const vid = item?.id?.videoId;
+          if (vid) {
+            addCandidate({
+              videoId: vid,
+              title: item?.snippet?.title || '',
+              author: item?.snippet?.channelTitle || '',
+              _source: 'youtube-api',
+            });
+          }
         }
+        console.log(`[search] YouTube API returned ${ytItems.length} results`);
+        if (ytItems.length > 0) break; // Success — no need to burn second key
+      } catch (e) {
+        console.warn(`[search] YouTube API key failed, trying next:`, (e as Error).message);
       }
-      console.log(`[search] YouTube API returned ${ytItems.length} results`);
-    } catch (e) {
-      console.warn(`[search] YouTube API failed:`, (e as Error).message);
     }
   }
 

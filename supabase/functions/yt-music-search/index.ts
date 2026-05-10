@@ -86,36 +86,47 @@ serve(async (req) => {
     }
     const limit = Math.max(1, Math.min(50, typeof requestedLimit === 'number' ? requestedLimit : 30));
 
-    const apiKey = Deno.env.get('YOUTUBE_API_KEY');
-    if (!apiKey) {
+    const apiKeys = [
+      Deno.env.get('YOUTUBE_API_KEY'),
+      Deno.env.get('YOUTUBE_API_KEY_2'),
+    ].filter(Boolean) as string[];
+
+    if (apiKeys.length === 0) {
       return new Response(JSON.stringify({ success: false, error: 'YouTube search service is not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const url = new URL('https://www.googleapis.com/youtube/v3/search');
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('q', `${query.trim()} music`);
-    url.searchParams.set('type', 'video');
-    url.searchParams.set('videoCategoryId', '10');
-    url.searchParams.set('maxResults', String(limit));
-    url.searchParams.set('key', apiKey);
+    let data: any = null;
+    let lastErr = '';
+    for (const apiKey of apiKeys) {
+      const url = new URL('https://www.googleapis.com/youtube/v3/search');
+      url.searchParams.set('part', 'snippet');
+      url.searchParams.set('q', `${query.trim()} music`);
+      url.searchParams.set('type', 'video');
+      url.searchParams.set('videoCategoryId', '10');
+      url.searchParams.set('maxResults', String(limit));
+      url.searchParams.set('key', apiKey);
 
-    const response = await fetch(url.toString(), {
-      headers: { Accept: 'application/json' },
-    });
+      const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      if (response.ok) {
+        data = await response.json();
+        break;
+      }
+      lastErr = await response.text();
+      console.warn(`YouTube key failed (${response.status}), trying next...`, lastErr.slice(0, 200));
+      // Only rotate on quota/forbidden style errors; otherwise still try next as last resort
+    }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('YouTube search failed:', response.status, errorText);
+    if (!data) {
+      console.error('All YouTube keys failed:', lastErr);
       return new Response(JSON.stringify({ success: false, error: 'YouTube search is temporarily unavailable' }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const data = await response.json();
     const results: SearchResult[] = (data.items || [])
       .map((item: any) => {
         const videoId = item?.id?.videoId;
