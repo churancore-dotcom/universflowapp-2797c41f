@@ -41,15 +41,29 @@ export const useMediaSession = ({
     if (!('mediaSession' in navigator)) return;
 
     if (song) {
-      // Create artwork array with multiple sizes for better display
-      const artwork = song.cover_url ? [
-        { src: song.cover_url, sizes: '96x96', type: 'image/jpeg' },
-        { src: song.cover_url, sizes: '128x128', type: 'image/jpeg' },
-        { src: song.cover_url, sizes: '192x192', type: 'image/jpeg' },
-        { src: song.cover_url, sizes: '256x256', type: 'image/jpeg' },
-        { src: song.cover_url, sizes: '384x384', type: 'image/jpeg' },
-        { src: song.cover_url, sizes: '512x512', type: 'image/jpeg' },
-      ] : [];
+      // Always include app logo as a fallback so lock screen / control center
+      // always shows artwork (Universflow brand) even when cover is missing.
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const logo192 = `${origin}/pwa-192x192.png`;
+      const logo512 = `${origin}/pwa-512x512.png`;
+
+      const cover = song.cover_url;
+      const coverType = cover && /\.png(\?|$)/i.test(cover) ? 'image/png' : 'image/jpeg';
+
+      const artwork = cover
+        ? [
+            { src: cover, sizes: '96x96', type: coverType },
+            { src: cover, sizes: '128x128', type: coverType },
+            { src: cover, sizes: '192x192', type: coverType },
+            { src: cover, sizes: '256x256', type: coverType },
+            { src: cover, sizes: '384x384', type: coverType },
+            { src: cover, sizes: '512x512', type: coverType },
+            { src: logo512, sizes: '512x512', type: 'image/png' },
+          ]
+        : [
+            { src: logo192, sizes: '192x192', type: 'image/png' },
+            { src: logo512, sizes: '512x512', type: 'image/png' },
+          ];
 
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
