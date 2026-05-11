@@ -38,7 +38,12 @@ function rowToSong(s: any): Song {
   } as Song;
 }
 
+// Require at least 5 total plays before generating any auto-mix
+const MIN_TOTAL_PLAYS = 5;
+
 function buildMixes(played: { song: Song; count: number; lastTs: number }[]): Mix[] {
+  const totalPlays = played.reduce((sum, p) => sum + p.count, 0);
+  if (totalPlays < MIN_TOTAL_PLAYS) return [];
   if (played.length < 3) return [];
   const mixes: Mix[] = [];
   let accentIdx = 0;
