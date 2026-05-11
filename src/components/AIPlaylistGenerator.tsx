@@ -74,14 +74,6 @@ const moodOptions: MoodOption[] = [
   },
 ];
 
-interface MoodOption {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  prompt: string;
-  queries: string[];
-  gradient: string;
-}
 
 const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlaylistGeneratorProps) => {
   const { user } = useAuth();
