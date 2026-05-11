@@ -30,12 +30,14 @@ const SharedPlaylist = () => {
     if (!token) return;
     let cancelled = false;
     (async () => {
-      const { data: pl } = await supabase
+      setLoading(true);
+      const { data: pl, error: plErr } = await supabase
         .from('playlists')
         .select('id, title, description, cover_url, user_id')
         .eq('share_token', token)
         .maybeSingle();
       if (cancelled) return;
+      if (plErr) console.error('shared playlist load error', plErr);
       if (!pl) { setLoading(false); return; }
       setPlaylist(pl as PlaylistRow);
 
@@ -44,15 +46,47 @@ const SharedPlaylist = () => {
         .select('song_id, position, track_source')
         .eq('playlist_id', pl.id)
         .order('position');
-      const ids = (rows || []).filter((r: any) => r.track_source === 'library').map((r: any) => r.song_id);
-      if (ids.length) {
-        const { data: songRows } = await supabase
-          .from('songs')
-          .select('id, title, artist, album, cover_url, audio_url, duration')
-          .in('id', ids);
-        if (!cancelled) setSongs((songRows || []) as Song[]);
+
+      const items = rows || [];
+      const libIds = items.filter((r: any) => r.track_source === 'library').map((r: any) => r.song_id);
+      const streamIds = items.filter((r: any) => r.track_source !== 'library').map((r: any) => r.song_id);
+
+      const [libRes, streamRes] = await Promise.all([
+        libIds.length
+          ? supabase.from('songs').select('id, title, artist, album, cover_url, audio_url, duration').in('id', libIds)
+          : Promise.resolve({ data: [] as any[] }),
+        streamIds.length
+          ? supabase.from('stream_songs').select('track_id, title, artist, album, cover_url, audio_url, duration').in('track_id', streamIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const libMap = new Map<string, any>((libRes.data || []).map((s: any) => [s.id, s]));
+      const streamMap = new Map<string, any>((streamRes.data || []).map((s: any) => [s.track_id, s]));
+
+      const ordered: Song[] = items
+        .map((r: any) => {
+          if (r.track_source === 'library') {
+            const s = libMap.get(r.song_id);
+            return s ? (s as Song) : null;
+          }
+          const s = streamMap.get(r.song_id);
+          if (!s) return null;
+          return {
+            id: s.track_id,
+            title: s.title,
+            artist: s.artist,
+            album: s.album || undefined,
+            cover_url: s.cover_url || undefined,
+            audio_url: s.audio_url || undefined,
+            duration: s.duration || 0,
+          } as unknown as Song;
+        })
+        .filter(Boolean) as Song[];
+
+      if (!cancelled) {
+        setSongs(ordered);
+        setLoading(false);
       }
-      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [token]);
