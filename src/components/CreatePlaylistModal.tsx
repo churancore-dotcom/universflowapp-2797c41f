@@ -7,17 +7,22 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { iosSpring, iosBounce } from '@/lib/animations';
+import type { Song } from '@/contexts/PlayerContext';
+import { getTrackSource, persistStreamSong } from '@/lib/streamSongs';
+import { isCatalogSongId } from '@/lib/songSupport';
 
 interface CreatePlaylistModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  initialSong?: Song | null;
 }
 
 const CreatePlaylistModal = memo(function CreatePlaylistModal({ 
   isOpen, 
   onClose, 
-  onCreated 
+  onCreated,
+  initialSong = null,
 }: CreatePlaylistModalProps) {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
@@ -34,18 +39,37 @@ const CreatePlaylistModal = memo(function CreatePlaylistModal({
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      if (initialSong && !isCatalogSongId(initialSong.id)) {
+        await persistStreamSong(initialSong);
+      }
+
+      const { data: playlist, error } = await supabase
         .from('playlists')
         .insert({
           user_id: user.id,
           title: title.trim(),
           description: description.trim() || null,
+          cover_url: initialSong?.cover_url || null,
           is_public: isPublic,
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      toast.success('Playlist created! 🎵');
+      if (initialSong && playlist?.id) {
+        const { error: songError } = await supabase
+          .from('playlist_songs')
+          .insert({
+            playlist_id: playlist.id,
+            song_id: initialSong.id,
+            position: 0,
+            track_source: getTrackSource(initialSong),
+          });
+        if (songError) throw songError;
+      }
+
+      toast.success(initialSong ? 'Playlist created with this song! 🎵' : 'Playlist created! 🎵');
       setTitle('');
       setDescription('');
       onCreated();
