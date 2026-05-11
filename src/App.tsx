@@ -78,6 +78,7 @@ const PromoCodes = lazy(() => import("./pages/admin/PromoCodes"));
 const PaymentRequests = lazy(() => import("./pages/admin/PaymentRequests"));
 const APIManagement = lazy(() => import("./pages/admin/APIManagement"));
 const PushNotifications = lazy(() => import("./pages/admin/PushNotifications"));
+const RegisteredDevices = lazy(() => import("./pages/admin/RegisteredDevices"));
 const UserEngagement = lazy(() => import("./pages/admin/UserEngagement"));
 const ABTesting = lazy(() => import("./pages/admin/ABTesting"));
 const SecurityCenter = lazy(() => import("./pages/admin/SecurityCenter"));
@@ -200,6 +201,7 @@ const AnimatedRoutes = () => {
             <Route path="settings" element={<AdminSettings />} />
             <Route path="api" element={<APIManagement />} />
             <Route path="notifications" element={<PushNotifications />} />
+            <Route path="devices" element={<RegisteredDevices />} />
             <Route path="engagement" element={<UserEngagement />} />
             <Route path="ab-testing" element={<ABTesting />} />
             <Route path="security" element={<SecurityCenter />} />

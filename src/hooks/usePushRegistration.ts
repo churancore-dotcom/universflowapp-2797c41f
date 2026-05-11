@@ -73,6 +73,29 @@ export function usePushRegistration() {
         }
 
         // 2) Register listeners FIRST so we catch registrationError
+        // Capture rich device metadata so admin can identify "whose APK this is"
+        let deviceMeta: Record<string, unknown> = { ua: navigator.userAgent };
+        try {
+          const { Device } = await import('@capacitor/device');
+          const [info, langCode] = await Promise.all([
+            Device.getInfo(),
+            Device.getLanguageCode().catch(() => ({ value: '' })),
+          ]);
+          deviceMeta = {
+            ...deviceMeta,
+            model: info.model,
+            manufacturer: info.manufacturer,
+            os: info.operatingSystem,
+            os_version: info.osVersion,
+            platform: info.platform,
+            web_view_version: info.webViewVersion,
+            is_virtual: info.isVirtual,
+            language: langCode?.value,
+          };
+        } catch (metaErr) {
+          console.warn('[Push] device meta unavailable', metaErr);
+        }
+
         const tokenListener = await PushNotifications.addListener('registration', async (t) => {
           if (cancelled) return;
           // Success — clear pending flag
@@ -85,7 +108,7 @@ export function usePushRegistration() {
               user_id: uid,
               token: t.value,
               platform: 'android',
-              device_info: { ua: navigator.userAgent },
+              device_info: { ...deviceMeta, last_seen_at: new Date().toISOString() },
             },
             { onConflict: 'token' },
           );
