@@ -433,6 +433,18 @@ const Search = () => {
                               {isResolving ? 'Starting song...' : track.title}
                             </p>
                             <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">{track.artist}</p>
+                            {!isResolving && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleHideIndexed(track);
+                                }}
+                                className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground/70 active:text-primary"
+                              >
+                                <EyeOff className="w-3 h-3" /> Don’t show again
+                              </button>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             {isActive && isPlaying ? (
@@ -445,18 +457,6 @@ const Search = () => {
                               <Loader2 className="w-4 h-4 animate-spin text-primary" />
                             ) : (
                               <>
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleHideIndexed(track);
-                                  }}
-                                  className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground active:bg-white/10"
-                                  aria-label="Don’t show again"
-                                  title="Don’t show again"
-                                >
-                                  <EyeOff className="w-3.5 h-3.5" />
-                                </button>
                                 <PinToViralButton
                                   song={{
                                     track_id: track.id,
