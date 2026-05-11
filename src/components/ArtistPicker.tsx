@@ -146,8 +146,8 @@ const ArtistPicker = ({ onComplete }: Props) => {
       triggerHaptic('success');
       toast.success('Your feed is being personalized 🎶');
       onComplete();
-    } catch (e: any) {
-      toast.error(e.message || 'Could not save your picks');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Could not save your picks');
     } finally {
       setSaving(false);
     }
