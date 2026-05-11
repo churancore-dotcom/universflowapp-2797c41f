@@ -85,6 +85,9 @@ const SharedPlaylist = () => {
 
       if (!cancelled) {
         setSongs(ordered);
+        if (!pl.cover_url && ordered.some((song) => song.cover_url)) {
+          setPlaylist({ ...(pl as PlaylistRow), cover_url: ordered.find((song) => song.cover_url)?.cover_url || null });
+        }
         setLoading(false);
       }
     })();
@@ -94,7 +97,7 @@ const SharedPlaylist = () => {
   const handlePlayAll = () => {
     if (songs.length === 0) return;
     setQueue(songs);
-    playSong(songs[0]);
+    playSong(songs[0], null, songs);
   };
 
   const handleSaveCopy = async () => {
@@ -183,7 +186,7 @@ const SharedPlaylist = () => {
         {songs.map((s, i) => (
           <button
             key={s.id}
-            onClick={() => { setQueue(songs); playSong(s); }}
+            onClick={() => { setQueue(songs); playSong(s, null, songs); }}
             className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left active:bg-white/5"
           >
             <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 flex items-center justify-center">

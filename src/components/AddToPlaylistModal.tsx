@@ -98,6 +98,16 @@ const AddToPlaylistModal = memo(function AddToPlaylistModal({
           throw error;
         }
       } else {
+        if (!playlists.find((playlist) => playlist.id === playlistId)?.cover_url && song.cover_url) {
+          await supabase
+            .from('playlists')
+            .update({ cover_url: song.cover_url })
+            .eq('id', playlistId)
+            .eq('user_id', user?.id);
+          setPlaylists((prev) => prev.map((playlist) => (
+            playlist.id === playlistId ? { ...playlist, cover_url: song.cover_url } : playlist
+          )));
+        }
         toast.success('Added to playlist! 🎵');
         setAddedTo(prev => new Set(prev).add(playlistId));
       }

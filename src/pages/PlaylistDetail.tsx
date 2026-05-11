@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { iosSpring, iosBounce } from '@/lib/animations';
 import { toast } from 'sonner';
-import { loadPlaylistSongs } from '@/lib/streamSongs';
+import { hydratePlaylistCoverUrls, loadPlaylistSongs } from '@/lib/streamSongs';
 
 interface Playlist {
   id: string;
@@ -71,7 +71,8 @@ const PlaylistDetail = () => {
     ]);
 
     if (playlistRes.data) {
-      setPlaylist(playlistRes.data);
+      const [playlistWithCover] = await hydratePlaylistCoverUrls([playlistRes.data]);
+      setPlaylist(playlistWithCover);
     }
 
     setSongs(songsData as PlaylistSong[]);
@@ -92,7 +93,7 @@ const PlaylistDetail = () => {
     }));
     setQueue(songsForQueue);
     const offlineUrl = getDownloadedUrl(songs[0].id);
-    playSong(songsForQueue[0], offlineUrl);
+    playSong(songsForQueue[0], offlineUrl, songsForQueue);
   };
 
   const handleShufflePlay = () => {
@@ -109,12 +110,12 @@ const PlaylistDetail = () => {
     }));
     setQueue(songsForQueue);
     const offlineUrl = getDownloadedUrl(shuffled[0].id);
-    playSong(songsForQueue[0], offlineUrl);
+    playSong(songsForQueue[0], offlineUrl, songsForQueue);
   };
 
   const handlePlaySong = (song: PlaylistSong) => {
     const offlineUrl = getDownloadedUrl(song.id);
-    playSong(song, offlineUrl);
+    playSong(song, offlineUrl, songs);
   };
 
   const handleRemoveSong = async (playlistSongId: string) => {

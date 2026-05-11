@@ -15,7 +15,7 @@ import DownloadButton from '@/components/DownloadButton';
 import { TabTransition } from '@/components/PageTransition';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LibrarySkeleton, LibraryArtistsSkeleton } from '@/components/PageSkeletons';
-import { loadLibrarySongs } from '@/lib/streamSongs';
+import { hydratePlaylistCoverUrls, loadLibrarySongs } from '@/lib/streamSongs';
 import { getUserArtistPrefs, unfollowArtist } from '@/lib/userArtistPrefs';
 import { Heart as HeartIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,9 +41,11 @@ const fetchLibraryData = async (userId: string) => {
     getUserArtistPrefs(userId, true),
   ]);
 
+  const playlistsWithCovers = await hydratePlaylistCoverUrls(userPlaylists.data || []);
+
   return {
     likedSongs: likedSongsData,
-    playlists: userPlaylists.data || [],
+    playlists: playlistsWithCovers,
     artists: followedArtists.map(a => ({
       name: a.artist_name,
       songCount: 0,
