@@ -467,15 +467,13 @@ const Library = () => {
                           className="flex-1 flex items-center gap-2.5 text-left min-w-0"
                           onClick={() => navigate(`/playlist/${playlist.id}`)}
                         >
-                          <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
-                            style={{
-                              background: 'rgba(255,255,255,0.04)',
-                              border: '0.5px solid rgba(255,255,255,0.06)',
-                            }}
-                          >
-                            {playlist.cover_url ? <img src={playlist.cover_url} alt="" className="w-full h-full object-cover" /> : <ListMusic className="w-4 h-4 text-muted-foreground" />}
-                          </div>
+                          <PlaylistCover
+                            coverUrl={playlist.cover_url}
+                            coverUrls={(playlist as any).cover_urls}
+                            className="w-11 h-11 flex-shrink-0"
+                            rounded="rounded-xl"
+                            iconClassName="w-4 h-4 text-muted-foreground"
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{playlist.title}</p>
                             <p className="text-xs text-muted-foreground">Playlist</p>
