@@ -137,26 +137,29 @@ Deno.serve(async (req) => {
         </div>
         <div style="margin-top:10px;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#6e6e73">Premium Music Experience</div>
       </div>
-      <div style="padding:32px 36px 8px;text-align:center">
-        <div style="display:inline-block;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#FF2D55,#BF5AF2);line-height:64px;font-size:30px;margin-bottom:20px">✉️</div>
-        <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;letter-spacing:-0.4px">Hey ${safeName},<br/>let's confirm it's you</h1>
-        <p style="font-size:15px;line-height:1.6;color:#a1a1a6;margin:0 0 32px;max-width:420px;margin-left:auto;margin-right:auto">
-          Tap the button below to verify your email and unlock millions of songs, curated playlists and a world of music.
+      <div style="padding:36px 36px 8px;text-align:center">
+        <div style="display:inline-block;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#FF2D55,#BF5AF2);line-height:64px;font-size:30px;margin-bottom:18px">🎧</div>
+        <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;letter-spacing:-0.4px">Welcome, ${safeName}</h1>
+        <p style="font-size:15px;line-height:1.6;color:#a1a1a6;margin:0 0 32px;max-width:440px;margin-left:auto;margin-right:auto">
+          Your account is ready. Tap below to confirm your email and dive into millions of songs, follow your favourite artists, and discover what's trending right now around the world.
         </p>
         <a href="${verifyUrl}"
            style="display:inline-block;background:linear-gradient(135deg,#FF2D55,#BF5AF2);color:#fff;text-decoration:none;padding:16px 40px;border-radius:999px;font-weight:600;font-size:15px;letter-spacing:.01em;box-shadow:0 10px 30px rgba(255,45,85,0.35)">
-          Confirm my email
+          Open Universflow
         </a>
-        <p style="margin:20px 0 0;font-size:12px;color:#6e6e73">This link works once and expires in 24 hours.</p>
+        <p style="margin:18px 0 0;font-size:11px;color:#6e6e73">This link works once and expires in 24 hours.</p>
       </div>
-      <div style="margin:36px 36px 0;padding:18px 20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px">
-        <p style="margin:0 0 6px;font-size:11px;color:#6e6e73;letter-spacing:.05em;text-transform:uppercase">Or paste this link</p>
-        <a href="${verifyUrl}" style="color:#FF6B8A;text-decoration:none;font-size:12px;word-break:break-all">${verifyUrl}</a>
+      <div style="margin:40px 36px 0;padding:24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px">
+        <p style="margin:0 0 16px;font-size:12px;color:#6e6e73;letter-spacing:.05em;text-transform:uppercase;text-align:center">What's inside</p>
+        <table style="width:100%;border-collapse:collapse" cellspacing="0" cellpadding="0">
+          <tr><td style="padding:8px 0;font-size:14px;color:#e5e5ea">🎵 <span style="color:#a1a1a6">&nbsp;Millions of songs, ad-light</span></td></tr>
+          <tr><td style="padding:8px 0;font-size:14px;color:#e5e5ea">⭐ <span style="color:#a1a1a6">&nbsp;Follow artists & build playlists</span></td></tr>
+          <tr><td style="padding:8px 0;font-size:14px;color:#e5e5ea">🔥 <span style="color:#a1a1a6">&nbsp;Trending charts from around the globe</span></td></tr>
+          <tr><td style="padding:8px 0;font-size:14px;color:#e5e5ea">📥 <span style="color:#a1a1a6">&nbsp;Offline downloads on Premium</span></td></tr>
+        </table>
       </div>
       <div style="padding:32px 36px 36px;text-align:center">
-        <p style="margin:0;font-size:11px;color:#48484a;line-height:1.6">
-          Didn't sign up for Universflow? You can safely ignore this email — no account will be created.
-        </p>
+        <p style="margin:0;font-size:11px;color:#48484a;line-height:1.6">If you didn't create this account, you can safely ignore this email.</p>
       </div>
     </div>
     <div style="text-align:center;margin-top:24px;font-size:11px;color:#48484a">
@@ -175,7 +178,7 @@ Deno.serve(async (req) => {
         from: FROM_ADDRESS,
         reply_to: REPLY_TO,
         to: [email],
-        subject: 'Confirm your Universflow email',
+        subject: 'Welcome to Universflow 🎉',
         html,
       }),
     });

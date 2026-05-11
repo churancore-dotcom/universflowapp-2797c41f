@@ -190,14 +190,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // CRITICAL: Supabase auto-creates a session on signUp. Sign the user out
       // immediately so they must click the verification link and sign in fresh.
-      await supabase.auth.signOut();
+      // Clear local state synchronously first so no protected route flashes,
+      // then sign out in the background (don't block navigation on it).
       setUser(null);
       setSession(null);
-
-      // Fire-and-forget welcome email via Resend (never block signup on this)
-      supabase.functions
-        .invoke('send-welcome-email', { body: { email, username: trimmedUsername } })
-        .catch((e) => console.warn('welcome email failed:', e));
+      setIsAdmin(false);
+      supabase.auth.signOut().catch(() => {});
 
       return { error: null };
     } catch (error) {

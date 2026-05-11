@@ -61,22 +61,15 @@ const Auth = () => {
         const { error } = await signUp(email, password, username, detectCountryCode());
         if (error) { toast.error(error.message); return; }
         localStorage.setItem('uf_just_signed_up', '1');
-        // Send verification link via Resend BEFORE navigating, so the user
-        // lands on the check-email screen with the email already on its way.
-        try {
-          await supabase.functions.invoke('send-verification-link', {
-            body: { email, username },
-          });
-        } catch (e) {
-          console.warn('verification email failed:', e);
-        }
-        toast.success('Account created — check your email');
-        // Use URL params (survives reloads) AND state, replace history so
-        // back button doesn't bounce them back to the signup form.
+        // Navigate IMMEDIATELY so no protected route flashes; fire the email in background.
         navigate(
           `/check-email?email=${encodeURIComponent(email)}&u=${encodeURIComponent(username)}`,
           { state: { email, username }, replace: true }
         );
+        toast.success('Account created — check your email');
+        supabase.functions
+          .invoke('send-verification-link', { body: { email, username } })
+          .catch((e) => console.warn('verification email failed:', e));
       }
     } catch {
       toast.error('Something went wrong. Please try again.');
