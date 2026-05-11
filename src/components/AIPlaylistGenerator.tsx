@@ -7,6 +7,8 @@ import { iosSpring } from '@/lib/animations';
 import { toast } from 'sonner';
 import { usePremium } from '@/hooks/usePremium';
 import PremiumLockOverlay from './PremiumLockOverlay';
+import { searchYTMusic, type YTMusicResult } from '@/lib/ytMusicSearch';
+import { persistStreamSong } from '@/lib/streamSongs';
 
 interface AIPlaylistGeneratorProps {
   isOpen: boolean;
