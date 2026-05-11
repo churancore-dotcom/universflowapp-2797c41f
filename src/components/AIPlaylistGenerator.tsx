@@ -7,6 +7,8 @@ import { iosSpring } from '@/lib/animations';
 import { toast } from 'sonner';
 import { usePremium } from '@/hooks/usePremium';
 import PremiumLockOverlay from './PremiumLockOverlay';
+import { searchYTMusic, type YTMusicResult } from '@/lib/ytMusicSearch';
+import { persistStreamSong } from '@/lib/streamSongs';
 
 interface AIPlaylistGeneratorProps {
   isOpen: boolean;
@@ -19,53 +21,61 @@ interface MoodOption {
   label: string;
   icon: React.ReactNode;
   prompt: string;
+  queries: string[];
   gradient: string;
 }
 
 const moodOptions: MoodOption[] = [
-  { 
-    id: 'energetic', 
-    label: 'Energetic', 
-    icon: <Zap className="w-5 h-5" />, 
-    prompt: 'high energy, upbeat, workout',
-    gradient: 'from-orange-500 to-red-500'
+  {
+    id: 'energetic',
+    label: 'Energetic',
+    icon: <Zap className="w-5 h-5" />,
+    prompt: 'high energy workout',
+    queries: ['high energy workout hits', 'gym motivation songs', 'upbeat pop bangers', 'edm workout playlist'],
+    gradient: 'from-orange-500 to-red-500',
   },
-  { 
-    id: 'chill', 
-    label: 'Chill', 
-    icon: <Moon className="w-5 h-5" />, 
-    prompt: 'relaxing, calm, ambient',
-    gradient: 'from-blue-500 to-purple-500'
+  {
+    id: 'chill',
+    label: 'Chill',
+    icon: <Moon className="w-5 h-5" />,
+    prompt: 'relaxing chill',
+    queries: ['chill lofi beats', 'relaxing acoustic songs', 'calm ambient music', 'sunset chill mix'],
+    gradient: 'from-blue-500 to-purple-500',
   },
-  { 
-    id: 'happy', 
-    label: 'Happy', 
-    icon: <Sun className="w-5 h-5" />, 
-    prompt: 'happy, joyful, feel-good',
-    gradient: 'from-yellow-500 to-orange-500'
+  {
+    id: 'happy',
+    label: 'Happy',
+    icon: <Sun className="w-5 h-5" />,
+    prompt: 'happy feel good',
+    queries: ['feel good happy songs', 'good vibes pop', 'happy hindi songs', 'sunshine indie hits'],
+    gradient: 'from-yellow-500 to-orange-500',
   },
-  { 
-    id: 'romantic', 
-    label: 'Romantic', 
-    icon: <Heart className="w-5 h-5" />, 
-    prompt: 'romantic, love songs, emotional',
-    gradient: 'from-pink-500 to-rose-500'
+  {
+    id: 'romantic',
+    label: 'Romantic',
+    icon: <Heart className="w-5 h-5" />,
+    prompt: 'romantic love songs',
+    queries: ['romantic love songs', 'best hindi romantic songs', 'slow love ballads', 'arijit singh romantic'],
+    gradient: 'from-pink-500 to-rose-500',
   },
-  { 
-    id: 'focus', 
-    label: 'Focus', 
-    icon: <Music2 className="w-5 h-5" />, 
-    prompt: 'focus, concentration, study',
-    gradient: 'from-cyan-500 to-blue-500'
+  {
+    id: 'focus',
+    label: 'Focus',
+    icon: <Music2 className="w-5 h-5" />,
+    prompt: 'focus study',
+    queries: ['deep focus instrumental', 'study lofi mix', 'concentration piano music', 'ambient study beats'],
+    gradient: 'from-cyan-500 to-blue-500',
   },
-  { 
-    id: 'party', 
-    label: 'Party', 
-    icon: <Sparkles className="w-5 h-5" />, 
-    prompt: 'party, dance, club',
-    gradient: 'from-violet-500 to-purple-500'
+  {
+    id: 'party',
+    label: 'Party',
+    icon: <Sparkles className="w-5 h-5" />,
+    prompt: 'party dance',
+    queries: ['party dance hits', 'club bangers 2024', 'bollywood party songs', 'edm party anthems'],
+    gradient: 'from-violet-500 to-purple-500',
   },
 ];
+
 
 const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlaylistGeneratorProps) => {
   const { user } = useAuth();
@@ -96,57 +106,69 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
     setIsGenerating(true);
     
     try {
-      const mood = moodOptions.find(m => m.id === selectedMood);
-      const prompt = customPrompt.trim() || mood?.prompt || '';
-      
-      setGenerationStep('Analyzing your mood...');
-      await new Promise(r => setTimeout(r, 800));
-      
-      setGenerationStep('Finding matching songs...');
-      
-      // Fetch all available songs
-      const { data: allSongs, error: songsError } = await supabase
-        .from('songs')
-        .select('id, title, artist, genre, mood')
-        .eq('is_visible', true);
+      const mood = moodOptions.find((m) => m.id === selectedMood);
+      const customQuery = customPrompt.trim();
+      const queries = customQuery
+        ? [customQuery, `${customQuery} songs`, `${customQuery} hits`, `best ${customQuery}`]
+        : mood?.queries || [];
 
-      if (songsError) throw songsError;
+      setGenerationStep('Searching YouTube...');
 
-      if (!allSongs || allSongs.length === 0) {
-        toast.error('No songs available to create playlist');
+      // Run searches in parallel across all queries
+      const searchResults = await Promise.all(
+        queries.map((q) => searchYTMusic(q).catch(() => [] as YTMusicResult[])),
+      );
+
+      // Interleave results so the playlist mixes from each query, then dedupe
+      const seen = new Set<string>();
+      const interleaved: YTMusicResult[] = [];
+      const maxLen = Math.max(...searchResults.map((r) => r.length), 0);
+      for (let i = 0; i < maxLen; i++) {
+        for (const list of searchResults) {
+          const item = list[i];
+          if (!item || seen.has(item.videoId)) continue;
+          // Skip very short clips (per content sourcing preference)
+          if (item.duration && item.duration < 120) continue;
+          seen.add(item.videoId);
+          interleaved.push(item);
+        }
+      }
+
+      const picked = interleaved.slice(0, 20);
+
+      if (picked.length === 0) {
+        toast.error('No tracks found. Try a different vibe.');
         return;
       }
 
-      setGenerationStep('Curating your playlist...');
-      await new Promise(r => setTimeout(r, 600));
+      setGenerationStep('Saving tracks...');
 
-      // Filter songs based on mood/genre matching
-      const keywords = prompt.toLowerCase().split(/[,\s]+/);
-      let matchingSongs = allSongs.filter(song => {
-        const songText = `${song.genre || ''} ${song.mood || ''} ${song.title} ${song.artist}`.toLowerCase();
-        return keywords.some(kw => songText.includes(kw));
-      });
+      // Persist as stream songs (audio_url resolved on play)
+      await Promise.all(
+        picked.map((r) =>
+          persistStreamSong({
+            id: r.id,
+            title: r.title,
+            artist: r.artist,
+            cover_url: r.cover_url,
+            audio_url: 'resolving',
+            duration: r.duration,
+            source: 'indexed',
+          } as any),
+        ),
+      );
 
-      // If no matches, use random selection
-      if (matchingSongs.length < 5) {
-        matchingSongs = allSongs.sort(() => Math.random() - 0.5).slice(0, 15);
-      }
+      setGenerationStep('Creating playlist...');
 
-      // Limit to 15 songs
-      matchingSongs = matchingSongs.slice(0, 15);
-
-      setGenerationStep('Creating your playlist...');
-      
-      // Create the playlist
-      const playlistTitle = customPrompt.trim() 
-        ? `AI: ${customPrompt.slice(0, 30)}${customPrompt.length > 30 ? '...' : ''}`
+      const playlistTitle = customQuery
+        ? `AI: ${customQuery.slice(0, 30)}${customQuery.length > 30 ? '…' : ''}`
         : `AI: ${mood?.label} Mix`;
 
       const { data: newPlaylist, error: playlistError } = await supabase
         .from('playlists')
         .insert({
           title: playlistTitle,
-          description: `AI-generated playlist for ${prompt}`,
+          description: `AI-generated from YouTube · ${queries[0]}`,
           user_id: user.id,
           is_public: false,
         })
@@ -155,11 +177,11 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
 
       if (playlistError) throw playlistError;
 
-      // Add songs to playlist
-      const playlistSongs = matchingSongs.map((song, index) => ({
+      const playlistSongs = picked.map((r, index) => ({
         playlist_id: newPlaylist.id,
-        song_id: song.id,
+        song_id: r.id,
         position: index,
+        track_source: 'indexed',
       }));
 
       const { error: songsInsertError } = await supabase
@@ -169,9 +191,9 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
       if (songsInsertError) throw songsInsertError;
 
       setGenerationStep('Done! ✨');
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 400));
 
-      toast.success(`Created "${playlistTitle}" with ${matchingSongs.length} songs!`);
+      toast.success(`Created "${playlistTitle}" with ${picked.length} songs!`);
       onPlaylistCreated?.();
       onClose();
     } catch (error) {
@@ -228,7 +250,7 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
                 <Wand2 className="w-6 h-6 text-white" />
               </motion.div>
               <div>
-                <h2 className="text-lg font-semibold">AI DJ</h2>
+                <h2 className="text-lg font-semibold">AI Playlist</h2>
                 <p className="text-xs text-muted-foreground">Create a personalized playlist</p>
               </div>
             </div>
