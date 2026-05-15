@@ -1,22 +1,13 @@
-import { useState, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Sparkles, X, Wand2, Music2, Moon, Sun, Zap, Heart, Loader2 } from 'lucide-react';
+import { Sparkles, X, Wand2, Loader2, Radio, Music2 } from 'lucide-react';
 import { iosSpring } from '@/lib/animations';
 import { toast } from 'sonner';
 import { usePremium } from '@/hooks/usePremium';
 import PremiumLockOverlay from './PremiumLockOverlay';
-import type { IndexedTrack } from '@/lib/musicIndexer';
-import { persistStreamSong } from '@/lib/streamSongs';
-
-const searchPlaylistTracks = async (query: string): Promise<IndexedTrack[]> => {
-  const { data, error } = await supabase.functions.invoke('yt-music-search', {
-    body: { query, limit: 20 },
-  });
-  if (error || !data?.success || !Array.isArray(data.results)) return [];
-  return data.results;
-};
+import { runPlaylistEngine, type CandidateSong, type HistoryEntry, type UserSongScore } from '@/lib/playlistEngine';
 
 interface AIPlaylistGeneratorProps {
   isOpen: boolean;
@@ -24,195 +15,181 @@ interface AIPlaylistGeneratorProps {
   onPlaylistCreated?: () => void;
 }
 
-interface MoodOption {
+interface SeedRow {
   id: string;
-  label: string;
-  icon: React.ReactNode;
-  prompt: string;
-  queries: string[];
-  gradient: string;
+  title: string;
+  artist: string;
+  cover_url: string | null;
+  genre: string | null;
+  mood: string | null;
+  last_played: number;
 }
 
-const moodOptions: MoodOption[] = [
-  {
-    id: 'energetic',
-    label: 'Energetic',
-    icon: <Zap className="w-5 h-5" />,
-    prompt: 'high energy workout',
-    queries: ['high energy workout hits', 'gym motivation songs', 'upbeat pop bangers', 'edm workout playlist'],
-    gradient: 'from-orange-500 to-red-500',
-  },
-  {
-    id: 'chill',
-    label: 'Chill',
-    icon: <Moon className="w-5 h-5" />,
-    prompt: 'relaxing chill',
-    queries: ['chill lofi beats', 'relaxing acoustic songs', 'calm ambient music', 'sunset chill mix'],
-    gradient: 'from-blue-500 to-purple-500',
-  },
-  {
-    id: 'happy',
-    label: 'Happy',
-    icon: <Sun className="w-5 h-5" />,
-    prompt: 'happy feel good',
-    queries: ['feel good happy songs', 'good vibes pop', 'happy hindi songs', 'sunshine indie hits'],
-    gradient: 'from-yellow-500 to-orange-500',
-  },
-  {
-    id: 'romantic',
-    label: 'Romantic',
-    icon: <Heart className="w-5 h-5" />,
-    prompt: 'romantic love songs',
-    queries: ['romantic love songs', 'best hindi romantic songs', 'slow love ballads', 'arijit singh romantic'],
-    gradient: 'from-pink-500 to-rose-500',
-  },
-  {
-    id: 'focus',
-    label: 'Focus',
-    icon: <Music2 className="w-5 h-5" />,
-    prompt: 'focus study',
-    queries: ['deep focus instrumental', 'study lofi mix', 'concentration piano music', 'ambient study beats'],
-    gradient: 'from-cyan-500 to-blue-500',
-  },
-  {
-    id: 'party',
-    label: 'Party',
-    icon: <Sparkles className="w-5 h-5" />,
-    prompt: 'party dance',
-    queries: ['party dance hits', 'club bangers 2024', 'bollywood party songs', 'edm party anthems'],
-    gradient: 'from-violet-500 to-purple-500',
-  },
-];
-
+const tagsFor = (s: { genre?: string | null; mood?: string | null; artist?: string | null }) =>
+  [s.genre, s.mood, s.artist].filter(Boolean).map((t) => String(t).toLowerCase().trim());
 
 const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlaylistGeneratorProps) => {
   const { user } = useAuth();
   const { isPremium, isLoading: premiumLoading } = usePremium();
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [customPrompt, setCustomPrompt] = useState('');
+  const [seeds, setSeeds] = useState<SeedRow[]>([]);
+  const [seedId, setSeedId] = useState<string | null>(null);
+  const [loadingSeeds, setLoadingSeeds] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationStep, setGenerationStep] = useState('');
+  const [step, setStep] = useState('');
+
+  // Load seed candidates from recent plays + user library
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    let cancelled = false;
+    setLoadingSeeds(true);
+    (async () => {
+      const { data: rp } = await supabase
+        .from('recently_played')
+        .select('song_id, played_at, songs(id,title,artist,cover_url,genre,mood)')
+        .eq('user_id', user.id)
+        .order('played_at', { ascending: false })
+        .limit(40);
+      const seen = new Set<string>();
+      const list: SeedRow[] = [];
+      (rp || []).forEach((row: any) => {
+        const s = row.songs;
+        if (!s || seen.has(s.id)) return;
+        seen.add(s.id);
+        list.push({
+          id: s.id, title: s.title, artist: s.artist, cover_url: s.cover_url,
+          genre: s.genre, mood: s.mood,
+          last_played: new Date(row.played_at).getTime(),
+        });
+      });
+      if (!cancelled) {
+        setSeeds(list);
+        setSeedId(list[0]?.id ?? null);
+        setLoadingSeeds(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, user]);
 
   if (isOpen && !premiumLoading && !isPremium) {
     return (
       <AnimatePresence>
         <PremiumLockOverlay
-          title="AI Playlist Generator"
-          description="Create mood-matched playlists in seconds. Available with Premium."
+          title="Personal Radio"
+          description="Pick a song you love and we'll build a 20-track radio tuned to your taste. Available with Premium."
           onClose={onClose}
         />
       </AnimatePresence>
     );
   }
 
-  const generatePlaylist = async () => {
-    if (!user || (!selectedMood && !customPrompt.trim())) {
-      toast.error('Please select a mood or enter a description');
+  const generate = async () => {
+    if (!user || !seedId) {
+      toast.error('Pick a song to start the radio');
       return;
     }
-
     setIsGenerating(true);
-    
     try {
-      const mood = moodOptions.find((m) => m.id === selectedMood);
-      const customQuery = customPrompt.trim();
-      const queries = customQuery
-        ? [customQuery, `${customQuery} songs`, `${customQuery} hits`, `best ${customQuery}`]
-        : mood?.queries || [];
+      setStep('Reading your taste…');
+      const seed = seeds.find((s) => s.id === seedId)!;
 
-      setGenerationStep('Searching YouTube...');
-
-      // Run searches in parallel across all queries
-      const searchResults = await Promise.all(
-        queries.map((q) => searchPlaylistTracks(q).catch(() => [] as IndexedTrack[])),
-      );
-
-      // Interleave results so the playlist mixes from each query, then dedupe
-      const seen = new Set<string>();
-      const interleaved: IndexedTrack[] = [];
-      const maxLen = Math.max(...searchResults.map((r) => r.length), 0);
-      for (let i = 0; i < maxLen; i++) {
-        for (const list of searchResults) {
-          const item = list[i];
-          const trackKey = item?.videoId || item?.id;
-          if (!item || !trackKey || seen.has(trackKey)) continue;
-          // Skip very short clips (per content sourcing preference)
-          if (item.duration && item.duration < 120) continue;
-          seen.add(trackKey);
-          interleaved.push(item);
-        }
-      }
-
-      const picked = interleaved.slice(0, 20);
-
-      if (picked.length === 0) {
-        toast.error('No tracks found. Try a different vibe.');
+      // Candidate pool: visible catalog songs
+      const { data: catalog } = await supabase
+        .from('songs')
+        .select('id,title,artist,album,cover_url,genre,mood,duration,audio_url,play_count')
+        .eq('is_visible', true)
+        .limit(1000);
+      if (!catalog || catalog.length === 0) {
+        toast.error('Catalog is empty');
         return;
       }
 
-      setGenerationStep('Saving tracks...');
+      const all_songs: CandidateSong[] = catalog.map((s) => ({
+        id: s.id,
+        tags: tagsFor(s),
+        genre: s.genre,
+        play_count_7d: s.play_count ?? 0,
+      }));
 
-      // Edge search already caches stream songs server-side; this is a harmless
-      // fallback for older results that may still be in memory during the session.
-      await Promise.all(
-        picked.map((r) =>
-          persistStreamSong({
-            id: r.id,
-            title: r.title,
-            artist: r.artist,
-            cover_url: r.cover_url,
-            audio_url: r.audio_url || 'resolving',
-            duration: r.duration,
-            source: 'indexed',
-          } as any),
-        ),
-      );
+      // History — recent plays for this user (last 30d)
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: hist } = await supabase
+        .from('recently_played')
+        .select('song_id, played_at')
+        .eq('user_id', user.id)
+        .gte('played_at', since)
+        .limit(500);
+      const user_history: HistoryEntry[] = (hist || []).map((h: any) => ({
+        song_id: h.song_id,
+        timestamp: new Date(h.played_at).getTime(),
+      }));
 
-      setGenerationStep('Creating playlist...');
+      // Self-derived affinity scores from the user's library (liked = 1.0)
+      const { data: lib } = await supabase
+        .from('user_library')
+        .select('song_id, track_source')
+        .eq('user_id', user.id)
+        .limit(500);
+      const user_song_scores: UserSongScore[] = (lib || [])
+        .filter((r: any) => r.track_source === 'library' || !r.track_source)
+        .map((r: any) => ({ user_id: user.id, song_id: r.song_id, score: 1.0 }));
 
-      const playlistTitle = customQuery
-        ? `AI: ${customQuery.slice(0, 30)}${customQuery.length > 30 ? '…' : ''}`
-        : `AI: ${mood?.label} Mix`;
+      setStep('Ranking 20 tracks…');
+      const { playlist } = runPlaylistEngine({
+        seed_song: { id: seed.id, tags: tagsFor(seed), genre: seed.genre },
+        user_history,
+        session_played: [],
+        all_songs,
+        user_song_scores,
+      });
 
-      const { data: newPlaylist, error: playlistError } = await supabase
+      if (playlist.length === 0) {
+        toast.error('Not enough similar tracks. Try another seed.');
+        return;
+      }
+
+      // Resolve picked rows (preserve engine order, then prepend the seed itself)
+      const byId = new Map(catalog.map((s) => [s.id, s]));
+      const seedRow = byId.get(seed.id);
+      const picked = [
+        ...(seedRow ? [seedRow] : []),
+        ...playlist.map((p) => byId.get(p.song_id)).filter(Boolean) as any[],
+      ];
+
+      setStep('Saving radio…');
+      const title = `Radio: ${seed.title.slice(0, 40)}`;
+      const { data: pl, error: plErr } = await supabase
         .from('playlists')
         .insert({
-          title: playlistTitle,
-          description: `AI-generated from YouTube · ${queries[0]}`,
+          title,
+          description: `Auto-generated radio based on ${seed.artist}`,
           user_id: user.id,
-          cover_url: picked[0]?.cover_url || null,
+          cover_url: seedRow?.cover_url || picked[0]?.cover_url || null,
           is_public: false,
         })
         .select()
         .single();
+      if (plErr) throw plErr;
 
-      if (playlistError) throw playlistError;
-
-      const playlistSongs = picked.map((r, index) => ({
-        playlist_id: newPlaylist.id,
-        song_id: r.id,
-        position: index,
-        track_source: 'indexed',
+      const rows = picked.map((s, i) => ({
+        playlist_id: pl.id,
+        song_id: s.id,
+        position: i,
+        track_source: 'library',
       }));
+      const { error: insErr } = await supabase.from('playlist_songs').insert(rows);
+      if (insErr) throw insErr;
 
-      const { error: songsInsertError } = await supabase
-        .from('playlist_songs')
-        .insert(playlistSongs);
-
-      if (songsInsertError) throw songsInsertError;
-
-      setGenerationStep('Done! ✨');
-      await new Promise((r) => setTimeout(r, 400));
-
-      toast.success(`Created "${playlistTitle}" with ${picked.length} songs!`);
+      setStep('Done ✨');
+      await new Promise((r) => setTimeout(r, 300));
+      toast.success(`Built "${title}" with ${picked.length} songs`);
       onPlaylistCreated?.();
       onClose();
-    } catch (error) {
-      console.error('Failed to generate playlist:', error);
-      toast.error('Failed to generate playlist');
+    } catch (e) {
+      console.error('Radio generation failed:', e);
+      toast.error('Could not build radio. Try again.');
     } finally {
       setIsGenerating(false);
-      setGenerationStep('');
+      setStep('');
     }
   };
 
@@ -222,127 +199,93 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
     <AnimatePresence>
       <motion.div
         className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       >
-        {/* Backdrop */}
-        <motion.div
-          className="absolute inset-0 bg-black/70 backdrop-blur-xl"
-          onClick={onClose}
-        />
+        <motion.div className="absolute inset-0 bg-black/70 backdrop-blur-xl" onClick={onClose} />
 
-        {/* Modal */}
         <motion.div
           className="relative w-full max-w-md rounded-3xl overflow-hidden"
           style={{
-            background: 'linear-gradient(180deg, rgba(30, 30, 35, 0.98) 0%, rgba(20, 20, 25, 0.99) 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'linear-gradient(180deg, rgba(30,30,35,0.98) 0%, rgba(20,20,25,0.99) 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
           }}
           initial={{ y: 50, opacity: 0, scale: 0.95 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 50, opacity: 0, scale: 0.95 }}
           transition={iosSpring}
         >
-          {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-white/5">
             <div className="flex items-center gap-3">
-              <motion.div 
-                className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-500 to-pink-500"
-                animate={{
-                  boxShadow: [
-                    '0 0 20px rgba(168, 85, 247, 0.4)',
-                    '0 0 40px rgba(168, 85, 247, 0.6)',
-                    '0 0 20px rgba(168, 85, 247, 0.4)',
-                  ],
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Wand2 className="w-6 h-6 text-white" />
-              </motion.div>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-rose-500 to-violet-500">
+                <Radio className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h2 className="text-lg font-semibold">AI Playlist</h2>
-                <p className="text-xs text-muted-foreground">Create a personalized playlist</p>
+                <h2 className="text-lg font-semibold">Personal Radio</h2>
+                <p className="text-xs text-muted-foreground">Pick a seed, get 20 tuned tracks</p>
               </div>
             </div>
-            <motion.button
+            <button
               onClick={onClose}
+              aria-label="Close"
               className="w-10 h-10 rounded-full flex items-center justify-center glass"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               <X className="w-5 h-5" />
-            </motion.button>
+            </button>
           </div>
 
-          <div className="p-5 space-y-6">
-            {/* Mood selection */}
+          <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Select a mood</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {moodOptions.map((mood) => (
-                  <motion.button
-                    key={mood.id}
-                    onClick={() => {
-                      setSelectedMood(mood.id === selectedMood ? null : mood.id);
-                      setCustomPrompt('');
-                    }}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all ${
-                      selectedMood === mood.id
-                        ? `bg-gradient-to-br ${mood.gradient} text-white`
-                        : 'glass hover:bg-white/10'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={iosSpring}
-                  >
-                    {mood.icon}
-                    <span className="text-xs font-medium">{mood.label}</span>
-                  </motion.button>
-                ))}
-              </div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Seed song</h3>
+              {loadingSeeds ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading your recent plays…
+                </div>
+              ) : seeds.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-6 text-center">
+                  Play a few catalog songs first, then come back to build a radio.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {seeds.slice(0, 12).map((s) => {
+                    const active = s.id === seedId;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setSeedId(s.id)}
+                        className={`w-full flex items-center gap-3 p-2.5 rounded-2xl transition-all text-left ${
+                          active ? 'bg-gradient-to-r from-rose-500/25 to-violet-500/15 ring-1 ring-rose-500/40' : 'glass hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="w-11 h-11 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+                          {s.cover_url ? (
+                            <img src={s.cover_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center"><Music2 className="w-4 h-4 opacity-50" /></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{s.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{s.artist}</p>
+                        </div>
+                        {active && <Sparkles className="w-4 h-4 text-rose-400" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Or divider */}
-            <div className="flex items-center gap-4">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-xs text-muted-foreground">or describe your vibe</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-
-            {/* Custom prompt */}
-            <div>
-              <textarea
-                value={customPrompt}
-                onChange={(e) => {
-                  setCustomPrompt(e.target.value);
-                  setSelectedMood(null);
-                }}
-                placeholder="e.g., Rainy day coffee shop vibes, or 90s throwback hits..."
-                className="w-full h-24 bg-white/5 rounded-2xl px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
-              />
-            </div>
-
-            {/* Generate button */}
-            <motion.button
-              onClick={generatePlaylist}
-              disabled={isGenerating || (!selectedMood && !customPrompt.trim())}
-              className="w-full py-4 rounded-2xl font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-3 bg-gradient-to-r from-violet-500 to-pink-500"
-              whileHover={{ scale: isGenerating ? 1 : 1.02 }}
-              whileTap={{ scale: isGenerating ? 1 : 0.98 }}
+            <button
+              onClick={generate}
+              disabled={isGenerating || !seedId}
+              className="w-full py-4 rounded-2xl font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-3 bg-gradient-to-r from-rose-500 to-violet-500"
             >
               {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>{generationStep}</span>
-                </>
+                <><Loader2 className="w-5 h-5 animate-spin" /><span>{step}</span></>
               ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  <span>Generate Playlist</span>
-                </>
+                <><Wand2 className="w-5 h-5" /><span>Build Radio</span></>
               )}
-            </motion.button>
+            </button>
           </div>
         </motion.div>
       </motion.div>
@@ -351,5 +294,4 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
 });
 
 AIPlaylistGenerator.displayName = 'AIPlaylistGenerator';
-
 export default AIPlaylistGenerator;
