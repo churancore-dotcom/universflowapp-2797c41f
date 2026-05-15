@@ -8,6 +8,7 @@ import LikeButton from '@/components/LikeButton';
 import PinToViralButton from '@/components/PinToViralButton';
 import DownloadButton from '@/components/DownloadButton';
 import { TabTransition } from '@/components/PageTransition';
+import SEOHead from '@/components/SEOHead';
 import { Input } from '@/components/ui/input';
 import { SearchSkeleton } from '@/components/PageSkeletons';
 import { prefetchIndexedTrack, searchIndexedTracks, getTagTopTracks, searchYouTubeMusicTracks, type IndexedTrack } from '@/lib/musicIndexer';
