@@ -27,6 +27,7 @@ import { usePremium } from '@/hooks/usePremium';
 import appLogo from '@/assets/app-logo.png';
 import { HomeSkeleton } from '@/components/PageSkeletons';
 import AnnouncementBanner from '@/components/AnnouncementBanner';
+import SEOHead from '@/components/SEOHead';
 
 
 // Simple empty state
@@ -208,6 +209,12 @@ const Home = () => {
   return (
     <TabTransition>
       <div className="h-[100dvh] bg-background relative flex flex-col overflow-hidden">
+        <SEOHead
+          title="Music Player — Univers Flow"
+          description="Your personalized music feed: trending tracks, featured artists, auto-generated mixes, and your now-playing card."
+          path="/home"
+        />
+        <h1 className="sr-only">Univers Flow Music Player</h1>
         {/* Ambient background — cinematic */}
         <div className="absolute inset-0 pointer-events-none">
           {currentSong?.cover_url && (
@@ -261,13 +268,14 @@ const Home = () => {
             
             <div className="flex items-center gap-1.5">
               {[
-                { icon: ListMusic, action: () => setShowQueue(true) },
-                ...(isPremium ? [{ icon: Sliders, action: () => setShowEqualizer(true) }] : []),
-                { icon: Lock, action: () => setShowLockScreen(true) },
-              ].map(({ icon: Icon, action }, i) => (
+                { icon: ListMusic, action: () => setShowQueue(true), label: 'Open queue' },
+                ...(isPremium ? [{ icon: Sliders, action: () => setShowEqualizer(true), label: 'Open equalizer' }] : []),
+                { icon: Lock, action: () => setShowLockScreen(true), label: 'Open lock screen player' },
+              ].map(({ icon: Icon, action, label }, i) => (
                 <motion.button
                   key={i}
                   onClick={() => { triggerHaptic('selection'); action(); }}
+                  aria-label={label}
                   className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{
                     background: 'rgba(255,255,255,0.06)',

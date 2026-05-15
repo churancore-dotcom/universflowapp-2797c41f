@@ -8,6 +8,7 @@ import LikeButton from '@/components/LikeButton';
 import PinToViralButton from '@/components/PinToViralButton';
 import DownloadButton from '@/components/DownloadButton';
 import { TabTransition } from '@/components/PageTransition';
+import SEOHead from '@/components/SEOHead';
 import { Input } from '@/components/ui/input';
 import { SearchSkeleton } from '@/components/PageSkeletons';
 import { prefetchIndexedTrack, searchIndexedTracks, getTagTopTracks, searchYouTubeMusicTracks, type IndexedTrack } from '@/lib/musicIndexer';
@@ -231,6 +232,11 @@ const Search = () => {
   return (
     <TabTransition>
       <div className="h-[100dvh] bg-background flex flex-col overflow-hidden relative">
+        <SEOHead
+          title="Search Music — Univers Flow"
+          description="Search any song, artist, or album worldwide. Discover and play tracks instantly on Univers Flow."
+          path="/search"
+        />
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0" style={{
             background: `radial-gradient(ellipse 80% 50% at 50% 0%, hsl(260 100% 60% / 0.05), transparent),
@@ -255,6 +261,7 @@ const Search = () => {
             <Input value={query} onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}
               placeholder="Any song, artist, or album worldwide"
+              aria-label="Search songs, artists, or albums"
               className="pl-10 pr-8 h-11 text-sm rounded-xl border-0"
               style={{
                 background: 'rgba(255, 255, 255, 0.06)',
@@ -263,6 +270,7 @@ const Search = () => {
               }} />
             {query && (
               <button onClick={() => { setQuery(''); setIndexedResults([]); }}
+                aria-label="Clear search"
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full"
                 style={{ background: 'rgba(255,255,255,0.15)' }}>
                 <X className="w-3 h-3" />

@@ -10,6 +10,7 @@ import LikeButton from '@/components/LikeButton';
 import DownloadButton from '@/components/DownloadButton';
 import FollowArtistButton from '@/components/FollowArtistButton';
 import { TabTransition } from '@/components/PageTransition';
+import SEOHead from '@/components/SEOHead';
 import { iosSpring, iosBounce } from '@/lib/animations';
 
 interface Artist {
@@ -110,6 +111,15 @@ const ArtistDetail = () => {
   return (
     <TabTransition>
       <div className="min-h-screen bg-black pb-52">
+        {artist && (
+          <SEOHead
+            title={`${artist.name} — Univers Flow`}
+            description={artist.bio?.slice(0, 155) || `Listen to ${artist.name} on Univers Flow. Stream songs, follow the artist, and download for offline listening.`}
+            image={artist.photo_url || undefined}
+            path={`/artist/${artist.id}`}
+            type="profile"
+          />
+        )}
         {/* Hero Header */}
         <motion.div
           className="relative h-72 overflow-hidden"

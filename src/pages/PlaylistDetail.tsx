@@ -23,6 +23,7 @@ import { iosSpring, iosBounce } from '@/lib/animations';
 import { toast } from 'sonner';
 import { hydratePlaylistCoverUrls, loadPlaylistSongs } from '@/lib/streamSongs';
 import PlaylistCover from '@/components/PlaylistCover';
+import SEOHead from '@/components/SEOHead';
 
 interface Playlist {
   id: string;
@@ -186,6 +187,13 @@ const PlaylistDetail = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
+        <SEOHead
+          title={`${playlist.title} — Playlist on Univers Flow`}
+          description={playlist.description?.slice(0, 155) || `Listen to "${playlist.title}" — a ${songs.length}-song playlist on Univers Flow.`}
+          image={playlist.cover_url || undefined}
+          path={`/playlist/${playlist.id}`}
+          type="music.playlist"
+        />
         {/* Header with back button */}
         <motion.header
           className="sticky top-0 z-30 px-4 py-3 safe-area-pt flex items-center gap-3"
@@ -200,6 +208,7 @@ const PlaylistDetail = () => {
         >
           <motion.button
             onClick={() => navigate(-1)}
+            aria-label="Go back"
             className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
             whileTap={{ scale: 0.9 }}
           >
@@ -307,6 +316,7 @@ const PlaylistDetail = () => {
           >
             <motion.button
               onClick={handleShufflePlay}
+              aria-label="Shuffle play"
               className="p-3 rounded-full bg-white/10"
               whileTap={{ scale: 0.9 }}
               disabled={songs.length === 0}
@@ -315,6 +325,7 @@ const PlaylistDetail = () => {
             </motion.button>
             <motion.button
               onClick={handlePlayAll}
+              aria-label="Play all"
               className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
               whileTap={{ scale: 0.9 }}
               disabled={songs.length === 0}
@@ -424,6 +435,7 @@ const PlaylistDetail = () => {
                             <motion.button
                               className="p-2 rounded-full text-muted-foreground hover:text-destructive transition-colors"
                               onClick={() => handleRemoveSong(song.playlist_song_id)}
+                              aria-label={`Remove ${song.title} from playlist`}
                               whileTap={{ scale: 0.9 }}
                               disabled={isRemoving}
                             >

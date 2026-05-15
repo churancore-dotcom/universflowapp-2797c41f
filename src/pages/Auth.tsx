@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { FadeTransition } from '@/components/PageTransition';
+import SEOHead from '@/components/SEOHead';
 import appLogo from '@/assets/app-logo.png';
 
 function detectCountryCode(): string | undefined {
@@ -81,6 +82,11 @@ const Auth = () => {
   return (
     <FadeTransition>
       <div className="h-[100dvh] bg-background flex flex-col items-center justify-center p-5 relative overflow-hidden">
+        <SEOHead
+          title="Sign in — Univers Flow Premium Music Experience"
+          description="Sign in or create your free Univers Flow account to stream music, build playlists, and listen offline."
+          path="/auth"
+        />
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -138,6 +144,7 @@ const Auth = () => {
                 Univers
               </span>
               <span className="text-foreground ml-1.5 font-light">Flow</span>
+              <span className="sr-only"> — Premium Music Experience</span>
             </motion.h1>
             <motion.p
               className="mt-1.5 text-[12px] tracking-[0.15em] uppercase font-medium text-muted-foreground"
@@ -176,6 +183,7 @@ const Auth = () => {
                 <Input
                   type="email"
                   placeholder="Email address"
+                  aria-label="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-12 text-sm rounded-xl border-0"
@@ -190,6 +198,7 @@ const Auth = () => {
                   <Input
                     type="text"
                     placeholder="Username (permanent)"
+                    aria-label="Username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_.]/g, '').slice(0, 20))}
                     className="pl-10 h-12 text-sm rounded-xl border-0"
@@ -207,6 +216,7 @@ const Auth = () => {
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
+                  aria-label="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 h-12 text-sm rounded-xl border-0"
@@ -218,6 +228,7 @@ const Auth = () => {
                   type="button"
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground active:scale-90 transition-transform"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

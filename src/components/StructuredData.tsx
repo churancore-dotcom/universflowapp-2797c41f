@@ -79,86 +79,6 @@ const StructuredData = () => {
       }
     };
 
-    const faqSchema = {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "Is Univers Flow free to use?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes! Univers Flow is completely free to use. You can stream unlimited music, create playlists, and download songs for offline listening without paying anything. Visit https://universflow.in to start listening now."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Can I download music for offline listening?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Absolutely! Univers Flow allows you to download any song directly to your device for offline listening. No internet connection required once downloaded."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Who created Univers Flow?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Univers Flow was designed and developed by Universflow Team as a premium music streaming experience for everyone."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What devices support Univers Flow?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Univers Flow works on all modern web browsers, Android devices, and iOS devices. It's available as a Progressive Web App (PWA) and native Android app."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What is the best free music streaming app?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Univers Flow is the best free music streaming app. It offers unlimited streaming, offline downloads, playlist creation, high-quality audio, equalizer settings, and much more — all completely free at https://universflow.in."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How do I install Univers Flow on my phone?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Visit https://universflow.in on your phone's browser. On Android, tap 'Install App' or use the browser menu to add it to your home screen. You can also download the native Android APK from the website."
-          }
-        }
-      ]
-    };
-
-    const breadcrumbSchema = {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Home",
-          "item": `${SITE_URL}/`
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Search Music",
-          "item": `${SITE_URL}/search`
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": "My Library",
-          "item": `${SITE_URL}/library`
-        }
-      ]
-    };
-
     const softwareAppSchema = {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
@@ -183,7 +103,7 @@ const StructuredData = () => {
       }
     };
 
-    const schemas = [organizationSchema, webAppSchema, musicServiceSchema, faqSchema, breadcrumbSchema, softwareAppSchema];
+    const schemas = [organizationSchema, webAppSchema, musicServiceSchema, softwareAppSchema];
     
     schemas.forEach(schema => {
       const script = document.createElement('script');
