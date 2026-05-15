@@ -58,7 +58,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      // CRITICAL: never wipe the local session as a side effect of being offline.
+      // When the device has no internet, Supabase's auto-refresh fails and emits
+      // SIGNED_OUT / TOKEN_REFRESHED with a null session — that would log the user
+      // out of the APK every time they open it without WiFi. Keep the cached
+      // session so they can still play their downloaded songs.
+      if (!nextSession && !navigator.onLine && event !== 'SIGNED_OUT') {
+        setIsLoading(false);
+        return;
+      }
+      // Also ignore an offline-driven SIGNED_OUT that wasn't user-initiated.
+      // (A user-initiated signOut() also clears state in the signOut callback.)
+      if (event === 'SIGNED_OUT' && !navigator.onLine) {
+        setIsLoading(false);
+        return;
+      }
+
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setSentryUser(nextSession?.user ? { id: nextSession.user.id, email: nextSession.user.email } : null);
