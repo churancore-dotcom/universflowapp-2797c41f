@@ -2,15 +2,13 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-// When the user is offline, restrict navigation to Home + Library + Offline player.
-// All other routes redirect to /home.
-const OFFLINE_ALLOWED = new Set<string>(['/home', '/library', '/offline-player', '/auth']);
-
-const isAllowedOfflinePath = (pathname: string): boolean => {
-  if (OFFLINE_ALLOWED.has(pathname)) return true;
-  // Allow nothing else (no playlist/artist/admin/etc when offline).
-  return false;
-};
+/**
+ * When offline, the app collapses to a single screen: the standalone
+ * OfflinePlayerShell at /offline-player. Auth pages stay reachable so the
+ * user can sign in once they reconnect. Everything else redirects there —
+ * no Home, Library, Search, Profile etc. when there's no network.
+ */
+const OFFLINE_ALLOWED = new Set<string>(['/offline-player', '/auth']);
 
 const OfflineGate = () => {
   const { isOffline } = useAuth();
@@ -19,8 +17,8 @@ const OfflineGate = () => {
 
   useEffect(() => {
     if (!isOffline) return;
-    if (!isAllowedOfflinePath(location.pathname)) {
-      navigate('/home', { replace: true });
+    if (!OFFLINE_ALLOWED.has(location.pathname)) {
+      navigate('/offline-player', { replace: true });
     }
   }, [isOffline, location.pathname, navigate]);
 

@@ -1,0 +1,1 @@
+DELETE FROM public.playlist_songs WHERE playlist_id IN (SELECT id FROM public.playlists WHERE description LIKE 'Auto-generated radio based on%' OR title LIKE 'Radio: %'); DELETE FROM public.playlists WHERE description LIKE 'Auto-generated radio based on%' OR title LIKE 'Radio: %';

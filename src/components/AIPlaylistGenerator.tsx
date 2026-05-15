@@ -2,7 +2,8 @@ import { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Sparkles, X, Wand2, Loader2, Radio, Music2 } from 'lucide-react';
+import { usePlayer, type Song } from '@/contexts/PlayerContext';
+import { Sparkles, X, Loader2, Radio, Music2, Play } from 'lucide-react';
 import { iosSpring } from '@/lib/animations';
 import { toast } from 'sonner';
 import { usePremium } from '@/hooks/usePremium';
@@ -12,6 +13,7 @@ import { runPlaylistEngine, type CandidateSong, type HistoryEntry, type UserSong
 interface AIPlaylistGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Kept for backwards compat with Library.tsx (no DB rows are created anymore). */
   onPlaylistCreated?: () => void;
 }
 
@@ -22,22 +24,28 @@ interface SeedRow {
   cover_url: string | null;
   genre: string | null;
   mood: string | null;
-  last_played: number;
+  audio_url: string;
+  duration: number | null;
+  album: string | null;
 }
 
 const tagsFor = (s: { genre?: string | null; mood?: string | null; artist?: string | null }) =>
   [s.genre, s.mood, s.artist].filter(Boolean).map((t) => String(t).toLowerCase().trim());
 
-const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlaylistGeneratorProps) => {
+/**
+ * YouTube-style "Start Mix" — picks a seed and instantly plays an endless
+ * radio queue in the global player. NO playlists are saved to the database.
+ */
+const AIPlaylistGenerator = memo(({ isOpen, onClose }: AIPlaylistGeneratorProps) => {
   const { user } = useAuth();
   const { isPremium, isLoading: premiumLoading } = usePremium();
+  const { playSong } = usePlayer();
   const [seeds, setSeeds] = useState<SeedRow[]>([]);
   const [seedId, setSeedId] = useState<string | null>(null);
   const [loadingSeeds, setLoadingSeeds] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [step, setStep] = useState('');
+  const [isStarting, setIsStarting] = useState(false);
 
-  // Load seed candidates from recent plays + user library
+  // Load seed candidates from recent plays
   useEffect(() => {
     if (!isOpen || !user) return;
     let cancelled = false;
@@ -45,7 +53,7 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
     (async () => {
       const { data: rp } = await supabase
         .from('recently_played')
-        .select('song_id, played_at, songs(id,title,artist,cover_url,genre,mood)')
+        .select('song_id, played_at, songs(id,title,artist,cover_url,genre,mood,audio_url,duration,album)')
         .eq('user_id', user.id)
         .order('played_at', { ascending: false })
         .limit(40);
@@ -57,8 +65,8 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
         seen.add(s.id);
         list.push({
           id: s.id, title: s.title, artist: s.artist, cover_url: s.cover_url,
-          genre: s.genre, mood: s.mood,
-          last_played: new Date(row.played_at).getTime(),
+          genre: s.genre, mood: s.mood, audio_url: s.audio_url,
+          duration: s.duration, album: s.album,
         });
       });
       if (!cancelled) {
@@ -74,25 +82,23 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
     return (
       <AnimatePresence>
         <PremiumLockOverlay
-          title="Personal Radio"
-          description="Pick a song you love and we'll build a 20-track radio tuned to your taste. Available with Premium."
+          title="Start Mix"
+          description="Pick a song and we'll instantly play an endless radio mix tuned to your taste. Available with Premium."
           onClose={onClose}
         />
       </AnimatePresence>
     );
   }
 
-  const generate = async () => {
+  const startMix = async () => {
     if (!user || !seedId) {
-      toast.error('Pick a song to start the radio');
+      toast.error('Pick a song to start the mix');
       return;
     }
-    setIsGenerating(true);
+    setIsStarting(true);
     try {
-      setStep('Reading your taste…');
       const seed = seeds.find((s) => s.id === seedId)!;
 
-      // Candidate pool: visible catalog songs
       const { data: catalog } = await supabase
         .from('songs')
         .select('id,title,artist,album,cover_url,genre,mood,duration,audio_url,play_count')
@@ -110,7 +116,6 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
         play_count_7d: s.play_count ?? 0,
       }));
 
-      // History — recent plays for this user (last 30d)
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data: hist } = await supabase
         .from('recently_played')
@@ -123,7 +128,6 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
         timestamp: new Date(h.played_at).getTime(),
       }));
 
-      // Self-derived affinity scores from the user's library (liked = 1.0)
       const { data: lib } = await supabase
         .from('user_library')
         .select('song_id, track_source')
@@ -133,7 +137,6 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
         .filter((r: any) => r.track_source === 'library' || !r.track_source)
         .map((r: any) => ({ user_id: user.id, song_id: r.song_id, score: 1.0 }));
 
-      setStep('Ranking 20 tracks…');
       const { playlist } = runPlaylistEngine({
         seed_song: { id: seed.id, tags: tagsFor(seed), genre: seed.genre },
         user_history,
@@ -142,54 +145,38 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
         user_song_scores,
       });
 
-      if (playlist.length === 0) {
+      const byId = new Map(catalog.map((s) => [s.id, s]));
+      const seedRow = byId.get(seed.id);
+      const picked: any[] = [
+        ...(seedRow ? [seedRow] : []),
+        ...playlist.map((p) => byId.get(p.song_id)).filter(Boolean),
+      ];
+
+      if (picked.length <= 1) {
         toast.error('Not enough similar tracks. Try another seed.');
         return;
       }
 
-      // Resolve picked rows (preserve engine order, then prepend the seed itself)
-      const byId = new Map(catalog.map((s) => [s.id, s]));
-      const seedRow = byId.get(seed.id);
-      const picked = [
-        ...(seedRow ? [seedRow] : []),
-        ...playlist.map((p) => byId.get(p.song_id)).filter(Boolean) as any[],
-      ];
+      const queue: Song[] = picked.map((s) => ({
+        id: s.id,
+        title: s.title,
+        artist: s.artist,
+        album: s.album ?? undefined,
+        cover_url: s.cover_url ?? undefined,
+        audio_url: s.audio_url,
+        duration: s.duration ?? 0,
+        genre: s.genre ?? undefined,
+        mood: s.mood ?? undefined,
+      }) as Song);
 
-      setStep('Saving radio…');
-      const title = `Radio: ${seed.title.slice(0, 40)}`;
-      const { data: pl, error: plErr } = await supabase
-        .from('playlists')
-        .insert({
-          title,
-          description: `Auto-generated radio based on ${seed.artist}`,
-          user_id: user.id,
-          cover_url: seedRow?.cover_url || picked[0]?.cover_url || null,
-          is_public: false,
-        })
-        .select()
-        .single();
-      if (plErr) throw plErr;
-
-      const rows = picked.map((s, i) => ({
-        playlist_id: pl.id,
-        song_id: s.id,
-        position: i,
-        track_source: 'library',
-      }));
-      const { error: insErr } = await supabase.from('playlist_songs').insert(rows);
-      if (insErr) throw insErr;
-
-      setStep('Done ✨');
-      await new Promise((r) => setTimeout(r, 300));
-      toast.success(`Built "${title}" with ${picked.length} songs`);
-      onPlaylistCreated?.();
+      playSong(queue[0], null, queue);
+      toast.success(`Mix started · ${queue.length} tracks`);
       onClose();
     } catch (e) {
-      console.error('Radio generation failed:', e);
-      toast.error('Could not build radio. Try again.');
+      console.error('Mix start failed:', e);
+      toast.error('Could not start mix. Try again.');
     } finally {
-      setIsGenerating(false);
-      setStep('');
+      setIsStarting(false);
     }
   };
 
@@ -220,8 +207,8 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
                 <Radio className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Personal Radio</h2>
-                <p className="text-xs text-muted-foreground">Pick a seed, get 20 tuned tracks</p>
+                <h2 className="text-lg font-semibold">Start Mix</h2>
+                <p className="text-xs text-muted-foreground">Pick a song · we'll play 20 tuned tracks</p>
               </div>
             </div>
             <button
@@ -242,7 +229,7 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
                 </div>
               ) : seeds.length === 0 ? (
                 <div className="text-sm text-muted-foreground py-6 text-center">
-                  Play a few catalog songs first, then come back to build a radio.
+                  Play a few catalog songs first, then come back to start a mix.
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -276,16 +263,19 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
             </div>
 
             <button
-              onClick={generate}
-              disabled={isGenerating || !seedId}
+              onClick={startMix}
+              disabled={isStarting || !seedId}
               className="w-full py-4 rounded-2xl font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-3 bg-gradient-to-r from-rose-500 to-violet-500"
             >
-              {isGenerating ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /><span>{step}</span></>
+              {isStarting ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /><span>Building mix…</span></>
               ) : (
-                <><Wand2 className="w-5 h-5" /><span>Build Radio</span></>
+                <><Play className="w-5 h-5" fill="currentColor" /><span>Start Mix</span></>
               )}
             </button>
+            <p className="text-[11px] text-muted-foreground text-center -mt-2">
+              Plays instantly · nothing saved to your library
+            </p>
           </div>
         </motion.div>
       </motion.div>
