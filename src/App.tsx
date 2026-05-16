@@ -150,10 +150,7 @@ const AnimatedRoutes = () => {
     <OfflineGate />
     <Suspense fallback={<LazyFallback />}>
         <Routes location={location}>
-          <Route path="/" element={
-            user ? <Navigate to="/home" replace /> : 
-            <Navigate to="/auth" replace />
-          } />
+          <Route path="/" element={<Home />} />
           <Route path="/auth" element={
             user ? <Navigate to="/home" replace /> : 
             <Auth />
@@ -161,19 +158,19 @@ const AnimatedRoutes = () => {
           <Route path="/verify" element={<VerifyEmail />} />
           <Route path="/check-email" element={<CheckEmail />} />
           <Route path="/offline-player" element={<OfflinePlayerShell />} />
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
-          <Route path="/playlist/:id" element={<ProtectedRoute><PlaylistDetail /></ProtectedRoute>} />
-          <Route path="/artist/:artistId" element={<ProtectedRoute><ArtistDetail /></ProtectedRoute>} />
+          <Route path="/playlist/:id" element={<PlaylistDetail />} />
+          <Route path="/artist/:artistId" element={<ArtistDetail />} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+          <Route path="/support" element={<Support />} />
           <Route path="/offline" element={<ProtectedRoute><Offline /></ProtectedRoute>} />
           <Route path="/listen-together" element={<ProtectedRoute><PlayWithMate /></ProtectedRoute>} />
-          <Route path="/artists" element={<ProtectedRoute><AllArtists /></ProtectedRoute>} />
+          <Route path="/artists" element={<AllArtists />} />
           <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
-          <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+          <Route path="/premium" element={<Premium />} />
           <Route path="/downloads" element={<ProtectedRoute><Downloads /></ProtectedRoute>} />
           <Route path="/p/:token" element={<SharedPlaylist />} />
 
