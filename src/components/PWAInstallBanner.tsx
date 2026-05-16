@@ -26,13 +26,9 @@ const PWAInstallBanner = memo(function PWAInstallBanner() {
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
 
-    // Check if dismissed recently (24 hours)
-    const dismissed = localStorage.getItem('pwa-banner-dismissed');
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed, 10);
-      if (Date.now() - dismissedTime < 24 * 60 * 60 * 1000) {
-        return;
-      }
+    // If user has ever dismissed the banner, never show it again.
+    if (localStorage.getItem('pwa-banner-dismissed') === '1') {
+      return;
     }
 
     // Listen for beforeinstallprompt (Android/Chrome)
