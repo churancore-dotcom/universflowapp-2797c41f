@@ -36,7 +36,7 @@ const SocialShareModal = ({ isOpen, onClose, song }: SocialShareModalProps) => {
   const [copied, setCopied] = useState(false);
   const [copiedApp, setCopiedApp] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const appUrl = window.location.origin;
+  const appUrl = 'https://universflow.in';
 
   useEffect(() => {
     if (isOpen && song) {
