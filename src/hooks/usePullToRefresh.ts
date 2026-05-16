@@ -17,7 +17,8 @@ export const usePullToRefresh = ({
   const isPulling = useRef(false);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const target = e.currentTarget as HTMLElement;
+    const scrollTop = target?.scrollTop ?? (window.scrollY || document.documentElement.scrollTop);
     if (scrollTop <= 0 && !isRefreshing) {
       startY.current = e.touches[0].clientY;
       isPulling.current = true;

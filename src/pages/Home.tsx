@@ -29,6 +29,8 @@ import appLogo from '@/assets/app-logo.png';
 import { HomeSkeleton } from '@/components/PageSkeletons';
 import AnnouncementBanner from '@/components/AnnouncementBanner';
 import SEOHead from '@/components/SEOHead';
+import PullToRefreshIndicator from '@/components/PullToRefresh';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 
 // Simple empty state
@@ -207,6 +209,15 @@ const Home = () => {
     return 'Good evening';
   }, []);
 
+  // Pull-to-refresh — re-fetches home feed on overscroll
+  const pullToRefresh = usePullToRefresh({
+    onRefresh: async () => {
+      triggerHaptic('impactMedium');
+      await queryClient.invalidateQueries({ queryKey: HOME_SONGS_QUERY_KEY });
+      await queryClient.refetchQueries({ queryKey: HOME_SONGS_QUERY_KEY });
+    },
+  });
+
   return (
     <TabTransition>
       <div className="h-[100dvh] bg-background relative flex flex-col overflow-hidden">
@@ -295,7 +306,14 @@ const Home = () => {
         <main 
           className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-4 pb-36 relative z-10"
           style={{ WebkitOverflowScrolling: 'touch' }}
+          {...pullToRefresh.handlers}
         >
+        <PullToRefreshIndicator
+          pullDistance={pullToRefresh.pullDistance}
+          isRefreshing={pullToRefresh.isRefreshing}
+          progress={pullToRefresh.progress}
+          isTriggered={pullToRefresh.isTriggered}
+        />
         {loading ? (
             <HomeSkeleton />
           ) : isOffline && songs.length === 0 ? (
