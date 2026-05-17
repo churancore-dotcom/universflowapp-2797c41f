@@ -103,6 +103,7 @@ const AUDIO_PROXY_ALLOWED_HOST_SUFFIXES = [
   '.protokolla.fi',
   '.invidious.f5.si',
   '.f5.si',
+  '.thepixora.com',
   '.yewtu.be',
 ];
 
