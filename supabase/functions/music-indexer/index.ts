@@ -933,12 +933,14 @@ async function resolveVideoId(videoId: string): Promise<{ streamUrl: string; dur
   // Try primary first (fast path)
   try {
     const data = await fetchJson(`${primaryPiped}/streams/${videoId}`, 8000);
-    const url = pickBestPipedStream(data, primaryPiped);
+    const url = await pickBestPipedStream(data, primaryPiped);
     if (url) {
       console.log(`[resolve] ✓ ${videoId} via ${primaryPiped}`);
       return { streamUrl: url, duration: Number(data.duration || 0) || undefined };
     }
+    markFailed(primaryPiped);
   } catch (e) {
+    markFailed(primaryPiped);
     console.warn(`[resolve] primary failed for ${videoId}:`, (e as Error).message);
   }
 
@@ -947,7 +949,7 @@ async function resolveVideoId(videoId: string): Promise<{ streamUrl: string; dur
     ...orderedPiped.slice(1).map(async (inst) => {
       try {
         const data = await fetchJson(`${inst}/streams/${videoId}`, 7000);
-        const url = pickBestPipedStream(data, inst);
+        const url = await pickBestPipedStream(data, inst);
         if (!url) throw new Error('no audio stream');
         console.log(`[resolve] ✓ ${videoId} via ${inst}`);
         return { streamUrl: url, duration: Number(data.duration || 0) || undefined };
