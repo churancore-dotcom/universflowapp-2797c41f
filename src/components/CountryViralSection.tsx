@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Song, usePlayer } from '@/contexts/PlayerContext';
 import { getGeoTopTracks, prefetchIndexedTrack, type IndexedTrack } from '@/lib/musicIndexer';
 import { triggerHaptic } from '@/hooks/useHaptics';
+import ChartSection from '@/components/ChartSection';
 
 // ISO-3166 alpha-2 → English country name (limited to common Last.fm-supported names)
 const COUNTRY_NAMES: Record<string, string> = {
@@ -158,58 +159,67 @@ const CountryViralSection = memo(function CountryViralSection() {
     else playSong(song, undefined, queueAsSongs);
   }, [queueAsSongs, currentSong?.id, togglePlay, playSong]);
 
-  if (!loading && tracks.length === 0) return null;
+  const hasViral = loading || tracks.length > 0;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <Flame className="w-4 h-4" style={{ color: '#FF6B2D' }} />
-          <h2 className="text-sm font-bold text-foreground">Viral Right Now</h2>
-        </div>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Live</span>
-      </div>
+    <div className="space-y-6">
+      {hasViral && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4" style={{ color: '#FF6B2D' }} />
+              <h2 className="text-sm font-bold text-foreground">Viral Right Now</h2>
+            </div>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Live</span>
+          </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-          {tracks.map((track, i) => {
-            const active = currentSong?.id === track.id;
-            return (
-              <button
-                key={track.id}
-                type="button"
-                onClick={() => handleTap(track, i)}
-                className="w-32 flex-shrink-0 text-left active:scale-[0.96] transition-transform"
-              >
-                <div className={`relative mb-2 aspect-square overflow-hidden rounded-2xl bg-muted/50 ${active ? 'ring-2 ring-primary' : ''}`}>
-                  {track.cover_url ? (
-                    <img src={track.cover_url} alt={`${track.title} cover`} className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <Music className="w-7 h-7 text-muted-foreground" />
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+              {tracks.map((track, i) => {
+                const active = currentSong?.id === track.id;
+                return (
+                  <button
+                    key={track.id}
+                    type="button"
+                    onClick={() => handleTap(track, i)}
+                    className="w-32 flex-shrink-0 text-left active:scale-[0.96] transition-transform"
+                  >
+                    <div className={`relative mb-2 aspect-square overflow-hidden rounded-2xl bg-muted/50 ${active ? 'ring-2 ring-primary' : ''}`}>
+                      {track.cover_url ? (
+                        <img src={track.cover_url} alt={`${track.title} cover`} className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Music className="w-7 h-7 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white">
+                        #{i + 1}
+                      </div>
+                      {active && isPlaying && (
+                        <div className="absolute bottom-1.5 right-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
+                          ▶
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white">
-                    #{i + 1}
-                  </div>
-                  {active && isPlaying && (
-                    <div className="absolute bottom-1.5 right-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
-                      ▶
-                    </div>
-                  )}
-                </div>
-                <p className={`truncate text-[12px] font-semibold ${active ? 'text-primary' : 'text-foreground'}`}>{track.title}</p>
-                <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{track.artist}</p>
-              </button>
-            );
-          })}
-        </div>
+                    <p className={`truncate text-[12px] font-semibold ${active ? 'text-primary' : 'text-foreground'}`}>{track.title}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{track.artist}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
       )}
-    </section>
+
+      {/* Real-time global charts — moved here from Home so all "viral" content lives together */}
+      <ChartSection chartType="trending" perCountry />
+      <ChartSection chartType="latest" perCountry />
+      <ChartSection chartType="viral" />
+    </div>
   );
 });
 

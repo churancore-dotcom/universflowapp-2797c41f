@@ -401,12 +401,7 @@ const Home = () => {
                   {/* Artist discovery */}
                   <FeaturedArtistsSection />
 
-                  {/* Real-time global charts (auto-refreshed every 6h from Apple, Last.fm, YouTube, Deezer) */}
-                  <ChartSection chartType="trending" perCountry />
-                  <ChartSection chartType="latest" perCountry />
-                  <ChartSection chartType="viral" />
-
-                  {/* Real per-country viral chart (Last.fm geo.getTopTracks) */}
+                  {/* Viral Right Now — bundles per-country Last.fm viral + global charts (trending/latest/viral) */}
                   <CountryViralSection />
 
                   {/* Top 30 from your followed artists */}
