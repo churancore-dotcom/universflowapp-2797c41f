@@ -27,13 +27,10 @@ function dbCacheKey(artist: string, title: string) {
 }
 
 function isKnownBrokenStreamUrl(url?: string | null) {
-  if (!url || url.startsWith('yt-video:')) return false;
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return host.startsWith('proxy.piped.');
-  } catch {
-    return false;
-  }
+  // Only obvious placeholders; per-URL liveness is determined by probing
+  if (!url) return false;
+  if (url.startsWith('yt-video:')) return false;
+  return false;
 }
 
 async function getDbCachedStream(artist: string, title: string): Promise<{ streamUrl: string; videoId?: string; cover_url?: string; duration?: number } | null> {
@@ -96,10 +93,15 @@ const AUDIO_PROXY_ALLOWED_HOST_SUFFIXES = [
   '.piped.kavin.rocks',
   '.piped.tokhmi.xyz',
   '.piped.adminforge.de',
+  '.projectsegfau.lt',
   '.invidious.io',
   '.invidious.privacydev.net',
   '.invidious.fdn.fr',
   '.invidious.projectsegfau.lt',
+  '.invidious.protokolla.fi',
+  '.protokolla.fi',
+  '.invidious.f5.si',
+  '.f5.si',
   '.yewtu.be',
 ];
 
@@ -117,31 +119,18 @@ const YOUTUBE_API_KEY_2 = Deno.env.get('YOUTUBE_API_KEY_2') || '';
 const YOUTUBE_API_KEYS = [YOUTUBE_API_KEY, YOUTUBE_API_KEY_2].filter(Boolean);
 const LASTFM_BASE_URL = 'https://ws.audioscrobbler.com/2.0/';
 
-// ── Instance lists (pruned to actually-working ones, April 2026) ──
+// ── Instance lists (verified working May 2026) ──
 
 const PIPED_INSTANCES = [
-  'https://pipedapi.kavin.rocks',
   'https://api.piped.private.coffee',
+  'https://api.piped.projectsegfau.lt',
+  'https://pipedapi.in.projectsegfau.lt',
   'https://pipedapi.tokhmi.xyz',
-  'https://pipedapi.moomoo.me',
-  'https://pipedapi.syncpundit.io',
-  'https://api-piped.mha.fi',
-  'https://pipedapi.leptons.xyz',
-  'https://pipedapi.r4fo.com',
-  'https://pipedapi.adminforge.de',
-  'https://api.piped.yt',
 ];
 
 const INVIDIOUS_INSTANCES = [
-  'https://invidious-production-d29a.up.railway.app',
-  'https://inv.nadeko.net',
-  'https://invidious.private.coffee',
-  'https://invidious.nerdvpn.de',
-  'https://iv.datura.network',
+  'https://invidious.f5.si',
   'https://invidious.protokolla.fi',
-  'https://invidious.jing.rocks',
-  'https://iv.nboez.cc',
-  'https://invidious.slipfox.xyz',
 ];
 
 // ── Dynamic instance discovery (cached 30 min) ──
@@ -879,12 +868,17 @@ function pickBestStream(data: Record<string, any>, instance: string) {
       return (b.bitrate || 0) - (a.bitrate || 0);
     });
   const chosen = audio[0] || (Array.isArray(data.formatStreams) ? data.formatStreams[0] : null);
-  // ALWAYS prefer proxyUrl for CORS compatibility in browser
-  const raw = normalizeUrl(chosen?.proxyUrl, instance) || normalizeUrl(chosen?.url, instance);
-  return raw;
+  if (!chosen) return undefined;
+  // Use Invidious's local proxy (/latest_version?local=true) — bypasses IP-bound googlevideo signing.
+  const itag = chosen?.itag;
+  const videoId = data?.videoId;
+  if (itag && videoId) {
+    return `${instance.replace(/\/$/, '')}/latest_version?id=${encodeURIComponent(String(videoId))}&itag=${encodeURIComponent(String(itag))}&local=true`;
+  }
+  return normalizeUrl(chosen?.url, instance);
 }
 
-async function probePlayableStream(url: string, timeoutMs = 5000) {
+async function probePlayableStream(url: string, timeoutMs = 4000) {
   if (isKnownBrokenStreamUrl(url)) return false;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -892,11 +886,11 @@ async function probePlayableStream(url: string, timeoutMs = 5000) {
     const response = await fetch(url, {
       method: 'GET',
       signal: controller.signal,
-      headers: { range: 'bytes=0-1', 'user-agent': 'Mozilla/5.0 (UniversFlow Audio Probe)', accept: '*/*' },
+      headers: { range: 'bytes=0-1', 'user-agent': 'Mozilla/5.0', accept: '*/*' },
     });
-    const type = response.headers.get('content-type') || '';
     await response.body?.cancel().catch(() => undefined);
-    return (response.ok || response.status === 206) && type.startsWith('audio/');
+    // Accept any 2xx — content-type checks are unreliable cross-instance
+    return response.ok || response.status === 206;
   } catch {
     return false;
   } finally {
@@ -914,9 +908,15 @@ async function pickBestPipedStream(data: Record<string, any>, instance: string) 
       if (am !== bm) return bm - am;
       return (b.bitrate || 0) - (a.bitrate || 0);
     });
+  // Try each candidate: prefer proxyUrl, then url. Probe each before returning.
   for (const stream of ranked) {
-    const url = normalizeUrl(stream?.proxyUrl || stream?.url, instance);
-    if (url && await probePlayableStream(url)) return url;
+    const candidates = [
+      normalizeUrl(stream?.proxyUrl, instance),
+      normalizeUrl(stream?.url, instance),
+    ].filter(Boolean) as string[];
+    for (const url of candidates) {
+      if (await probePlayableStream(url)) return url;
+    }
   }
   return undefined;
 }
@@ -960,11 +960,8 @@ async function resolveVideoId(videoId: string): Promise<{ streamUrl: string; dur
         const data = await fetchJson(`${inst}/api/v1/videos/${videoId}`, 7000);
         const url = pickBestStream(data, inst);
         if (!url) throw new Error('no audio stream');
-        // Skip non-CORS URLs — they will fail in browser playback
-        if (!isCorsCompatible(url)) {
-          console.warn(`[resolve] skipping non-CORS stream from ${inst}`);
-          throw new Error('non-CORS stream');
-        }
+        // HTML5 <audio> can play googlevideo URLs without CORS; only probe liveness.
+        if (!(await probePlayableStream(url))) throw new Error('stream not playable');
         console.log(`[resolve] ✓ ${videoId} via ${inst}`);
         return { streamUrl: url, duration: Number(data.lengthSeconds || 0) || undefined };
       } catch (e) { markFailed(inst); throw e; }

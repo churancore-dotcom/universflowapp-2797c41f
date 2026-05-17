@@ -216,13 +216,9 @@ const getYouTubeFallbackVideoId = (url?: string | null) => {
   return url?.replace('yt-video:', '').trim() || null;
 };
 
-const isKnownBrokenStreamUrl = (url?: string | null) => {
-  if (!url || isYouTubeFallbackUrl(url)) return false;
-  try {
-    return new URL(url, window.location.href).hostname.toLowerCase().startsWith('proxy.piped.');
-  } catch {
-    return false;
-  }
+const isKnownBrokenStreamUrl = (_url?: string | null) => {
+  // Server-side probing decides liveness now; don't blanket-block any host here.
+  return false;
 };
 
 let youtubeIframeApiPromise: Promise<typeof window.YT> | null = null;

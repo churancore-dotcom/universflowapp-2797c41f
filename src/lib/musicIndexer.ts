@@ -130,14 +130,9 @@ function setCachedStream(key: string, url: string, meta?: Partial<ResolveTrackRe
   persistCache();
 }
 
-function isKnownBrokenStreamUrl(url?: string | null) {
-  if (!url || url.startsWith('yt-video:')) return false;
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return host.startsWith('proxy.piped.');
-  } catch {
-    return false;
-  }
+function isKnownBrokenStreamUrl(_url?: string | null) {
+  // Server-side probing decides liveness; never blanket-block by host.
+  return false;
 }
 
 // Try to grab a cached audio_url directly from the DB (stream_songs table) before
