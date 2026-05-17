@@ -1,0 +1,1 @@
+DELETE FROM public.stream_songs WHERE audio_url LIKE 'yt-video:%' OR audio_url LIKE '%proxy.piped.%';
