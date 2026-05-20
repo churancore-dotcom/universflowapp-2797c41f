@@ -173,30 +173,28 @@ jobs:
         run: |
           PKG="app.lovable.id5acaae55bbc847a7bd32f3924d8ef986"
           PKG_PATH="app/lovable/id5acaae55bbc847a7bd32f3924d8ef986"
-          MAIN_ACTIVITY="$(find android/app/src/main/java -path '*/MainActivity.java' -print -quit)"
+          MAIN_ACTIVITY="android/app/src/main/java/${PKG_PATH}/MainActivity.java"
 
-          if [ -z "$MAIN_ACTIVITY" ]; then
-            MAIN_ACTIVITY="android/app/src/main/java/${PKG_PATH}/MainActivity.java"
-            mkdir -p "$(dirname "$MAIN_ACTIVITY")"
-            cat > "$MAIN_ACTIVITY" <<EOF
+          mkdir -p "$(dirname "$MAIN_ACTIVITY")"
+          cat > "$MAIN_ACTIVITY" <<EOF
 package ${PKG};
 
+import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
+import ${PKG}.widgets.WidgetBridgePlugin;
+import ${PKG}.media.MediaNotificationPlugin;
 
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(WidgetBridgePlugin.class);
+        registerPlugin(MediaNotificationPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
 EOF
-          fi
 
-          echo "Using MainActivity: $MAIN_ACTIVITY"
-
-          # Add import for the WidgetBridgePlugin
-          sed -i "s|import com.getcapacitor.BridgeActivity;|import com.getcapacitor.BridgeActivity;\\nimport ${PKG}.widgets.WidgetBridgePlugin;|" "$MAIN_ACTIVITY"
-
-          # Override onCreate to register the plugin
-          sed -i 's/public class MainActivity extends BridgeActivity {/public class MainActivity extends BridgeActivity {\n\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(WidgetBridgePlugin.class);\n        registerPlugin(MediaNotificationPlugin.class);\n        super.onCreate(savedInstanceState);\n    }\n/' "$MAIN_ACTIVITY"
-
-          # Also import MediaNotificationPlugin
-          sed -i "s|import ${PKG}.widgets.WidgetBridgePlugin;|import ${PKG}.widgets.WidgetBridgePlugin;\\nimport ${PKG}.media.MediaNotificationPlugin;|" "$MAIN_ACTIVITY"
+          echo "MainActivity registered at: $MAIN_ACTIVITY"
 
       - name: Integrate MediaNotification plugin (lockscreen + notification controls)
         run: |
