@@ -251,7 +251,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     playerProgressStore.setProgress(next);
   };
   const setDuration = (v: number) => playerProgressStore.setDuration(v);
-  const [volume, setVolumeState] = useState(0.8);
+  const [volume, setVolumeState] = useState<number>(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('uf_volume') || '');
+      return Number.isFinite(v) && v > 0 ? Math.min(1, v) : 0.8;
+    } catch { return 0.8; }
+  });
   const [queue, setQueueState] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [shuffle, setShuffle] = useState(false);
