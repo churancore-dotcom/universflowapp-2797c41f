@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Trash2, Info, Headphones, Bell, Palette, ChevronRight, Heart, Crown, Check, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Trash2, Info, Headphones, Bell, Palette, ChevronRight, Heart, Crown, Check, MessageSquare, Gauge, RotateCcw, Sliders } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
 import PageTransition from '@/components/PageTransition';
@@ -10,14 +10,27 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
 import SupportChatModal from '@/components/SupportChatModal';
 import EmailVerificationCard from '@/components/EmailVerificationCard';
+import EqualizerModal from '@/components/EqualizerModal';
 
 import { applyTheme, type ThemeMode } from '@/lib/themeBoot';
 import SEOHead from '@/components/SEOHead';
 
+const EQ_KEY = 'eq_settings';
+
+const readEq = () => {
+  try { return JSON.parse(localStorage.getItem(EQ_KEY) || '{}'); } catch { return {}; }
+};
+const writeEq = (patch: Record<string, unknown>) => {
+  try {
+    const cur = readEq();
+    localStorage.setItem(EQ_KEY, JSON.stringify({ ...cur, ...patch }));
+  } catch { /* ignore */ }
+};
+
 const Settings = () => {
   const navigate = useNavigate();
   const { isPremium } = usePremium();
-  const { crossfade: cfEnabled, crossfadeDuration: cfDuration, toggleCrossfade, setCrossfadeDuration } = usePlayer();
+  const { crossfade: cfEnabled, crossfadeDuration: cfDuration, toggleCrossfade, setCrossfadeDuration, audioElement } = usePlayer();
 
   const [gaplessPlayback, setGaplessPlayback] = useState(() => localStorage.getItem('uf_gapless') !== 'false');
   const [autoplay, setAutoplay] = useState(() => localStorage.getItem('uf_autoplay') !== 'false');
@@ -26,6 +39,11 @@ const Settings = () => {
   const [theme, setTheme] = useState<ThemeMode>(() => (localStorage.getItem('uf_theme') as ThemeMode) || 'default');
   const [cacheSize, setCacheSize] = useState('0 MB');
   const [showSupport, setShowSupport] = useState(false);
+  const [showEq, setShowEq] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(() => {
+    const s = readEq();
+    return typeof s.playbackSpeed === 'number' ? s.playbackSpeed : 1;
+  });
 
   useEffect(() => {
     const calcSize = async () => {
