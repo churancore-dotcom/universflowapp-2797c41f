@@ -164,11 +164,15 @@ const Search = () => {
           ? Promise.resolve([] as IndexedTrack[])
           : searchIndexedTracks(trimmedQuery, 200);
         const youtubeJob = searchYouTubeMusicTracks(smartQuery, 50);
+        const saavnJob = searchJioSaavnTracks(trimmedQuery, 30).catch(() => [] as IndexedTrack[]);
 
-        const [youtube, literal, ...tagSets] = await Promise.all([youtubeJob, literalJob, ...tagJobs]);
+        const [youtube, literal, saavn, ...tagSets] = await Promise.all([youtubeJob, literalJob, saavnJob, ...tagJobs]);
         if (cancelled) return;
 
-        const merged = rankAndDedupeResults(trimmedQuery, youtube, literal, tagSets, pureBrowse)
+        // JioSaavn results are merged with the literal tier (they carry direct
+        // metadata + often a pre-resolved stream URL, so they should rank high).
+        const literalMerged = [...saavn, ...literal];
+        const merged = rankAndDedupeResults(trimmedQuery, youtube, literalMerged, tagSets, pureBrowse)
           .filter((track) => !isHiddenTrack(track, hiddenResults))
           .slice(0, 120);
         setCached(SEARCH_CACHE_NAMESPACE, trimmedQuery, merged);
