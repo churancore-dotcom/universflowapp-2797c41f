@@ -1,7 +1,10 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'in.universflow.app',
+  // Must match google-services.json package_name AND the PKG used in
+  // .github/workflows/build-android.yml — changing this here without updating
+  // both of those will break the Android build (MainActivity path mismatch).
+  appId: 'app.lovable.id5acaae55bbc847a7bd32f3924d8ef986',
   appName: 'Universflow',
   webDir: 'dist',
   server: {
