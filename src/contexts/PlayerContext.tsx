@@ -159,9 +159,11 @@ supabase.auth.onAuthStateChange((_event, session) => {
 const buildStreamProxyUrl = (sourceUrl: string) => {
   const projectUrl = import.meta.env.VITE_SUPABASE_URL;
   if (!projectUrl || !shouldProxyStreamUrl(sourceUrl)) return sourceUrl;
-  const tokenParam = cachedAccessToken ? `&token=${encodeURIComponent(cachedAccessToken)}` : '';
-  return `${projectUrl}/functions/v1/music-indexer?audio=${encodeURIComponent(sourceUrl)}${tokenParam}`;
+  // The music-indexer audio proxy is intentionally open; never attach the JWT
+  // (it would leak into history, logs, and Referer headers for no benefit).
+  return `${projectUrl}/functions/v1/music-indexer?audio=${encodeURIComponent(sourceUrl)}`;
 };
+
 
 const isEqProcessingEnabled = () => {
   try {
