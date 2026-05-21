@@ -12,10 +12,14 @@ const FullscreenPlayer = lazy(() => import('./FullscreenPlayer'));
 const GlobalPlayerLayer = memo(function GlobalPlayerLayer() {
   const { pathname } = useLocation();
 
-  // Hide on routes where the player UI shouldn't appear
+  // Hide on routes where the player UI shouldn't appear.
+  // NOTE: '/' was previously hidden, which broke the MiniPlayer on the
+  // landing route since Home is mounted at both '/' and '/home'. The
+  // player must materialise the instant a song starts from Home.
   const hidden =
-    pathname === '/' ||
     pathname === '/auth' ||
+    pathname === '/verify' ||
+    pathname === '/check-email' ||
     pathname.startsWith('/admin') ||
     pathname === '/offline-player';
 
