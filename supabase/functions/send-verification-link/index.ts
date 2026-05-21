@@ -27,6 +27,18 @@ async function sha256(input: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Build a deterministic UUID v4-shaped string from an arbitrary identifier.
+// Used so we can reuse the user_id-keyed api_rate_limits table for IP-based limits.
+async function idToUuid(id: string): Promise<string> {
+  const h = await sha256(`ip:${id}`);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
+function clientIp(req: Request): string {
+  const xf = req.headers.get('x-forwarded-for') ?? '';
+  return (xf.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (!RESEND_API_KEY) {
