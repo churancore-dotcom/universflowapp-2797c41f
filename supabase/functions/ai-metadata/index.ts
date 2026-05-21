@@ -79,14 +79,43 @@ serve(async (req) => {
 
     const { url } = await req.json();
 
-    if (!url) {
+    if (!url || typeof url !== 'string' || url.length > 2048) {
       return new Response(
         JSON.stringify({ success: false, error: 'URL is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('AI Metadata extraction for:', url);
+    // --- Hardening: validate URL + extract a safe YouTube video ID -----------
+    // The raw `url` is NEVER interpolated into the prompt. Only the sanitised
+    // 11-char video ID is, which removes the prompt-injection surface entirely.
+    const ALLOWED_YT_HOSTS = new Set([
+      'youtube.com', 'www.youtube.com', 'm.youtube.com',
+      'music.youtube.com', 'youtu.be',
+    ]);
+    let videoId: string | null = null;
+    try {
+      const parsed = new URL(url);
+      if (!ALLOWED_YT_HOSTS.has(parsed.hostname)) {
+        throw new Error('host not allowed');
+      }
+      if (parsed.hostname === 'youtu.be') {
+        videoId = parsed.pathname.replace(/^\//, '');
+      } else {
+        videoId = parsed.searchParams.get('v') || parsed.pathname.split('/').pop() || '';
+      }
+      // YouTube IDs are 11 chars, [A-Za-z0-9_-]
+      if (!/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) {
+        throw new Error('invalid video id');
+      }
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Only YouTube URLs are supported' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('AI Metadata extraction for video ID:', videoId);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -97,9 +126,9 @@ serve(async (req) => {
       );
     }
 
-    const prompt = `Analyze this YouTube URL and extract song metadata. URL: ${url}
+    const prompt = `Analyze this YouTube video and extract song metadata. Video ID: ${videoId}
 
-Based on the URL pattern and any identifiable information (video ID, common title formats), provide your best guess for the song metadata.
+Based on the video ID and any identifiable information (common title formats), provide your best guess for the song metadata.
 
 Return a JSON object with these fields:
 - title: The song title (clean, without extra info like "Official Video", "Lyrics", etc.)
