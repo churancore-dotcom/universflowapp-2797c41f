@@ -114,11 +114,14 @@
 </head>
 
   <body>
-    <div id="root">
-      <!-- SEO: indexable content for crawlers (Googlebot initial fetch, Bingbot, social previews, AI bots).
-           React replaces #root on hydration; this static payload is what search engines see first.
-           Positioned off-screen so it never flashes for real users. Do not remove. -->
-      <div id="seo-shell" style="position:absolute;left:-99999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="false">
+    <div id="root"></div>
+
+    <!-- SEO / crawler fallback. <noscript> is the Google-sanctioned way to expose
+         indexable content for non-JS crawlers and social-preview bots. It is NOT
+         hidden text under spam policies because it is the explicit alternative
+         shown to clients without JS. -->
+    <noscript>
+      <div role="document">
         <header>
           <h1>Universflow — Free Music Streaming, Download &amp; Offline Player</h1>
           <p>Universflow is a free music streaming app where you can listen to millions of songs, follow your favourite artists, build playlists, download tracks for offline play, and enjoy a clean, Apple Music–inspired player on any phone or browser.</p>
@@ -167,17 +170,21 @@
             <p>© Universflow. Free music streaming &amp; download app. Visit <a href="https://universflow.in/">universflow.in</a>.</p>
           </footer>
         </main>
-        <script type="application/ld+json">
-        {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-          {"@type":"Question","name":"Is Universflow really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Universflow is free to use with optional Premium upgrades. Create an account with email to start listening instantly."}},
-          {"@type":"Question","name":"Can I download songs to listen offline?","acceptedAnswer":{"@type":"Answer","text":"Yes. Tap the download icon on any song or playlist and it will be saved for offline playback inside the app."}},
-          {"@type":"Question","name":"Does Universflow work on Android and iPhone?","acceptedAnswer":{"@type":"Answer","text":"Universflow works in any modern browser and ships as a native Android app. iPhone users can install it as a home-screen web app."}},
-          {"@type":"Question","name":"How do I create a Universflow account?","acceptedAnswer":{"@type":"Answer","text":"Visit the Universflow sign-up page, enter your email and password, verify your email, and start listening."}}
-        ]}
-        </script>
       </div>
-    </div>
+    </noscript>
+
+    <!-- FAQ JSON-LD is allowed in <head>/<body>; it's metadata, not "hidden text". -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+      {"@type":"Question","name":"Is Universflow really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Universflow is free to use with optional Premium upgrades. Create an account with email to start listening instantly."}},
+      {"@type":"Question","name":"Can I download songs to listen offline?","acceptedAnswer":{"@type":"Answer","text":"Yes. Tap the download icon on any song or playlist and it will be saved for offline playback inside the app."}},
+      {"@type":"Question","name":"Does Universflow work on Android and iPhone?","acceptedAnswer":{"@type":"Answer","text":"Universflow works in any modern browser and ships as a native Android app. iPhone users can install it as a home-screen web app."}},
+      {"@type":"Question","name":"How do I create a Universflow account?","acceptedAnswer":{"@type":"Answer","text":"Visit the Universflow sign-up page, enter your email and password, verify your email, and start listening."}}
+    ]}
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
+
 
     <!-- Fallback for users (and crawlers) without JS -->
     <noscript>

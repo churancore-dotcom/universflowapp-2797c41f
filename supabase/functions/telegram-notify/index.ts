@@ -1,10 +1,27 @@
 // Telegram notification for premium events
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Restrict CORS to known first-party origins. Telegram bot calls cost nothing
+// per request but spam our admin chat; wildcard let any site trigger that.
+const ALLOWED_ORIGINS = new Set([
+  'https://universflow.in',
+  'https://www.universflow.in',
+  'https://universflowapp.lovable.app',
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'capacitor://localhost',
+  'https://localhost',
+]);
+function buildCors(req: Request): Record<string, string> {
+  const o = req.headers.get('origin') ?? '';
+  const allow = ALLOWED_ORIGINS.has(o) ? o : 'https://universflow.in';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  };
+}
+
 
 interface NotifyBody {
   event: 'payment_submitted' | 'premium_granted' | 'promo_redeemed' | 'payment_rejected';
@@ -19,7 +36,9 @@ interface NotifyBody {
 const ADMIN_ONLY_EVENTS = new Set(['premium_granted', 'payment_rejected']);
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCors(req);
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
 
   try {
     // ── Auth check: every caller must be a signed-in user ──

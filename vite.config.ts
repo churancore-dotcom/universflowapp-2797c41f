@@ -27,6 +27,12 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+  // Strip console.log / debugger from production bundle (keeps console.warn/error
+  // so real production errors still surface in Sentry).
+  esbuild: mode === "production"
+    ? { drop: ["debugger"], pure: ["console.log", "console.info", "console.debug"] }
+    : undefined,
+
   plugins: [
     react(),
     mode === "development" && componentTagger(),
