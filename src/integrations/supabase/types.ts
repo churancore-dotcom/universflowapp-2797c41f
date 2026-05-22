@@ -1538,6 +1538,10 @@ export type Database = {
       }
       process_premium_expiry_notifications: { Args: never; Returns: Json }
       redeem_promo_code: { Args: { p_code: string }; Returns: Json }
+      register_device_token: {
+        Args: { _device_info?: Json; _platform?: string; _token: string }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
