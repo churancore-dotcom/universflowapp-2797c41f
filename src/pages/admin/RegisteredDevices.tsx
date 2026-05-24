@@ -12,13 +12,16 @@ interface DeviceRow {
   user_id: string;
   token: string;
   platform: string | null;
-  device_info: Record<string, any> | null;
+  device_info: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   username?: string | null;
   email?: string | null;
   avatar_url?: string | null;
 }
+
+type DeviceTokenRow = Pick<DeviceRow, 'id' | 'user_id' | 'token' | 'platform' | 'device_info' | 'created_at' | 'updated_at'>;
+type ProfileRow = { user_id: string; username: string | null; email: string | null; avatar_url: string | null };
 
 const formatRelative = (iso: string): string => {
   const d = new Date(iso).getTime();
@@ -58,13 +61,13 @@ const RegisteredDevices = () => {
         .from('profiles')
         .select('user_id, username, email, avatar_url')
         .in('user_id', userIds);
-      (profs ?? []).forEach((p: any) => {
+      ((profs ?? []) as ProfileRow[]).forEach((p) => {
         profiles[p.user_id] = { username: p.username, email: p.email, avatar_url: p.avatar_url };
       });
     }
     setRows(
-      (tokens ?? []).map((t) => ({
-        ...(t as any),
+      ((tokens ?? []) as DeviceTokenRow[]).map((t) => ({
+        ...t,
         ...profiles[t.user_id],
       })),
     );
