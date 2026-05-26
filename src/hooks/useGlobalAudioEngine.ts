@@ -55,8 +55,7 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     let processedWanted = false;
 
     const reapply = () => {
-      const allowOfflineEq = typeof navigator !== 'undefined' && navigator.onLine === false;
-      if (!isPremium && !allowOfflineEq) {
+      if (!isPremium) {
         bypassAudioElement(audioElement);
         audioElement.playbackRate = 1;
         processedWanted = false;
@@ -98,7 +97,7 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     // Foreground → restore the processed chain if the user had it on.
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        if (processedWanted) resume();
+        if (processedWanted) bypassAudioElement(audioElement);
       } else {
         resume();
         reapply();
