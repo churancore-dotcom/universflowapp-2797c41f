@@ -41,6 +41,7 @@ const timeAgo = (iso: string) => {
 const ReviewsSheet = ({ isOpen, onClose, onWriteReview }: Props) => {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [ownReviewIds, setOwnReviewIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Record<string, ReactionState>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -48,11 +49,21 @@ const ReviewsSheet = ({ isOpen, onClose, onWriteReview }: Props) => {
   const fetchAll = async () => {
     const { data: revs } = await supabase
       .from('app_reviews')
-      .select('id, rating, comment, display_name, created_at, user_id')
+      .select('id, rating, comment, display_name, created_at')
       .order('created_at', { ascending: false })
       .limit(100);
     const list = (revs as Review[]) || [];
     setReviews(list);
+
+    if (user) {
+      const { data: mine } = await supabase
+        .from('app_reviews')
+        .select('id')
+        .eq('user_id', user.id);
+      setOwnReviewIds(new Set((mine || []).map((r: any) => r.id)));
+    } else {
+      setOwnReviewIds(new Set());
+    }
 
     if (list.length) {
       const ids = list.map(r => r.id);
