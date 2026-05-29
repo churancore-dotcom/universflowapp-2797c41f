@@ -192,6 +192,11 @@ public class MediaNotificationService extends Service {
             case ACTION_PREV:  MediaNotificationPlugin.emitControlEvent("music-controls-previous"); break;
             case ACTION_STOP:
                 MediaNotificationPlugin.emitControlEvent("music-controls-destroy");
+                // CRITICAL: When started via startForegroundService(), Android requires
+                // startForeground() to be called within ~5s OR the app crashes with
+                // ForegroundServiceDidNotStartInTimeException. Post a minimal
+                // notification first, then immediately tear it down.
+                ensureForegroundBeforeStop();
                 stopForegroundCompat();
                 stopSelf();
                 return START_NOT_STICKY;
