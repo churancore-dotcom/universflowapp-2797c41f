@@ -294,6 +294,7 @@ const Library = () => {
                 </div>
               )}
               <TabsContent value="liked" className="mt-0 h-full">
+                <h2 className="sr-only">Liked Songs</h2>
                 {loading ? (
                   <LibrarySkeleton />
                 ) : likedSongs.length === 0 ? (
