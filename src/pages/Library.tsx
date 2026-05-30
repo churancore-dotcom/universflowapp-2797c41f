@@ -373,6 +373,7 @@ const Library = () => {
               </TabsContent>
 
               <TabsContent value="downloads" className="mt-0">
+                <h2 className="sr-only">Saved Downloads</h2>
                 {downloads.length === 0 ? (
                   <div className="space-y-3">
                     <EmptyState icon={CloudOff} text="No downloads yet" />
