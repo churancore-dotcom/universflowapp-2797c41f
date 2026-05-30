@@ -109,14 +109,13 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     const onPlay = () => resume();
     const onPointer = () => resume();
 
-    // Background → bypass effects to prevent Android JS throttling glitches.
-    // Foreground → restore the processed chain if the user had it on.
+    // Background → DO NOT swap chains. Disconnecting/reconnecting the
+    // MediaElementSource mid-playback causes an audible pop and on Android
+    // WebView can stall the stream entirely (suspends AudioContext). Just
+    // resume the context when we come back to the foreground.
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        if (processedWanted) bypassAudioElement(audioElement);
-      } else {
+      if (document.visibilityState !== 'hidden') {
         resume();
-        reapply();
       }
     };
 
