@@ -439,14 +439,13 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                 >
                   <Share2 className="w-[18px] h-[18px] text-white/60" />
                 </button>
-                {isPremium && (
-                  <button 
-                    className="w-11 h-11 flex items-center justify-center active:scale-90 transition-transform" 
-                    onClick={() => { triggerHaptic('selection'); setShowEqualizer(true); }}
-                  >
-                    <Sliders className="w-[18px] h-[18px] text-white/60" />
-                  </button>
-                )}
+                <button 
+                  className="w-11 h-11 flex items-center justify-center active:scale-90 transition-transform" 
+                  onClick={() => { triggerHaptic('selection'); setShowEqualizer(true); }}
+                  aria-label="Equalizer"
+                >
+                  <Sliders className="w-[18px] h-[18px] text-white/60" />
+                </button>
                 <button 
                   className="w-11 h-11 flex items-center justify-center active:scale-90 transition-transform" 
                   onClick={() => { triggerHaptic('selection'); setShowPlaylistModal(true); }}

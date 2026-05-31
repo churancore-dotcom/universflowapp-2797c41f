@@ -3,6 +3,36 @@ import { Song } from './PlayerContext';
 import { toast } from 'sonner';
 import { canDownloadSong, getDownloadUnavailableMessage } from '@/lib/songSupport';
 
+// Build a proxy URL for cross-origin streams that fail direct fetch.
+// Uses the same music-indexer audio proxy that the player uses.
+const buildDownloadProxyUrl = (sourceUrl: string): string | null => {
+  try {
+    if (!sourceUrl?.startsWith('http')) return null;
+    const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!projectUrl) return null;
+    if (sourceUrl.includes('/functions/v1/music-indexer?audio=')) return null;
+    const parsed = new URL(sourceUrl);
+    if (parsed.origin === window.location.origin) return null;
+    return `${projectUrl}/functions/v1/music-indexer?audio=${encodeURIComponent(sourceUrl)}`;
+  } catch { return null; }
+};
+
+// Try direct fetch first, fall back to proxy on CORS / network failure so
+// every track with an audio URL can actually be downloaded.
+const robustFetch = async (url: string, init?: RequestInit): Promise<Response> => {
+  try {
+    const direct = await fetch(url, init);
+    if (direct.ok) return direct;
+    throw new Error(`HTTP ${direct.status}`);
+  } catch (directErr) {
+    const proxyUrl = buildDownloadProxyUrl(url);
+    if (!proxyUrl) throw directErr;
+    const proxied = await fetch(proxyUrl, { ...init, mode: 'cors', credentials: 'omit' });
+    if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`);
+    return proxied;
+  }
+};
+
 interface DownloadedSong extends Song {
   downloadedAt: string;
   blobUrl: string;
@@ -285,7 +315,7 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         [song.id]: { songId: song.id, progress: 5, status: 'downloading' }
       }));
 
-      const response = await fetch(song.audio_url, {
+      const response = await robustFetch(song.audio_url, {
         mode: 'cors',
         credentials: 'omit',
         signal: controller.signal,
@@ -333,7 +363,7 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (song.cover_url && /^https?:\/\//i.test(song.cover_url)) {
         try {
-          const coverResponse = await fetch(song.cover_url, { mode: 'cors', credentials: 'omit' });
+          const coverResponse = await robustFetch(song.cover_url, { mode: 'cors', credentials: 'omit' });
           if (coverResponse.ok) {
             coverBlob = await coverResponse.blob();
             offlineCoverUrl = URL.createObjectURL(coverBlob);

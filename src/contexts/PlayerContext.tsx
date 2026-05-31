@@ -149,9 +149,10 @@ const shouldProxyStreamUrl = (sourceUrl: string) => {
     if (parsed.origin === window.location.origin) return false;
     if (sourceUrl.includes('/functions/v1/music-indexer?audio=')) return false;
 
-    // Only proxy non-catalog streams while EQ/effects are active. Proxying every
-    // stream makes Android background playback more fragile and can cause stutter.
-    if (!isEqProcessingEnabled()) return false;
+    // Proxy any non-catalog stream so the Web Audio EQ chain can always
+    // process it (CORS-safe). This unconditionally routes through our
+    // edge function — the user explicitly chose reliability of EQ over
+    // background-throttling risk.
     return !DIRECT_PLAYABLE_HOST_SNIPPETS.some((host) => parsed.hostname.endsWith(host));
   } catch {
     return false;

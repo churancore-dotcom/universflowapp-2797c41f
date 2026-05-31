@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search as SearchIcon, Music, X, Globe, Radio, Loader2, Clock, Trash2, EyeOff } from 'lucide-react';
+import { Search as SearchIcon, Music, X, Globe, Radio, Loader2, Clock, Trash2 } from 'lucide-react';
 import { usePlayer, Song } from '@/contexts/PlayerContext';
 import { useDownloads } from '@/contexts/DownloadContext';
 import BottomNav from '@/components/BottomNav';
@@ -454,19 +454,8 @@ const Search = () => {
                               {isResolving ? 'Starting song...' : track.title}
                             </p>
                             <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">{track.artist}</p>
-                            {!isResolving && (
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleHideIndexed(track);
-                                }}
-                                className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground/70 active:text-primary"
-                              >
-                                <EyeOff className="w-3 h-3" /> Don’t show again
-                              </button>
-                            )}
                           </div>
+
                           <div className="flex items-center gap-1 flex-shrink-0">
                             {isActive && isPlaying ? (
                               <div className="flex items-end gap-[2px] h-4 mr-1">

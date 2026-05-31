@@ -1,76 +1,49 @@
-# Premium Value + Stability Plan
+# Big Fix Pass — 8 items
 
-A 3-phase plan, ordered by impact-per-hour. We ship phase 1 first (stabilize), then phase 2 (irresistible Premium), then phase 3 (polish + conversion).
+## 1. Subscription "JSHON" debug
+The premium settings page is dumping the raw subscription row as JSON text. Replace it with a friendly card: Plan name, Status badge, Platform, Activated date, Renews on / Expires, Auto-renew, and a "Show technical details" collapsible for the raw JSON. Keep the existing realtime + refresh logic.
 
----
+File: `src/pages/ManageSubscription.tsx` (and the debug block currently visible at /home → Manage Subscription).
 
-## Phase 1 — Kill the bugs (ship first)
+## 2. Real EQ + Bass (works in browser AND APK)
+Audit `src/lib/audioEngine.ts` + `useGlobalAudioEngine.ts` + `EqualizerModal.tsx`:
+- Always create the AudioContext + BiquadFilter chain (low-shelf for bass, peaking for mids, high-shelf for treble) lazily on first `play()` to satisfy autoplay policies.
+- Resume the context on every play (handle `suspended` state).
+- Set `crossOrigin = "anonymous"` BEFORE attaching `MediaElementSource`. If a stream blocks CORS, fall back to a tainted-but-still-routed chain when possible, else show a one-time toast — but do NOT silently bypass the EQ for catalog/Supabase streams (they support CORS).
+- Persist values in localStorage and reapply on song change.
+- Verify bass slider drives the 60 Hz / 120 Hz low-shelf gain (currently it may only touch a mid band).
 
-Known issues from current logs/usage:
+## 3. Song downloads failing
+Inspect `DownloadContext.tsx` + `DownloadButton.tsx` + `useSongCache.ts`. Likely cause: cross-origin fetch failing with `mode: 'cors'`. Switch to blob download pattern: `fetch(url) → blob → IndexedDB`, and on CORS failure retry via a Supabase Edge Function proxy (`proxy-stream`) so every catalog song can be cached. Show per-song error toast with the real reason, not a generic "failed".
 
-1. `MEDIA_ELEMENT_ERROR: Empty src attribute` — player auto-skip storm when a track has no resolved URL. Fix: in `PlayerContext`, skip *before* assigning empty src; mark dead tracks for the session so we don't loop on them.
-2. `Failed to fetch dynamically imported module: DownloadQueuePanel.tsx / nativeMusicControls.ts` — stale chunk after deploy. Fix: wrap dynamic imports with a one-time `window.location.reload()` retry, and add a version query to chunk URLs.
-3. `fetchPriority` React warning on `<img>` — switch to lowercase `fetchpriority` or drop the prop on non-supporting React.
-4. "Username is locked (can only be set once)" shown as scary `ERROR MATRIX` — downgrade to a soft inline hint, not a red error.
-5. Profile flashing "not premium" for premium users (already patched in `usePremium`) — verify on slow network and add a "checking…" skeleton instead of the free-tier UI as default.
-6. APK auto-logout on cold start without internet (already patched in `AuthContext`) — add a regression test path: launch APK in airplane mode, confirm session persists and Downloads page works.
+## 4. Home page — perf + Spotify-like density (additive only)
+- Wrap each section in `<Suspense>` with skeletons; lazy-load below-the-fold sections (`React.lazy`).
+- Parallelize initial fetches with `Promise.all`; cache results in `sessionStorage` for instant subsequent loads.
+- ADD new rails below the existing ones (do not change current order):
+  - "Made for You" (based on recently_played genres)
+  - "Because you liked …" (seeded from last liked song)
+  - "Top genres" chips row
+  - "Quick picks" 2-col grid (Spotify-style)
 
-Estimated: 1 short pass, no new tables.
+## 5. Search — remove blacklist, infinite scroll
+- Remove "don't show again from search results" menu item + the `search_blacklist` filtering logic on the client. Keep table untouched for now.
+- Implement infinite scroll: IntersectionObserver on a sentinel, increment `page`, append results, keep first-paint at 20 items so it still feels fast.
 
----
+## 6. Auto-queue (YouTube-style, mix of both)
+In `PlayerContext.tsx`, when the queue has ≤ 2 songs remaining and `autoQueue` is on (default on):
+- Fetch 10 recommendations: 5 from same artist's catalog, 3 from same genre tag, 2 from global trending — dedupe vs history.
+- Append silently. Continues forever.
+- Setting toggle in Settings → Playback.
 
-## Phase 2 — Make Premium actually worth paying for
+## 7. Top-bar Queue button on Fullscreen Player
+Replace the AI Playlist Generator icon at the top of `FullscreenPlayer.tsx` with a Queue icon that opens `QueueDrawer`. Move Playlist Generator to the overflow `…` menu.
 
-Right now Premium = "no ads + downloads + EQ". That's table stakes. Add **3 features users can't get free anywhere else** in our niche:
-
-### 2A. Lossless / Hi-Fi Audio toggle (Premium only)
-- Settings → Playback → "Hi-Fi (Lossless when available)" switch, gated by `usePremium`.
-- For catalog songs, prefer the highest-bitrate URL we have; for YouTube streams, pick the best `itag`.
-- Show a small "HiFi" chip on the MiniPlayer when active. This is the single biggest reason audiophiles pay for Tidal/Apple Music.
-
-### 2B. Premium-only Early Releases shelf on Home
-- New section "Premium First" on Home, only visible to premium users (free users see a teaser card → upgrade).
-- Backed by existing `is_premium_only` flag on `songs` (already in schema). Admin can mark any song.
-- This makes Premium *visible* every time they open the app.
-
-### 2C. Unlimited Skips + No Pre-roll Ads (already exists) + Background Downloads
-- Free tier: cap skips at 6/hour (industry standard), show "Skip limit — upgrade for unlimited".
-- Cap simultaneous downloads at 3 for free, unlimited for Premium.
-- Cap offline library at 30 songs for free, unlimited for Premium.
-
-These three create a *daily* friction point that converts.
-
-### 2D. Studio EQ Presets (Premium)
-- Free users get the 8-band EQ but only "Flat". Premium unlocks 8 named presets (Bass Boost, Vocal, Late Night, Cinema, etc.) + ability to save custom presets to their account.
-
----
-
-## Phase 3 — Polish + conversion UX
-
-1. **Premium badge everywhere** — small crown next to username on Profile, in comments, on shared playlist cards. Social proof.
-2. **Upgrade CTA placement** — when free user hits a gated action (skip limit, HiFi toggle, premium-only song), show a slick bottom-sheet with the 3 top benefits + price, not a generic toast.
-3. **`/premium` page rewrite** — lead with "What you unlock today" (concrete, with screenshots/icons of HiFi chip, Premium First shelf, unlimited skips), then price, then FAQ. Drop any feature we don't actually ship.
-4. **First-week trial** — 7-day free trial promo code auto-applied on signup (uses existing `redeem_promo_code` RPC). Massive conversion lever.
-5. **Renewal nudges** — 3-day and 1-day expiry pushes already exist in `process_premium_expiry_notifications`. Add an in-app banner too.
-
----
-
-## Technical notes
-
-- Schema additions needed for Phase 2:
-  - `songs.is_premium_only boolean default false` — confirm exists, else migration.
-  - `user_subscriptions` already has expiry + status; reuse `is_premium_user(uid)` RPC for all gating.
-  - Free-tier skip counter: client-side rolling 60-min window in `localStorage`, server-side `api_rate_limits` row for abuse.
-- All gating goes through one hook: `usePremium()` — no scattered checks.
-- No new payment provider needed — existing UPI flow + promo codes stay as-is.
+## 8. Queue reorder
+`QueueDrawer.tsx`: add a drag handle on the right of each item using `@dnd-kit/core` (already common; add if missing). Up/Down arrow buttons as an accessibility fallback. Reordering calls `reorderQueue(from, to)` exposed by `PlayerContext`.
 
 ---
 
 ## Order of execution
+1, 7, 8 (UI quick wins) → 5 (search) → 2 (EQ) → 3 (downloads) → 6 (auto-queue) → 4 (home additions).
 
-1. Phase 1 fixes (1 pass)
-2. Phase 2A Hi-Fi toggle + 2C skip/download caps (highest conversion lever)
-3. Phase 2B Premium First shelf + 2D EQ presets
-4. Phase 3 polish + 7-day trial
-
-Reply "go" to start with Phase 1, or tell me to jump straight to a specific item.
+I'll keep design tokens, mobile shell, and existing aesthetic intact. Nothing on the current home page will be removed.
