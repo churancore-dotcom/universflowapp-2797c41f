@@ -22,6 +22,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import CheckEmail from "./pages/CheckEmail";
 import NotFound from "./pages/NotFound";
 import { usePushRegistration } from "./hooks/usePushRegistration";
+import { useAuraSync } from "./hooks/useAuraSync";
 
 // Eager load main tabs for INSTANT navigation (Spotify-like feel).
 // Admin and rarely-visited pages stay lazy below.
@@ -271,9 +272,7 @@ const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   usePushRegistration();
-  // Live-sync the user's Listening Aura whenever song / playback state changes
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require('./hooks/useAuraSync').useAuraSync();
+  useAuraSync();
 
   const handleSplashComplete = () => {
     const hasSeenOnboarding = localStorage.getItem('uf_onboarding_done');

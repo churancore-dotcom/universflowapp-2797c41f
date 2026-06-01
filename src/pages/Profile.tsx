@@ -269,6 +269,10 @@ const Profile = () => {
             </div>
           </div>
 
+          {/* Live Listening Aura */}
+          {profileSettled && user && <ProfileAuraCard username={displayName} />}
+
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
