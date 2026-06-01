@@ -8,11 +8,9 @@ import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { PlayerProvider, usePlayer } from "./contexts/PlayerContext";
 import { DownloadProvider } from "./contexts/DownloadContext";
-import { JamQueueProvider } from "./contexts/JamQueueContext";
 import SplashScreen from "./components/SplashScreen";
 import Onboarding from "./components/Onboarding";
 import MobileShell from "./components/MobileShell";
-import JamHeartButton from "./components/MateHeartButton";
 import ArtistPicker from "./components/ArtistPicker";
 import RateUsPopup from "./components/RateUsPopup";
 import ReviewModal from "./components/ReviewModal";
@@ -41,7 +39,7 @@ const ArtistDetail = lazy(() => import("./pages/ArtistDetail"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Support = lazy(() => import("./pages/Support"));
 const Offline = lazy(() => import("./pages/Offline"));
-const JamQueue = lazy(() => import("./pages/JamQueue"));
+
 const AllArtists = lazy(() => import("./pages/AllArtists"));
 const ManageSubscription = lazy(() => import("./pages/ManageSubscription"));
 const Premium = lazy(() => import("./pages/Premium"));
@@ -166,8 +164,6 @@ const AnimatedRoutes = () => {
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/support" element={<Support />} />
           <Route path="/offline" element={<ProtectedRoute><Offline /></ProtectedRoute>} />
-          <Route path="/jam" element={<ProtectedRoute><JamQueue /></ProtectedRoute>} />
-          <Route path="/listen-together" element={<Navigate to="/jam" replace />} />
           <Route path="/artists" element={<ProtectedRoute><AllArtists /></ProtectedRoute>} />
           <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
           <Route path="/premium" element={<Premium />} />
@@ -310,7 +306,7 @@ const AppContent = () => {
       </AnimatePresence>
       <PrerollAdWrapper />
       <GlobalPlayerLayer />
-      <JamHeartButton />
+      
       <PostAuthGate />
       <Suspense fallback={null}>
         <DownloadQueuePanel />
@@ -327,13 +323,11 @@ const App = () => {
         <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
           <AuthProvider>
             <PlayerProvider>
-              <JamQueueProvider>
-                <DownloadProvider>
-                  <TooltipProvider>
-                    <AppContent />
-                  </TooltipProvider>
-                </DownloadProvider>
-              </JamQueueProvider>
+              <DownloadProvider>
+                <TooltipProvider>
+                  <AppContent />
+                </TooltipProvider>
+              </DownloadProvider>
             </PlayerProvider>
           </AuthProvider>
         </BrowserRouter>
