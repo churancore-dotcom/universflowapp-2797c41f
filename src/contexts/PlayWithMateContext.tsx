@@ -539,13 +539,15 @@ export const PlayWithMateProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (room?.role !== 'host' || !room.sessionId) return;
 
+    // Lower-frequency heartbeat (every 4s). Drift is corrected lazily on the
+    // guest with a generous threshold, so we don't need to spam updates.
     broadcastIntervalRef.current = window.setInterval(() => {
       void broadcastPlaybackState();
-    }, 2000);
+    }, 4000);
 
     persistIntervalRef.current = window.setInterval(() => {
       void persistSessionState(room.sessionId);
-    }, 10000);
+    }, 15000);
 
     return () => {
       if (broadcastIntervalRef.current) {
