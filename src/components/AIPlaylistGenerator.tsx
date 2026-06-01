@@ -45,7 +45,7 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose }: AIPlaylistGeneratorProps)
   const [loadingSeeds, setLoadingSeeds] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
-  // Load seed candidates from recent plays
+  // Load seed candidates from recent plays, fall back to top catalog
   useEffect(() => {
     if (!isOpen || !user) return;
     let cancelled = false;
@@ -69,6 +69,27 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose }: AIPlaylistGeneratorProps)
           duration: s.duration, album: s.album,
         });
       });
+
+      // Fallback: pull popular catalog so Start Mix is ALWAYS usable, even
+      // for brand-new users who haven't played anything yet.
+      if (list.length === 0) {
+        const { data: top } = await supabase
+          .from('songs')
+          .select('id,title,artist,cover_url,genre,mood,audio_url,duration,album,play_count')
+          .eq('is_visible', true)
+          .order('play_count', { ascending: false, nullsFirst: false })
+          .limit(20);
+        (top || []).forEach((s: any) => {
+          if (seen.has(s.id)) return;
+          seen.add(s.id);
+          list.push({
+            id: s.id, title: s.title, artist: s.artist, cover_url: s.cover_url,
+            genre: s.genre, mood: s.mood, audio_url: s.audio_url,
+            duration: s.duration, album: s.album,
+          });
+        });
+      }
+
       if (!cancelled) {
         setSeeds(list);
         setSeedId(list[0]?.id ?? null);

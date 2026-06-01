@@ -57,27 +57,30 @@ interface Preset {
   bassBoost: number;
 }
 
+// 10-band presets — matches engine's BAND_DEFS (32Hz → 16kHz)
 const presets: Preset[] = [
-  { id: 'flat', name: 'Flat', icon: Music2, bands: [0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0 },
-  { id: 'bass-boost', name: 'Bass Boost', icon: Zap, bands: [3, 2, 1, 0, 0, 0, 0, 0], bassBoost: 30 },
-  { id: 'treble-boost', name: 'Treble Boost', icon: Sparkles, bands: [0, 0, 0, 0, 1, 2, 3, 3], bassBoost: 0 },
-  { id: 'vocal', name: 'Vocal', icon: Volume2, bands: [-1, 0, 1, 3, 3, 2, 0, -1], bassBoost: 0 },
-  { id: '8d-audio', name: '8D Audio', icon: Globe, bands: [1, 0, -1, 0, 0, 1, 2, 1], bassBoost: 10 },
-  { id: 'phonk', name: 'Phonk', icon: Headphones, bands: [4, 3, 1, 0, -1, 1, 2, 2], bassBoost: 40 },
-  { id: 'deep-bass', name: 'Deep Bass', icon: Waves, bands: [5, 4, 2, 0, 0, 0, -1, -1], bassBoost: 50 },
-  { id: 'concert', name: 'Concert', icon: Sparkles, bands: [2, 1, 0, 1, 1, 2, 2, 1], bassBoost: 10 },
+  { id: 'flat',         name: 'Flat',         icon: Music2,     bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], bassBoost: 0 },
+  { id: 'bass-boost',   name: 'Bass Boost',   icon: Zap,        bands: [4, 3, 2, 0, 0, 0, 0, 0, 0, 0], bassBoost: 35 },
+  { id: 'treble-boost', name: 'Treble Boost', icon: Sparkles,   bands: [0, 0, 0, 0, 0, 0, 1, 2, 3, 3], bassBoost: 0 },
+  { id: 'vocal',        name: 'Vocal',        icon: Volume2,    bands: [-2, -1, 0, 1, 3, 4, 3, 1, 0, -1], bassBoost: 0 },
+  { id: '8d-audio',     name: '8D Audio',     icon: Globe,      bands: [2, 1, 0, -1, 0, 0, 1, 2, 1, 1], bassBoost: 10 },
+  { id: 'phonk',        name: 'Phonk',        icon: Headphones, bands: [6, 5, 3, 1, 0, -1, 0, 1, 2, 2], bassBoost: 55 },
+  { id: 'deep-bass',    name: 'Deep Bass',    icon: Waves,      bands: [7, 6, 4, 2, 0, 0, 0, -1, -1, -1], bassBoost: 70 },
+  { id: 'concert',      name: 'Concert',      icon: Sparkles,   bands: [3, 2, 1, 0, 1, 1, 2, 2, 2, 1], bassBoost: 15 },
 ];
 
-// Labels mirror the engine's BAND_DEFS (lowshelf 60Hz -> highshelf 12kHz)
+// Labels mirror engine's BAND_DEFS (32Hz → 16kHz)
 const defaultBands: EQBand[] = [
-  { frequency: 60, gain: 0, label: '60' },
-  { frequency: 170, gain: 0, label: '170' },
-  { frequency: 310, gain: 0, label: '310' },
-  { frequency: 600, gain: 0, label: '600' },
-  { frequency: 1000, gain: 0, label: '1k' },
-  { frequency: 3000, gain: 0, label: '3k' },
-  { frequency: 6000, gain: 0, label: '6k' },
-  { frequency: 12000, gain: 0, label: '12k' },
+  { frequency: 32,    gain: 0, label: '32' },
+  { frequency: 64,    gain: 0, label: '64' },
+  { frequency: 125,   gain: 0, label: '125' },
+  { frequency: 250,   gain: 0, label: '250' },
+  { frequency: 500,   gain: 0, label: '500' },
+  { frequency: 1000,  gain: 0, label: '1k' },
+  { frequency: 2000,  gain: 0, label: '2k' },
+  { frequency: 4000,  gain: 0, label: '4k' },
+  { frequency: 8000,  gain: 0, label: '8k' },
+  { frequency: 16000, gain: 0, label: '16k' },
 ];
 
 const STORAGE_KEY = 'eq_settings';
@@ -360,43 +363,43 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
               </div>
             </div>
 
-            {/* 8-Band Equalizer */}
+            {/* 10-Band Equalizer */}
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">8-Band Equalizer</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">10-Band Equalizer</h3>
               <div
-                className="rounded-2xl p-4"
+                className="rounded-2xl p-3"
                 style={{
                   background: 'rgba(28, 28, 30, 0.8)',
                   border: '1px solid rgba(255, 255, 255, 0.06)',
                 }}
               >
-                <div className="flex justify-between mb-2 px-1">
+                <div className="flex justify-between mb-2 px-0.5">
                   {bands.map((band) => (
-                    <span key={band.frequency} className="text-[10px] text-muted-foreground font-mono w-8 text-center">
+                    <span key={band.frequency} className="text-[9px] text-muted-foreground font-mono flex-1 text-center">
                       {band.gain > 0 ? '+' : ''}{band.gain}
                     </span>
                   ))}
                 </div>
 
-                <div className="flex justify-between gap-1 mb-2">
+                <div className="flex justify-between gap-0.5 mb-2">
                   {bands.map((band, index) => (
-                    <div key={band.frequency} className="flex-1 flex items-center h-24">
+                    <div key={band.frequency} className="flex-1 flex items-center h-28">
                       <Slider
                         orientation="vertical"
                         value={[band.gain]}
-                        min={-8}
-                        max={8}
+                        min={-12}
+                        max={12}
                         step={1}
                         onValueChange={([value]) => handleBandChange(index, value)}
-                        className="h-full [&_[role=slider]]:w-5 [&_[role=slider]]:h-5 [&_[role=slider]]:bg-rose-500 [&_[role=slider]]:border-2 [&_[role=slider]]:border-rose-400 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-rose-500/40"
+                        className="h-full [&_[role=slider]]:w-4 [&_[role=slider]]:h-4 [&_[role=slider]]:bg-rose-500 [&_[role=slider]]:border-2 [&_[role=slider]]:border-rose-400 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-rose-500/40"
                       />
                     </div>
                   ))}
                 </div>
 
-                <div className="flex justify-between px-1">
+                <div className="flex justify-between px-0.5">
                   {bands.map((band) => (
-                    <span key={band.frequency} className="text-[9px] text-muted-foreground/60 w-8 text-center">
+                    <span key={band.frequency} className="text-[8px] text-muted-foreground/60 flex-1 text-center">
                       {band.label}
                     </span>
                   ))}

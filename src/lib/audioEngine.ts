@@ -63,15 +63,18 @@ const engine: Engine = {
 
 const sourceCache = new WeakMap<HTMLAudioElement, MediaElementAudioSourceNode>();
 
+// 10-band semi-graphic EQ — wider range, finer control over the spectrum.
 const BAND_DEFS: Array<{ freq: number; type: BiquadFilterType; q: number }> = [
-  { freq: 60,    type: 'lowshelf',  q: 0.7 },
-  { freq: 170,   type: 'peaking',   q: 1.0 },
-  { freq: 310,   type: 'peaking',   q: 1.0 },
-  { freq: 600,   type: 'peaking',   q: 1.0 },
+  { freq: 32,    type: 'lowshelf',  q: 0.7 },
+  { freq: 64,    type: 'peaking',   q: 1.0 },
+  { freq: 125,   type: 'peaking',   q: 1.0 },
+  { freq: 250,   type: 'peaking',   q: 1.0 },
+  { freq: 500,   type: 'peaking',   q: 1.0 },
   { freq: 1000,  type: 'peaking',   q: 1.0 },
-  { freq: 3000,  type: 'peaking',   q: 1.0 },
-  { freq: 6000,  type: 'peaking',   q: 1.0 },
-  { freq: 12000, type: 'highshelf', q: 0.7 },
+  { freq: 2000,  type: 'peaking',   q: 1.0 },
+  { freq: 4000,  type: 'peaking',   q: 1.0 },
+  { freq: 8000,  type: 'peaking',   q: 1.0 },
+  { freq: 16000, type: 'highshelf', q: 0.7 },
 ];
 
 function ensureCtx(): AudioContext | null {
@@ -446,22 +449,26 @@ export function bypassAudioElement(el: HTMLAudioElement): boolean {
   return true;
 }
 
-/** Apply 8 band gains in dB. Smoothed via setTargetAtTime. Clamped ±12dB so the
- *  user actually hears the EQ they dial in. The brick-wall limiter at the end
- *  of the graph still protects against clipping at high gains. */
+/** Apply N band gains in dB. Smoothed via setTargetAtTime. Clamped ±15dB.
+ *  Bass boost now drives the dedicated sub-bass shelf (32Hz) + 64Hz peak ONLY
+ *  — so you feel real low-end punch without muddying vocals (250-2kHz untouched).
+ *  The brick-wall limiter at the end of the graph protects against clipping. */
 export function setBands(gainsDb: number[], bassBoostPercent = 0) {
   if (engine.mode !== 'processed' || !engine.ctx || !engine.filters.length) return;
   const ctx = engine.ctx;
   const now = ctx.currentTime;
-  // Bass boost now ramps up to +12dB on the 60Hz shelf — punchy, audible.
-  const boost = (Math.min(100, Math.max(0, bassBoostPercent)) / 100) * 12;
+  // Bass boost ramps up to +18dB on the 32Hz sub-shelf — felt as physical thump.
+  const pct = Math.min(100, Math.max(0, bassBoostPercent)) / 100;
+  const subBoost = pct * 18;
+  const punchBoost = pct * 12; // 64Hz — the "thump" frequency
+  const kickBoost  = pct * 4;  // 125Hz — slight body, no vocal muddiness
 
   for (let i = 0; i < engine.filters.length; i++) {
     let g = gainsDb[i] ?? 0;
-    if (i === 0) g += boost;
-    else if (i === 1) g += boost * 0.7;
-    else if (i === 2) g += boost * 0.35;
-    g = Math.max(-12, Math.min(12, g));
+    if (i === 0) g += subBoost;
+    else if (i === 1) g += punchBoost;
+    else if (i === 2) g += kickBoost;
+    g = Math.max(-15, Math.min(15, g));
     const param = engine.filters[i].gain;
     param.cancelScheduledValues(now);
     param.setTargetAtTime(g, now, SMOOTH);

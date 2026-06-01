@@ -90,16 +90,11 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
 
       processedWanted = true;
 
-      // Do not reconnect the Web Audio graph while backgrounded: on Android
-      // WebView this can suspend the AudioContext and make streams pause/lag.
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        if (typeof s.playbackSpeed === 'number') audioElement.playbackRate = s.playbackSpeed;
-        return;
-      }
-
+      // KEEP EQ CONNECTED across track changes and backgrounding on browser.
+      // (APK path already returned above for background-playback reliability.)
       const ok = connectAudioElement(audioElement);
       if (!ok) return;
-      setBands(s.bands ?? [0, 0, 0, 0, 0, 0, 0, 0], s.bassBoost ?? 0);
+      setBands(s.bands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s.bassBoost ?? 0);
       setReverb(s.reverb ?? 0);
       engineSetStudioSpace(s.studioSpace ?? 'off');
       setSpatial(!!s.spatialAudio);
