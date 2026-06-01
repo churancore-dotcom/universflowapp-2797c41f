@@ -14,6 +14,13 @@ import EqualizerModal from '@/components/EqualizerModal';
 
 import { applyTheme, type ThemeMode } from '@/lib/themeBoot';
 import SEOHead from '@/components/SEOHead';
+import {
+  LOCK_SCREEN_THEMES,
+  getStoredLockScreenTheme,
+  setStoredLockScreenTheme,
+  type LockScreenThemeId,
+} from '@/lib/lockScreenTheme';
+import { Lock } from 'lucide-react';
 
 const EQ_KEY = 'eq_settings';
 
@@ -44,6 +51,7 @@ const Settings = () => {
     const s = readEq();
     return typeof s.playbackSpeed === 'number' ? s.playbackSpeed : 1;
   });
+  const [lockTheme, setLockTheme] = useState<LockScreenThemeId>(getStoredLockScreenTheme);
 
   useEffect(() => {
     const calcSize = async () => {
@@ -116,6 +124,19 @@ const Settings = () => {
     setTheme(t);
     applyTheme(t);
     toast.success(`${themes.find(x => x.id === t)?.label} theme applied`);
+  };
+
+  const handleLockTheme = (id: LockScreenThemeId, premiumLocked: boolean) => {
+    if (premiumLocked) {
+      toast.error('Premium required to use this lock screen', {
+        action: { label: 'Upgrade', onClick: () => navigate('/premium') },
+      });
+      return;
+    }
+    setLockTheme(id);
+    setStoredLockScreenTheme(id);
+    const label = LOCK_SCREEN_THEMES.find(t => t.id === id)?.label ?? '';
+    toast.success(`${label} lock screen applied`);
   };
 
   const handleClearCache = async () => {
@@ -361,6 +382,75 @@ const Settings = () => {
               </div>
             </div>
           </section>
+
+          {/* Lock Screen Style */}
+          <section>
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'hsl(330 90% 58% / 0.9)' }}>
+                <Lock className="w-3 h-3 text-white" />
+              </div>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase">Lock Screen</h2>
+              {!isPremium && (
+                <span className="ml-auto text-[10px] font-semibold text-primary flex items-center gap-1">
+                  <Crown className="w-3 h-3" fill="currentColor" /> Premium
+                </span>
+              )}
+            </div>
+            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+              <div className="px-4 py-3">
+                <span className="text-sm mb-1 block">Choose your lock screen</span>
+                <p className="text-[11px] text-muted-foreground mb-3">
+                  {isPremium
+                    ? 'Pick an animated background. Updates instantly when you open the lock screen player.'
+                    : 'Free users use the classic album art. Upgrade to unlock animated styles.'}
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  {LOCK_SCREEN_THEMES.map(t => {
+                    const locked = t.premium && !isPremium;
+                    const active = lockTheme === t.id && (!t.premium || isPremium);
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => handleLockTheme(t.id, locked)}
+                        className="flex flex-col items-center gap-1.5 text-left"
+                      >
+                        <div
+                          className="w-full aspect-[3/4] rounded-2xl relative overflow-hidden transition-all"
+                          style={{
+                            background: t.preview,
+                            border: active ? `2.5px solid hsl(var(--primary))` : '2px solid hsl(var(--border))',
+                            boxShadow: active ? '0 0 16px hsl(var(--primary) / 0.45)' : 'none',
+                            opacity: locked ? 0.7 : 1,
+                          }}
+                        >
+                          {active && (
+                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                              <Check className="w-3 h-3 text-primary-foreground" />
+                            </div>
+                          )}
+                          {locked && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                              <Crown className="w-5 h-5 text-primary" fill="currentColor" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-medium leading-tight">{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!isPremium && (
+                  <button
+                    onClick={() => navigate('/premium')}
+                    className="mt-3 w-full py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold active:scale-[0.98] transition-transform"
+                  >
+                    Unlock animated lock screens
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
 
           {/* Storage */}
           <section>
