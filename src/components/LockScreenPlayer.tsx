@@ -4,7 +4,10 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { usePlayerProgress } from '@/lib/playerProgressStore';
 import { Slider } from '@/components/ui/slider';
 import { setLockscreenOpen } from '@/lib/lockscreenState';
-import { 
+import { usePremium } from '@/hooks/usePremium';
+import { useLockScreenTheme } from '@/lib/lockScreenTheme';
+import LockScreenBackground from '@/components/LockScreenBackground';
+import {
   Play, Pause, SkipBack, SkipForward, Music, Volume2, VolumeX,
   Shuffle, Repeat, Repeat1, Lock
 } from 'lucide-react';
@@ -66,6 +69,8 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
     setVolume, toggleShuffle, toggleRepeat, seek,
   } = usePlayer();
   const { progress, duration } = usePlayerProgress();
+  const { isPremium } = usePremium();
+  const themeId = useLockScreenTheme(isPremium);
 
   const [time, setTime] = useState(new Date());
   const dragY = useMotionValue(0);
@@ -105,23 +110,12 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
         >
-          {/* Background: blurred album art */}
-          <div className="absolute inset-0">
-            {currentSong.cover_url && (
-              <motion.img
-                key={currentSong.id}
-                src={currentSong.cover_url}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                initial={{ scale: 1.2, opacity: 0 }}
-                animate={{ scale: 1.05, opacity: 1 }}
-                exit={{ scale: 1.2, opacity: 0 }}
-                transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
-              />
-            )}
-            <div className="absolute inset-0 backdrop-blur-[80px] bg-black/50" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/70" />
-          </div>
+          {/* Background: selected lock screen theme (animated for premium) */}
+          <LockScreenBackground
+            themeId={themeId}
+            coverUrl={currentSong.cover_url}
+            isPlaying={isPlaying}
+          />
 
           {/* Main content - swipe up to dismiss */}
           <motion.div
