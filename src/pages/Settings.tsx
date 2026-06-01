@@ -389,65 +389,80 @@ const Settings = () => {
               <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'hsl(330 90% 58% / 0.9)' }}>
                 <Lock className="w-3 h-3 text-white" />
               </div>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase">Lock Screen</h2>
-              {!isPremium && (
-                <span className="ml-auto text-[10px] font-semibold text-primary flex items-center gap-1">
-                  <Crown className="w-3 h-3" fill="currentColor" /> Premium
-                </span>
-              )}
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase">Lock Screen Style</h2>
             </div>
             <div className="rounded-xl overflow-hidden bg-card border border-border/50">
-              <div className="px-4 py-3">
-                <span className="text-sm mb-1 block">Choose your lock screen</span>
-                <p className="text-[11px] text-muted-foreground mb-3">
+              <div className="px-4 pt-4 pb-2">
+                <p className="text-[12px] text-muted-foreground leading-snug">
                   {isPremium
-                    ? 'Pick an animated background. Updates instantly when you open the lock screen player.'
-                    : 'Free users use the classic album art. Upgrade to unlock animated styles.'}
+                    ? 'Choose how your artwork comes alive on the in-app lock screen.'
+                    : 'Free plan uses the Classic style. Upgrade to unlock spinning vinyl, pulse rings and more.'}
                 </p>
-                <div className="grid grid-cols-3 gap-3">
-                  {LOCK_SCREEN_THEMES.map(t => {
-                    const locked = t.premium && !isPremium;
-                    const active = lockTheme === t.id && (!t.premium || isPremium);
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => handleLockTheme(t.id, locked)}
-                        className="flex flex-col items-center gap-1.5 text-left"
+              </div>
+              <div className="px-3 pb-3 grid grid-cols-2 gap-2.5">
+                {LOCK_SCREEN_THEMES.map(t => {
+                  const locked = t.premium && !isPremium;
+                  const active = lockTheme === t.id && !locked;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => handleLockTheme(t.id, locked)}
+                      className={`relative rounded-2xl overflow-hidden text-left transition-transform active:scale-[0.98] ${
+                        active ? 'ring-2 ring-primary' : 'ring-1 ring-border/60'
+                      }`}
+                    >
+                      {/* Visual preview */}
+                      <div
+                        className="relative w-full aspect-[4/3]"
+                        style={{ background: t.preview }}
                       >
-                        <div
-                          className="w-full aspect-[3/4] rounded-2xl relative overflow-hidden transition-all"
-                          style={{
-                            background: t.preview,
-                            border: active ? `2.5px solid hsl(var(--primary))` : '2px solid hsl(var(--border))',
-                            boxShadow: active ? '0 0 16px hsl(var(--primary) / 0.45)' : 'none',
-                            opacity: locked ? 0.7 : 1,
-                          }}
-                        >
-                          {active && (
-                            <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                              <Check className="w-3 h-3 text-primary-foreground" />
+                        {/* badge */}
+                        <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/45 backdrop-blur-sm text-[9px] font-medium text-white/90 leading-none">
+                          {t.badge}
+                        </span>
+                        {locked && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[1px]">
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/95 text-primary-foreground text-[10px] font-semibold">
+                              <Crown className="w-3 h-3" fill="currentColor" />
+                              Premium
                             </div>
-                          )}
-                          {locked && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
-                              <Crown className="w-5 h-5 text-primary" fill="currentColor" />
-                            </div>
+                          </div>
+                        )}
+                        {active && (
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                            <Check className="w-3 h-3 text-primary-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      {/* Label */}
+                      <div className="px-2.5 py-2 bg-card">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[13px] font-semibold leading-tight">{t.label}</span>
+                          {!t.premium && (
+                            <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">
+                              Free
+                            </span>
                           )}
                         </div>
-                        <span className="text-[11px] font-medium leading-tight">{t.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {!isPremium && (
+                        <p className="text-[10.5px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                          {t.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {!isPremium && (
+                <div className="px-4 pb-4">
                   <button
                     onClick={() => navigate('/premium')}
-                    className="mt-3 w-full py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold active:scale-[0.98] transition-transform"
+                    className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5"
                   >
-                    Unlock animated lock screens
+                    <Crown className="w-3.5 h-3.5" fill="currentColor" />
+                    Unlock all lock screens
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </section>
 

@@ -7,6 +7,7 @@ import { setLockscreenOpen } from '@/lib/lockscreenState';
 import { usePremium } from '@/hooks/usePremium';
 import { useLockScreenTheme } from '@/lib/lockScreenTheme';
 import LockScreenBackground from '@/components/LockScreenBackground';
+import LockScreenArtwork from '@/components/LockScreenArtwork';
 import {
   Play, Pause, SkipBack, SkipForward, Music, Volume2, VolumeX,
   Shuffle, Repeat, Repeat1, Lock
@@ -154,75 +155,14 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
             {/* Spacer */}
             <div className="flex-1 min-h-[12px]" />
 
-            {/* Animated hero album art — vinyl-style rotation + breathing pulse when playing */}
-            <div className="flex justify-center items-center px-6 mb-2">
-              <motion.div
-                className="relative"
-                style={{ width: 'min(64vw, 260px)', aspectRatio: '1 / 1' }}
-                animate={isPlaying ? { scale: [1, 1.025, 1] } : { scale: 1 }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                {/* Outer glow ring */}
-                <motion.div
-                  className="absolute -inset-3 rounded-full opacity-50 blur-2xl"
-                  style={{
-                    background:
-                      'conic-gradient(from 0deg, rgba(255,45,85,0.5), rgba(94,92,230,0.5), rgba(255,149,0,0.5), rgba(255,45,85,0.5))',
-                  }}
-                  animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
-                  transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                />
-
-                {/* Rotating cover */}
-                <motion.div
-                  className="absolute inset-0 rounded-full overflow-hidden shadow-2xl"
-                  style={{
-                    boxShadow:
-                      '0 30px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08) inset',
-                  }}
-                  animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
-                  transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-                >
-                  <AnimatePresence mode="popLayout">
-                    <motion.div
-                      key={currentSong.id}
-                      className="absolute inset-0"
-                      initial={{ opacity: 0, scale: 1.08 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.45 }}
-                    >
-                      {currentSong.cover_url ? (
-                        <img
-                          src={currentSong.cover_url}
-                          alt={currentSong.title}
-                          className="w-full h-full object-cover"
-                          draggable={false}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                          <Music className="w-16 h-16 text-white/60" />
-                        </div>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-
-                  {/* Vinyl-style center hole */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[14%] h-[14%] rounded-full bg-black/85 border border-white/15 flex items-center justify-center">
-                    <div className="w-[28%] h-[28%] rounded-full bg-white/70" />
-                  </div>
-                </motion.div>
-
-                {/* Subtle gloss overlay (does not rotate) */}
-                <div
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{
-                    background:
-                      'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.22), rgba(255,255,255,0) 45%)',
-                  }}
-                />
-              </motion.div>
-            </div>
+            {/* Animated hero artwork — variant determined by selected lock-screen theme */}
+            <LockScreenArtwork
+              themeId={themeId}
+              coverUrl={currentSong.cover_url}
+              title={currentSong.title}
+              songId={currentSong.id}
+              isPlaying={isPlaying}
+            />
 
             <div className="min-h-[12px]" />
 
