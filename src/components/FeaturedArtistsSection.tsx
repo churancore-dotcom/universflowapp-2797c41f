@@ -61,44 +61,30 @@ ArtistCard.displayName = 'ArtistCard';
 const FeaturedArtistsSection = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [artists, setArtists] = useState<DisplayArtist[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        // Priority 1: User-followed artists
-        if (user) {
-          const prefs: UserArtistPref[] = await getUserArtistPrefs(user.id);
-          if (!cancelled && prefs.length > 0) {
-            setArtists(prefs.map(p => ({
-              key: p.id,
-              name: p.artist_name,
-              image: p.artist_image,
-            })));
-            setLoading(false);
-            return;
-          }
+  const { data: artists = [], isLoading: loading } = useQuery({
+    queryKey: ['featured-artists', user?.id ?? 'anon'],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    queryFn: async (): Promise<DisplayArtist[]> => {
+      if (user) {
+        const prefs: UserArtistPref[] = await getUserArtistPrefs(user.id);
+        if (prefs.length > 0) {
+          return prefs.map(p => ({
+            key: p.id,
+            name: p.artist_name,
+            image: p.artist_image,
+          }));
         }
-
-        // Fallback: Live indexed artists (no DB-managed catalog by user request)
-        const indexed = await getFeaturedIndexedArtists(12);
-        if (!cancelled) {
-          setArtists(indexed.map(a => ({
-            key: a.id,
-            name: a.name,
-            image: a.image_url || null,
-          })));
-        }
-      } catch (e) {
-        console.error('Featured artists failed:', e);
-      } finally {
-        if (!cancelled) setLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id]);
+      const indexed = await getFeaturedIndexedArtists(12);
+      return indexed.map(a => ({
+        key: a.id,
+        name: a.name,
+        image: a.image_url || null,
+      }));
+    },
+  });
 
   if (loading || artists.length === 0) return null;
 
