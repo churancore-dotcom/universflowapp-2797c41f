@@ -97,8 +97,11 @@ LibraryArtistsSkeleton.displayName = 'LibraryArtistsSkeleton';
 // ── Search Results Skeleton ──
 export const SearchSkeleton = memo(() => (
   <div className="space-y-1 animate-fade-in">
-    <Skeleton className="w-20 h-4 rounded-md mb-3" />
-    {Array.from({ length: 5 }).map((_, i) => (
+    <div className="flex items-center gap-2 mb-3">
+      <Skeleton className="w-4 h-4 rounded-md" />
+      <Skeleton className="w-40 h-4 rounded-md" />
+    </div>
+    {Array.from({ length: 6 }).map((_, i) => (
       <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl">
         <Skeleton className="w-12 h-12 rounded-xl flex-shrink-0" />
         <div className="flex-1 min-w-0">
