@@ -37,7 +37,17 @@ function hasActiveProcessing(s: StoredEQ) {
 
 /**
  * Mount once at app root. Connects the engine to the live <audio> element
- * and re-applies persisted EQ settings whenever the source changes.
+ * and re-applies persisted EQ settings whenever:
+ *  - the audio element instance changes (crossfade swap)
+ *  - its `src` attribute changes (next song / queue advance)
+ *  - any of: loadstart, loadedmetadata, canplay, playing, emptied fire
+ *  - the user changes EQ in the modal (uf-eq-changed event)
+ *
+ * Critical: we ALWAYS re-push setBands/setReverb/etc on every reapply, even
+ * if the engine chain didn't need a rebuild — otherwise a silent disconnect
+ * (e.g. AudioContext suspend → resume on Android) would leave EQ neutralised
+ * until the user toggled it again. EQ should ONLY go off when the user
+ * explicitly disables it.
  */
 export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
   const { isPremium, isLoading } = usePremium();
@@ -50,85 +60,112 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
       catch { return false; }
     })();
 
-    // NOTE: premium status flows through the runtime flag in
-    // src/lib/premiumState.ts (set by usePremium after a server fetch).
-    // We intentionally no longer write `uf_audio_fx_allowed` to
-    // localStorage — that key was trivially editable from DevTools.
+    let lastAppliedSrc = '';
+    let reapplyTimer: number | null = null;
 
-    // Track whether processed chain is "wanted" so we can switch to direct
-    // when backgrounded (to avoid Android throttling glitches) and restore
-    // when foregrounded.
-    let processedWanted = false;
-
-    const reapply = () => {
+    const doReapply = () => {
       // APK priority: Spotify-like background reliability beats Web Audio DSP.
-      // Android can suspend AudioContext while the app is minimized; keeping the
-      // stream on the native <audio> path avoids background pause/error loops.
+      // Android can suspend AudioContext while the app is minimized; keeping
+      // the stream on the native <audio> path avoids background pause loops.
       if (isNativeApk) {
         bypassAudioElement(audioElement);
         audioElement.playbackRate = 1;
-        processedWanted = false;
         return;
       }
 
-      // Browser EQ is available to ALL users (not just premium). On APK we
-      // still bypass for background-playback reliability above.
-      if (false && !isPremium) {
-        bypassAudioElement(audioElement);
-        audioElement.playbackRate = 1;
-        processedWanted = false;
-        return;
-      }
-
+      // Browser EQ is available to ALL users.
       const s = readStored();
       if (!hasActiveProcessing(s)) {
         bypassAudioElement(audioElement);
         audioElement.playbackRate = 1;
-        processedWanted = false;
         return;
       }
 
-      processedWanted = true;
-
-      // KEEP EQ CONNECTED across track changes and backgrounding on browser.
-      // (APK path already returned above for background-playback reliability.)
+      // (Re)connect the processed chain. connectAudioElement is idempotent
+      // when the element + source signature already match.
       const ok = connectAudioElement(audioElement);
-      if (!ok) return;
-      setBands(s.bands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s.bassBoost ?? 0);
-      setReverb(s.reverb ?? 0);
-      engineSetStudioSpace(s.studioSpace ?? 'off');
-      setSpatial(!!s.spatialAudio);
-      setLateNight(!!s.lateNight);
+      // Even if ok=false (e.g. CORS-tainted stream → fell back to direct),
+      // still apply playbackRate. We DON'T early-return — we ALWAYS push
+      // the persisted values so any silent disconnect heals immediately.
+      if (ok) {
+        setBands(s.bands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s.bassBoost ?? 0);
+        setReverb(s.reverb ?? 0);
+        engineSetStudioSpace(s.studioSpace ?? 'off');
+        setSpatial(!!s.spatialAudio);
+        setLateNight(!!s.lateNight);
+      }
       if (typeof s.playbackSpeed === 'number') audioElement.playbackRate = s.playbackSpeed;
+      lastAppliedSrc = audioElement.currentSrc || audioElement.src || '';
+    };
+
+    // Coalesce burst events (loadstart + loadedmetadata + canplay all fire
+    // within ms of each other on a track change) into a single rebuild.
+    const reapply = () => {
+      if (reapplyTimer != null) return;
+      reapplyTimer = window.setTimeout(() => {
+        reapplyTimer = null;
+        doReapply();
+      }, 30);
+    };
+
+    // Force immediate reapply when src actually changes — catches the
+    // crossfade swap case where the audio element is already past canplay
+    // by the time we re-attach listeners.
+    const reapplyIfSrcChanged = () => {
+      const now = audioElement.currentSrc || audioElement.src || '';
+      if (now && now !== lastAppliedSrc) reapply();
     };
 
     // Resume the AudioContext on first user gesture / play
-    const onPlay = () => resume();
+    const onPlay = () => { resume(); reapplyIfSrcChanged(); };
+    const onPlaying = () => { resume(); reapplyIfSrcChanged(); };
     const onPointer = () => resume();
 
     // Background → DO NOT swap chains. Disconnecting/reconnecting the
     // MediaElementSource mid-playback causes an audible pop and on Android
-    // WebView can stall the stream entirely (suspends AudioContext). Just
-    // resume the context when we come back to the foreground.
+    // WebView can stall the stream entirely. Just resume on foreground and
+    // re-push EQ values in case the context was suspended.
     const onVisibility = () => {
       if (document.visibilityState !== 'hidden') {
         resume();
+        reapply();
       }
     };
 
-    if (!isLoading) reapply();
+    // User toggled EQ in modal — apply right now.
+    const onEqChanged = () => reapply();
+
+    // Watch for programmatic src changes (PlayerContext sets audio.src on
+    // every track change). MutationObserver fires synchronously and BEFORE
+    // any media events, so EQ is wired up the instant the new song loads.
+    const srcObserver = new MutationObserver(() => reapply());
+    srcObserver.observe(audioElement, { attributes: true, attributeFilter: ['src'] });
+
+    if (!isLoading) doReapply();
+    audioElement.addEventListener('loadstart', reapply);
     audioElement.addEventListener('loadedmetadata', reapply);
     audioElement.addEventListener('canplay', reapply);
+    audioElement.addEventListener('emptied', reapply);
+    audioElement.addEventListener('durationchange', reapplyIfSrcChanged);
     audioElement.addEventListener('play', onPlay);
+    audioElement.addEventListener('playing', onPlaying);
     document.addEventListener('pointerdown', onPointer, { once: true });
     document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('uf-eq-changed', onEqChanged);
 
     return () => {
+      if (reapplyTimer != null) clearTimeout(reapplyTimer);
+      srcObserver.disconnect();
+      audioElement.removeEventListener('loadstart', reapply);
       audioElement.removeEventListener('loadedmetadata', reapply);
       audioElement.removeEventListener('canplay', reapply);
+      audioElement.removeEventListener('emptied', reapply);
+      audioElement.removeEventListener('durationchange', reapplyIfSrcChanged);
       audioElement.removeEventListener('play', onPlay);
+      audioElement.removeEventListener('playing', onPlaying);
       document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('uf-eq-changed', onEqChanged);
     };
   }, [audioElement, isPremium, isLoading]);
 }
