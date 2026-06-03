@@ -9,16 +9,13 @@ interface Props {
 /**
  * Lock-screen background renderer.
  *
- * Performance rules (per project memory):
- *  - Heavy backdrop blur is allowed ONLY when the layer behind it is static.
- *  - All motion is CSS keyframes on transform/opacity — no JS RAF loops.
- *  - No audio reactivity, no parallax, no canvas.
+ * Performance rules:
+ *  - Heavy blur is allowed ONLY when the layer behind it is static.
+ *  - All motion uses CSS keyframes on transform/opacity — no JS RAF, no canvas.
+ *  - Never stack backdrop-blur over an animated layer (causes per-frame resampling).
  *
- * Themes:
- *   classic — iOS-style: blurred cover + dark scrim + soft rose bloom (no motion)
- *   aurora  — two drifting rose/violet blobs over a black field
- *   waves   — layered slow-flowing SVG sine waves
- *   glow    — pulsing radial rose ember
+ * `classic` is the calm iOS-style purple lock screen — no animation, pure GPU
+ * composite of a heavily blurred album cover + violet scrim.
  */
 const LockScreenBackground = ({ themeId = 'classic', coverUrl }: Props) => {
   if (themeId === 'aurora') {
@@ -42,11 +39,11 @@ const LockScreenBackground = ({ themeId = 'classic', coverUrl }: Props) => {
         >
           <defs>
             <linearGradient id="lockfx-wave-1" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#ff2d55" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="#ff2d55" stopOpacity="0.3" />
               <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.0" />
             </linearGradient>
             <linearGradient id="lockfx-wave-2" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.45" />
+              <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.4" />
               <stop offset="100%" stopColor="#ff2d55" stopOpacity="0.0" />
             </linearGradient>
           </defs>
@@ -75,30 +72,41 @@ const LockScreenBackground = ({ themeId = 'classic', coverUrl }: Props) => {
     );
   }
 
-  // classic — calm blurred cover + dark scrim + static rose bloom
+  // classic — iOS-style purple lock screen.
+  // Static blurred cover (or violet fallback) + heavy violet scrim.
+  // Zero animation; entire stack is GPU-composited.
   return (
-    <div className="absolute inset-0 overflow-hidden bg-black">
+    <div
+      className="absolute inset-0 overflow-hidden"
+      style={{ background: 'linear-gradient(180deg, #2a1248 0%, #170828 60%, #0a0414 100%)' }}
+    >
       {coverUrl && (
         <img
           src={coverUrl}
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover scale-110"
+          className="absolute inset-0 w-full h-full object-cover scale-125 opacity-70"
           draggable={false}
+          style={{ filter: 'blur(90px) saturate(1.2)' }}
         />
       )}
-      <div className="absolute inset-0 backdrop-blur-[80px] bg-black/55" />
+      {/* Violet wash */}
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 50% 30%, rgba(255,45,85,0.18), transparent 60%)',
+            'radial-gradient(120% 80% at 50% 35%, rgba(80,30,140,0.55), transparent 70%)',
         }}
       />
+      {/* Top/bottom darkening for legibility */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80"
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0.7) 100%)',
+        }}
       />
     </div>
   );
