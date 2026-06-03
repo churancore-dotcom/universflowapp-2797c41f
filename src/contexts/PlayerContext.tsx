@@ -360,6 +360,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     audio.preload = 'auto';
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('webkit-playsinline', 'true');
+    // iOS Safari + AirPlay: allow background/lockscreen playback handoff
+    audio.setAttribute('x-webkit-airplay', 'allow');
     
     audioRef.current = audio;
     setAudioElement(audio);
@@ -370,6 +372,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     nextAudio.preload = 'auto';
     nextAudio.setAttribute('playsinline', 'true');
     nextAudio.setAttribute('webkit-playsinline', 'true');
+    nextAudio.setAttribute('x-webkit-airplay', 'allow');
     nextAudioRef.current = nextAudio;
 
     // Track playing state before going to background
