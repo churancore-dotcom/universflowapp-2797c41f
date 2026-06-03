@@ -188,16 +188,16 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
 
             <div className="min-h-[12px]" />
 
-            {/* Now Playing Widget - iOS Dynamic Island inspired */}
+            {/* Now Playing Widget - solid translucent (no backdrop-blur over animated themes) */}
             <motion.div
               className="mx-4 mb-3 rounded-[22px] overflow-hidden"
-              style={{ 
-                background: 'rgba(255,255,255,0.12)',
-                backdropFilter: 'blur(40px)',
-                WebkitBackdropFilter: 'blur(40px)',
+              style={{
+                background: 'rgba(20,20,28,0.72)',
+                border: '0.5px solid rgba(255,255,255,0.08)',
               }}
               initial={{ opacity: 0, y: 50, scale: 0.85 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
+
               exit={{ opacity: 0, y: 50, scale: 0.85 }}
               transition={{ delay: 0.2, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
             >
