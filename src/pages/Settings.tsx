@@ -14,13 +14,8 @@ import EqualizerModal from '@/components/EqualizerModal';
 
 import { applyTheme, type ThemeMode } from '@/lib/themeBoot';
 import SEOHead from '@/components/SEOHead';
-import {
-  LOCK_SCREEN_THEMES,
-  getStoredLockScreenTheme,
-  setStoredLockScreenTheme,
-  type LockScreenThemeId,
-} from '@/lib/lockScreenTheme';
-import { Lock } from 'lucide-react';
+import { applyTheme as _noop } from '@/lib/themeBoot';
+
 
 const EQ_KEY = 'eq_settings';
 
