@@ -83,14 +83,12 @@ function ensureCtx(): AudioContext | null {
   if (!AC) return null;
   try {
     const ctx = new AC({ latencyHint: 'playback' });
-    // Auto-resume if the OS suspends the context (common on Android background)
+    // Auto-resume on suspension. Try unconditionally so background tabs that
+    // are still permitted to play audio (e.g. PWA with MediaSession active)
+    // recover instantly. Browsers that block resume while hidden just reject.
     ctx.addEventListener?.('statechange', () => {
       if (ctx.state === 'suspended') {
-        // Only auto-resume when the page is visible; otherwise let the
-        // visibility handler restore it on foreground.
-        if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-          ctx.resume().catch(() => {});
-        }
+        ctx.resume().catch(() => {});
       }
     });
     engine.ctx = ctx;
