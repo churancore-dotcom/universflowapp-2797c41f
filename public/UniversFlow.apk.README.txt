@@ -1,7 +1,0 @@
-Drop the latest signed APK into this folder as:
-
-  public/UniversFlow.apk
-
-The /get landing page and homepage redirect link to /UniversFlow.apk.
-The GitHub Actions workflow builds "Univers Flow.apk" — rename it to
-"UniversFlow.apk" (no space) before placing it here, then publish.
