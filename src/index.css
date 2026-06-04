@@ -752,9 +752,21 @@ html.light [style*="boxShadow: 0 6px 24px rgba(0,0,0,0.4)"] {
   50%      { opacity: 1; }
 }
 
+/* Vinyl theme — spinning disc behind the cover. Pure transform animation. */
+@keyframes lockfxSpin {
+  from { transform: translateZ(0) translateY(-50%) rotate(0deg); }
+  to   { transform: translateZ(0) translateY(-50%) rotate(360deg); }
+}
+
+@keyframes lockfxFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 0.7; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lockfx-aurora-a, .lockfx-aurora-b,
   .lockfx-wave-path-1, .lockfx-wave-path-2,
   .lockfx-glow { animation: none !important; }
 }
+
 
