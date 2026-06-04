@@ -1,3 +1,4 @@
+import { memo, useEffect, useState } from 'react';
 import type { LockScreenThemeId } from '@/lib/lockScreenTheme';
 
 interface Props {
@@ -7,17 +8,81 @@ interface Props {
 }
 
 /**
- * Lock-screen background renderer.
- *
- * Performance rules:
- *  - Heavy blur is allowed ONLY when the layer behind it is static.
- *  - All motion uses CSS keyframes on transform/opacity — no JS RAF, no canvas.
- *  - Never stack backdrop-blur over an animated layer (causes per-frame resampling).
- *
- * `classic` is the calm iOS-style purple lock screen — no animation, pure GPU
- * composite of a heavily blurred album cover + violet scrim.
+ * Module-level decoded-image cache. Browsers already cache the byte response,
+ * but creating a fresh <img> on every track change re-decodes + re-rasterises
+ * the heavy 90px blur. Preloading + reusing the same <img>.src across mounts
+ * keeps the blurred layer warm on the GPU and removes the per-track hiccup.
  */
-const LockScreenBackground = ({ themeId = 'classic', coverUrl }: Props) => {
+const decodedCache = new Map<string, Promise<void>>();
+function preloadCover(url: string) {
+  if (decodedCache.has(url)) return decodedCache.get(url)!;
+  const p = new Promise<void>((resolve) => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.crossOrigin = 'anonymous';
+    img.onload = img.onerror = () => resolve();
+    img.src = url;
+  });
+  decodedCache.set(url, p);
+  return p;
+}
+
+/**
+ * Persistent blurred cover layer. Renders TWO stacked covers and crossfades
+ * between them on URL change so the GPU never sees a blank → re-blur frame.
+ */
+const CachedBlurCover = memo(({ url }: { url: string | null | undefined }) => {
+  const [current, setCurrent] = useState<string | null>(url || null);
+  const [previous, setPrevious] = useState<string | null>(null);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    if (!url || url === current) return;
+    let cancelled = false;
+    preloadCover(url).then(() => {
+      if (cancelled) return;
+      setPrevious(current);
+      setCurrent(url);
+      setFading(true);
+      const t = window.setTimeout(() => setFading(false), 450);
+      return () => window.clearTimeout(t);
+    });
+    return () => { cancelled = true; };
+  }, [url, current]);
+
+  return (
+    <>
+      {previous && fading && (
+        <img
+          src={previous}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover scale-125 opacity-70 transition-opacity duration-500"
+          style={{ filter: 'blur(90px) saturate(1.2)', willChange: 'opacity', transform: 'translateZ(0) scale(1.25)' }}
+          draggable={false}
+        />
+      )}
+      {current && (
+        <img
+          src={current}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover scale-125 opacity-70"
+          style={{
+            filter: 'blur(90px) saturate(1.2)',
+            willChange: 'filter',
+            transform: 'translateZ(0) scale(1.25)',
+            animation: fading ? 'lockfxFadeIn 450ms ease-out' : undefined,
+          }}
+          draggable={false}
+        />
+      )}
+    </>
+  );
+});
+CachedBlurCover.displayName = 'CachedBlurCover';
+
+const LockScreenBackground = ({ themeId = 'vinyl', coverUrl }: Props) => {
   if (themeId === 'aurora') {
     return (
       <div className="absolute inset-0 overflow-hidden bg-black">
@@ -63,43 +128,21 @@ const LockScreenBackground = ({ themeId = 'classic', coverUrl }: Props) => {
     );
   }
 
-  if (themeId === 'glow') {
-    return (
-      <div className="absolute inset-0 overflow-hidden bg-black">
-        <div className="lockfx-glow" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/85" />
-      </div>
-    );
-  }
+  // vinyl (default) and classic both use the cached blurred-cover layer.
+  // The vinyl theme tints toward deep blue (matches screenshot), classic stays violet.
+  const bgGradient =
+    themeId === 'vinyl'
+      ? 'linear-gradient(180deg, #142a5e 0%, #0a1430 60%, #060818 100%)'
+      : 'linear-gradient(180deg, #2a1248 0%, #170828 60%, #0a0414 100%)';
+  const tint =
+    themeId === 'vinyl'
+      ? 'radial-gradient(120% 80% at 50% 35%, rgba(40,80,200,0.42), transparent 70%)'
+      : 'radial-gradient(120% 80% at 50% 35%, rgba(80,30,140,0.55), transparent 70%)';
 
-  // classic — iOS-style purple lock screen.
-  // Static blurred cover (or violet fallback) + heavy violet scrim.
-  // Zero animation; entire stack is GPU-composited.
   return (
-    <div
-      className="absolute inset-0 overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, #2a1248 0%, #170828 60%, #0a0414 100%)' }}
-    >
-      {coverUrl && (
-        <img
-          src={coverUrl}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 w-full h-full object-cover scale-125 opacity-70"
-          draggable={false}
-          style={{ filter: 'blur(90px) saturate(1.2)' }}
-        />
-      )}
-      {/* Violet wash */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(120% 80% at 50% 35%, rgba(80,30,140,0.55), transparent 70%)',
-        }}
-      />
-      {/* Top/bottom darkening for legibility */}
+    <div className="absolute inset-0 overflow-hidden" style={{ background: bgGradient }}>
+      <CachedBlurCover url={coverUrl} />
+      <div aria-hidden className="absolute inset-0" style={{ background: tint }} />
       <div
         aria-hidden
         className="absolute inset-0"
