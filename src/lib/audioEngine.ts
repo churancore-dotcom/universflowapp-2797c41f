@@ -402,6 +402,12 @@ export function connectAudioElement(el: HTMLAudioElement): boolean {
     // MediaElementSource for unsafe remote streams. Once created, audio is
     // routed through AudioContext; Android often suspends that in background,
     // causing lag/pause. Leave the <audio> element on its native direct path.
+    const existingSource = sourceCache.get(el);
+    if (existingSource) {
+      // If this element was already connected before, disconnectAll() has just
+      // detached it from destination. Reconnect direct so audio never goes mute.
+      buildDirectChain(existingSource, ctx);
+    }
     setMode('direct');
     return false;
   }
