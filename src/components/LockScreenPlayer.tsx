@@ -4,19 +4,11 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { usePlayerProgress } from '@/lib/playerProgressStore';
 import { Slider } from '@/components/ui/slider';
 import { setLockscreenOpen } from '@/lib/lockscreenState';
-import { usePremium } from '@/hooks/usePremium';
-import {
-  useLockScreenTheme,
-  setStoredLockScreenTheme,
-  LOCK_SCREEN_THEMES,
-  type LockScreenThemeId,
-} from '@/lib/lockScreenTheme';
 import LockScreenBackground from '@/components/LockScreenBackground';
 import LockScreenArtwork from '@/components/LockScreenArtwork';
-import { toast } from 'sonner';
 import {
   Play, Pause, SkipBack, SkipForward, Music, Volume2, VolumeX,
-  Shuffle, Repeat, Repeat1, Lock, MoreHorizontal, Check, Crown
+  Shuffle, Repeat, Repeat1, Lock
 } from 'lucide-react';
 
 
@@ -77,24 +69,10 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
     setVolume, toggleShuffle, toggleRepeat, seek,
   } = usePlayer();
   const { progress, duration } = usePlayerProgress();
-  const { isPremium } = usePremium();
-  const themeId = useLockScreenTheme(isPremium);
 
   const [time, setTime] = useState(new Date());
-  const [showThemePicker, setShowThemePicker] = useState(false);
   const dragY = useMotionValue(0);
   const dragOpacity = useTransform(dragY, [-200, 0], [0, 1]);
-
-  const handlePickTheme = (id: LockScreenThemeId, locked: boolean) => {
-    if (locked) {
-      toast.info('Animated lock screens are a Premium perk');
-      setShowThemePicker(false);
-      return;
-    }
-    setStoredLockScreenTheme(id);
-    setShowThemePicker(false);
-  };
-
 
   // Keep screen awake
   useWakeLock(isOpen);
@@ -130,9 +108,8 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
         >
-          {/* Background: selected lock screen theme (animated for premium) */}
+          {/* Background: single real iOS-style animated lock screen */}
           <LockScreenBackground
-            themeId={themeId}
             coverUrl={currentSong.cover_url}
             isPlaying={isPlaying}
           />
@@ -149,13 +126,7 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
             {/* Status bar area */}
             <div className="flex items-center justify-between px-6 pt-[env(safe-area-inset-top,12px)] pb-1">
               <Lock className="w-3.5 h-3.5 text-white/40" />
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowThemePicker(v => !v); }}
-                className="w-9 h-9 -mr-2 flex items-center justify-center rounded-full active:bg-white/10"
-                aria-label="Change lock screen style"
-              >
-                <MoreHorizontal className="w-5 h-5 text-white/70" />
-              </button>
+              <div className="w-3.5 h-3.5" aria-hidden />
             </div>
 
 
@@ -179,7 +150,6 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
 
             {/* Animated hero artwork — variant determined by selected lock-screen theme */}
             <LockScreenArtwork
-              themeId={themeId}
               coverUrl={currentSong.cover_url}
               title={currentSong.title}
               songId={currentSong.id}
