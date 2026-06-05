@@ -7,7 +7,6 @@ import { iosSpring } from '@/lib/animations';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
 import {
-  bypassAudioElement,
   connectAudioElement,
   setBands as engineSetBands,
   setReverb as engineSetReverb,
@@ -139,34 +138,28 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
   const [lateNight, setLateNight] = useState<boolean>(saved?.lateNight ?? false);
   const [activePreset, setActivePreset] = useState<string>(saved?.activePreset ?? 'flat');
 
-  // Only route through Web Audio while EQ/effects are active. This prevents
-  // background/native playback from fighting expensive filters when EQ is off.
+  // Keep the WebAudio graph attached for every normal song. Flat settings are
+  // neutral, but staying connected makes presets/sliders and next-song changes
+  // apply immediately instead of falling into direct mode.
   useEffect(() => {
     if (!audioElement) return;
-    const active = hasActiveProcessing({ bands, bassBoost, reverb, playbackSpeed, spatialAudio, studioSpace, lateNight });
-    if (active) {
-      engineResume();
-      connectAudioElement(audioElement);
+    engineResume();
+    const connected = connectAudioElement(audioElement);
+    if (connected) {
       engineSetBands(bands.map(b => b.gain), bassBoost);
-      // When a Studio Space is active, IT owns wet/dry. Otherwise the reverb slider does.
       if (studioSpace === 'off') engineSetReverb(reverb);
       engineSetStudioSpace(studioSpace);
       engineSetSpatial(spatialAudio);
       engineSetLateNight(lateNight);
-    } else {
-      bypassAudioElement(audioElement);
-      engineSetSpatial(false);
-      engineSetLateNight(false);
-      audioElement.playbackRate = 1;
     }
+    audioElement.playbackRate = playbackSpeed;
   }, [audioElement, currentSong?.id, bands, bassBoost, reverb, playbackSpeed, spatialAudio, studioSpace, lateNight]);
 
   // Push EQ band changes to the engine (smoothed, never rebuilds graph)
   useEffect(() => {
-    if (!audioElement || !hasActiveProcessing({ bands, bassBoost, reverb, playbackSpeed, spatialAudio, studioSpace, lateNight })) return;
+    if (!audioElement) return;
     engineResume();
-    connectAudioElement(audioElement);
-    engineSetBands(bands.map(b => b.gain), bassBoost);
+    if (connectAudioElement(audioElement)) engineSetBands(bands.map(b => b.gain), bassBoost);
   }, [bands, bassBoost, audioElement, reverb, playbackSpeed, spatialAudio, studioSpace, lateNight]);
 
   useEffect(() => {
