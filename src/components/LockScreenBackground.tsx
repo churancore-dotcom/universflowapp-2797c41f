@@ -83,10 +83,14 @@ CachedBlurCover.displayName = 'CachedBlurCover';
 const LockScreenBackground = ({ coverUrl, isPlaying }: Props) => {
   const bgGradient = 'linear-gradient(180deg, hsl(220 22% 18%) 0%, hsl(222 28% 10%) 56%, hsl(228 34% 5%) 100%)';
 
+  const playState = isPlaying ? 'running' : 'paused';
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: bgGradient }}>
       <CachedBlurCover url={coverUrl} />
-      <div className="lockfx-ios-sheen" aria-hidden style={{ animationPlayState: isPlaying ? 'running' : 'paused' }} />
+      <div className="lockfx-ios-orb" aria-hidden style={{ animationPlayState: playState }} />
+      <div className="lockfx-ios-orb-2" aria-hidden style={{ animationPlayState: playState }} />
+      <div className="lockfx-ios-beam" aria-hidden style={{ animationPlayState: playState }} />
+      <div className="lockfx-ios-sheen" aria-hidden style={{ animationPlayState: playState }} />
       <div className="lockfx-ios-grain" aria-hidden />
       <div
         aria-hidden

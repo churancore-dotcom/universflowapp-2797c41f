@@ -697,7 +697,7 @@ html.light [style*="boxShadow: 0 6px 24px rgba(0,0,0,0.4)"] {
   50% { background-position: 100% 50%; }
 }
 
-/* ===== Lock-screen FX: single iOS-style animated background ===== */
+/* ===== Lock-screen FX: real iOS-style animated background ===== */
 @keyframes lockfxFadeIn {
   from { opacity: 0; }
   to   { opacity: 0.7; }
@@ -707,30 +707,93 @@ html.light [style*="boxShadow: 0 6px 24px rgba(0,0,0,0.4)"] {
   position: absolute;
   inset: -16%;
   background:
-    radial-gradient(circle at 24% 18%, hsl(0 0% 100% / 0.16), transparent 32%),
-    radial-gradient(circle at 76% 72%, hsl(0 0% 100% / 0.08), transparent 34%);
+    radial-gradient(circle at 24% 18%, hsl(0 0% 100% / 0.18), transparent 34%),
+    radial-gradient(circle at 76% 72%, hsl(0 0% 100% / 0.10), transparent 36%);
   will-change: transform, opacity;
   transform: translateZ(0);
-  animation: lockfxIosSheen 16s ease-in-out infinite alternate;
+  animation: lockfxIosSheen 14s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
 }
 
 .lockfx-ios-grain {
   position: absolute;
   inset: 0;
-  opacity: 0.12;
+  opacity: 0.14;
   background-image:
-    linear-gradient(115deg, transparent 0%, hsl(0 0% 100% / 0.08) 46%, transparent 54%),
-    radial-gradient(circle at 50% 20%, hsl(0 0% 100% / 0.08), transparent 34%);
+    linear-gradient(115deg, transparent 0%, hsl(0 0% 100% / 0.10) 46%, transparent 54%),
+    radial-gradient(circle at 50% 20%, hsl(0 0% 100% / 0.10), transparent 34%);
   transform: translateZ(0);
+}
+
+/* Soft drifting aurora orbs — pulses + drifts like iOS dynamic wallpaper */
+.lockfx-ios-orb {
+  position: absolute;
+  width: 70vw; height: 70vw;
+  max-width: 520px; max-height: 520px;
+  top: 8%; left: 50%;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.55;
+  transform: translate3d(-50%, 0, 0);
+  background: radial-gradient(circle at 50% 50%, hsl(0 0% 100% / 0.35), transparent 60%);
+  mix-blend-mode: screen;
+  animation: lockfxOrbDrift 18s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.lockfx-ios-orb-2 {
+  position: absolute;
+  width: 60vw; height: 60vw;
+  max-width: 460px; max-height: 460px;
+  bottom: 6%; right: -10%;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.42;
+  background: radial-gradient(circle at 50% 50%, hsl(0 0% 100% / 0.28), transparent 65%);
+  mix-blend-mode: screen;
+  animation: lockfxOrbDrift2 22s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+/* Slow diagonal light beam sweep */
+.lockfx-ios-beam {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(115deg, transparent 40%, hsl(0 0% 100% / 0.06) 50%, transparent 60%);
+  animation: lockfxBeam 11s ease-in-out infinite;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
 }
 
 @keyframes lockfxIosSheen {
   0%   { transform: translate3d(-2%, -1%, 0) scale(1); opacity: 0.55; }
-  100% { transform: translate3d(2%, 2%, 0) scale(1.05); opacity: 0.85; }
+  100% { transform: translate3d(2%, 2%, 0) scale(1.05); opacity: 0.9; }
+}
+
+@keyframes lockfxOrbDrift {
+  0%   { transform: translate3d(-55%, -2%, 0) scale(1); opacity: 0.45; }
+  50%  { transform: translate3d(-45%, 4%, 0) scale(1.08); opacity: 0.65; }
+  100% { transform: translate3d(-50%, -4%, 0) scale(1.02); opacity: 0.5; }
+}
+
+@keyframes lockfxOrbDrift2 {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.32; }
+  50%  { transform: translate3d(-6%, -4%, 0) scale(1.1); opacity: 0.52; }
+  100% { transform: translate3d(4%, 2%, 0) scale(1.04); opacity: 0.4; }
+}
+
+@keyframes lockfxBeam {
+  0%   { transform: translate3d(-30%, 0, 0); opacity: 0; }
+  40%  { opacity: 0.6; }
+  100% { transform: translate3d(30%, 0, 0); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lockfx-ios-sheen { animation: none !important; }
+  .lockfx-ios-sheen,
+  .lockfx-ios-orb,
+  .lockfx-ios-orb-2,
+  .lockfx-ios-beam { animation: none !important; }
 }
+
 
 
