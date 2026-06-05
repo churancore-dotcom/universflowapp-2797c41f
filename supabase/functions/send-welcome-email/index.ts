@@ -64,6 +64,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Per-email throttle: at most 1 welcome email every 5 minutes, max 3 total.
+    const throttleRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/welcome_email_sends?email=eq.${encodeURIComponent(email)}&select=last_sent_at,send_count`,
+      { headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` } },
+    );
+    const throttleRows = throttleRes.ok ? await throttleRes.json().catch(() => []) : [];
+    const prev = Array.isArray(throttleRows) && throttleRows[0];
+    if (prev) {
+      const last = new Date(prev.last_sent_at).getTime();
+      if (Date.now() - last < 5 * 60 * 1000 || (prev.send_count ?? 0) >= 3) {
+        return new Response(JSON.stringify({ success: true, throttled: true }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const safeName = escape(username);
     const html = `<!doctype html><html><body style="margin:0;padding:0;background:#0a0a0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#fff">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px">
@@ -129,10 +145,27 @@ Deno.serve(async (req) => {
 
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
-      return new Response(JSON.stringify({ error: data?.message || 'Resend failed', status: r.status }), {
+      return new Response(JSON.stringify({ error: 'Unable to send welcome email.' }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Record the send for throttling.
+    await fetch(`${SUPABASE_URL}/rest/v1/welcome_email_sends`, {
+      method: 'POST',
+      headers: {
+        apikey: SERVICE_ROLE,
+        Authorization: `Bearer ${SERVICE_ROLE}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        email,
+        last_sent_at: new Date().toISOString(),
+        send_count: ((prev?.send_count ?? 0) + 1),
+      }),
+    }).catch(() => {});
+
     return new Response(JSON.stringify({ success: true, id: data?.id ?? null }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
