@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { bypassAudioElement, connectAudioElement, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe, type StudioSpaceId } from '@/lib/audioEngine';
+import { connectAudioElement, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe, type StudioSpaceId } from '@/lib/audioEngine';
 
 const STORAGE_KEY = 'eq_settings';
 
@@ -19,18 +19,6 @@ function readStored(): StoredEQ {
     if (raw) return JSON.parse(raw);
   } catch {}
   return {};
-}
-
-function hasActiveProcessing(s: StoredEQ) {
-  return Boolean(
-    s.bands?.some((gain) => Math.abs(gain) >= 0.5) ||
-    (s.bassBoost ?? 0) > 0 ||
-    (s.reverb ?? 0) > 0 ||
-    s.spatialAudio ||
-    (s.studioSpace && s.studioSpace !== 'off') ||
-    s.lateNight ||
-    (typeof s.playbackSpeed === 'number' && s.playbackSpeed !== 1)
-  );
 }
 
 /**
@@ -55,21 +43,12 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     let reapplyTimer: number | null = null;
 
     const doReapply = () => {
-      // EQ is applied to every CORS-safe/proxied HTMLAudio stream. YouTube
-      // iframe fallback cannot be WebAudio-processed, but every normal song can.
       const s = readStored();
-      if (!hasActiveProcessing(s)) {
-        bypassAudioElement(audioElement);
-        audioElement.playbackRate = 1;
-        return;
-      }
-
-      // (Re)connect the processed chain. connectAudioElement is idempotent
-      // when the element + source signature already match.
+      // Always keep normal HTMLAudio songs attached to the WebAudio graph.
+      // Flat EQ still sounds neutral, but the graph remains ready so the next
+      // song and the next slider/preset change apply instantly without a
+      // silent "direct mode" gap.
       const ok = connectAudioElement(audioElement);
-      // Even if ok=false (e.g. CORS-tainted stream → fell back to direct),
-      // still apply playbackRate. We DON'T early-return — we ALWAYS push
-      // the persisted values so any silent disconnect heals immediately.
       if (ok) {
         setBands(s.bands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s.bassBoost ?? 0);
         setReverb(s.reverb ?? 0);
