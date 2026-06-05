@@ -250,7 +250,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
                 <h2 className="text-lg font-semibold">Equalizer</h2>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   {isConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
-                  {isConnected ? 'Connected' : currentSong ? 'This stream does not expose safe audio processing' : 'Play a song to connect'}
+                  {isConnected ? 'Connected' : currentSong ? 'Connecting to current song…' : 'Play a song to connect'}
                 </p>
               </div>
             </div>
@@ -265,7 +265,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
           </div>
 
           <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
-              {!isConnected && currentSong && (
+              {!isConnected && currentSong && engineMode === 'unsupported' && (
                 <div
                   className="rounded-2xl px-4 py-3 text-xs text-muted-foreground"
                   style={{
@@ -273,7 +273,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
                     border: '1px solid rgba(255, 255, 255, 0.06)',
                   }}
                 >
-                  Equalizer settings are saved, but this specific stream is playing in direct mode to avoid broken vocals or silent playback.
+                  Equalizer settings are saved. This device/browser could not open WebAudio processing for the current stream.
                 </div>
               )}
 
