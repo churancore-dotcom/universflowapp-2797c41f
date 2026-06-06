@@ -377,10 +377,10 @@ const EmptyState = memo(() => (
     initial={{ opacity: 0, y: 14 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-    className="space-y-5"
+    className="space-y-5 pb-8"
   >
     <section
-      className="relative h-[520px] overflow-hidden rounded-[2rem] border border-border/60 bg-card"
+      className="relative h-[68dvh] min-h-[500px] overflow-hidden rounded-[2rem] border border-border/60 bg-card"
       style={{
         boxShadow: '0 30px 80px -38px hsl(var(--primary) / 0.55)',
         background: 'radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.32), transparent 46%), linear-gradient(180deg, hsl(var(--secondary) / 0.85), hsl(var(--background)))',
