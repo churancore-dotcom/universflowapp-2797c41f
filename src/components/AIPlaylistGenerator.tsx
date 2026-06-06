@@ -368,7 +368,7 @@ const AIPlaylistGenerator = memo(({ isOpen, onClose, onPlaylistCreated }: AIPlay
                 </div>
               ) : seeds.length === 0 ? (
                 <div className="text-sm text-muted-foreground py-6 text-center">
-                  Play a few catalog songs first, then come back to start a mix.
+                  No songs available yet. Play or index a few tracks, then try again.
                 </div>
               ) : (
                 <div className="space-y-2">
