@@ -13,6 +13,7 @@ import ReviewModal from '@/components/ReviewModal';
 import ReviewsSheet from '@/components/ReviewsSheet';
 import { TabTransition } from '@/components/PageTransition';
 import EmailVerificationCard from '@/components/EmailVerificationCard';
+import RoseHero from '@/components/RoseHero';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
