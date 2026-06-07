@@ -289,8 +289,8 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
         <motion.div {...fadeUp(4)} className="bg-card rounded-3xl p-4 border border-white/5 flex flex-col h-32">
           <span className="text-white/40 text-[10px] font-extrabold uppercase tracking-[0.18em] mb-2">Moods</span>
           {moodList.length === 0 ? (
-            <button onClick={() => navigate('/search')} className="mt-auto flex items-center gap-2 text-left text-white/45 text-[11px]">
-              <Radio className="w-4 h-4" /> Discover by search
+            <button onClick={() => navigate('/search')} className="mt-auto text-left text-white/45 text-[11px]">
+              Discover by search
             </button>
           ) : (
             <div className="flex flex-wrap gap-1.5">
@@ -307,7 +307,7 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
           <motion.button {...fadeUp(5)} onClick={() => playFromTile(newRelease)} className="rounded-3xl p-4 border border-white/5 flex flex-col h-32 text-left relative overflow-hidden active:scale-[0.97] transition-transform bg-card">
             <div className="flex justify-between items-start">
               <span className="text-[hsl(18_100%_82%)] text-[10px] font-extrabold uppercase tracking-[0.18em]">New</span>
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span className="w-2 h-2 rounded-full bg-primary" aria-hidden />
             </div>
             <div className="mt-auto relative z-10">
               <p className="text-[12px] font-bold text-white truncate">{newRelease.title}</p>
