@@ -267,7 +267,7 @@ const PlaylistDetail = () => {
 
           {/* Action buttons */}
           <motion.div
-            className="flex items-center justify-center gap-4 mt-6"
+            className="flex items-center justify-center gap-4 mt-6 rounded-3xl bg-card border border-white/5 p-3"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...iosSpring, delay: 0.2 }}
@@ -284,11 +284,11 @@ const PlaylistDetail = () => {
             <motion.button
               onClick={handlePlayAll}
               aria-label="Play all"
-              className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
+              className="w-14 h-14 rounded-full uf-rose-gradient flex items-center justify-center"
               whileTap={{ scale: 0.9 }}
               disabled={songs.length === 0}
             >
-              <Play className="w-7 h-7 text-primary-foreground ml-1" fill="currentColor" />
+              <Play className="w-7 h-7 text-black ml-1" fill="currentColor" />
             </motion.button>
             {songs.length > 0 && (
               <DownloadAllButton songs={songs} />
@@ -299,7 +299,7 @@ const PlaylistDetail = () => {
           {isOwner && (
             <motion.button
               onClick={() => setShowAddSongs(true)}
-              className="w-full mt-6 py-3 rounded-xl bg-white/5 flex items-center justify-center gap-2 font-medium text-primary"
+              className="w-full mt-6 py-3 rounded-3xl bg-card border border-white/5 flex items-center justify-center gap-2 font-bold text-primary"
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -340,8 +340,8 @@ const PlaylistDetail = () => {
                 return (
                   <motion.div
                     key={song.playlist_song_id}
-                    className={`flex items-center gap-3 p-3 rounded-2xl transition-all ${
-                      isActive ? 'bg-primary/10' : 'active:bg-white/5'
+                    className={`flex items-center gap-3 p-3 rounded-3xl transition-all ${
+                      isActive ? 'bg-primary/10' : 'bg-card/40 active:bg-white/5'
                     } ${isRemoving ? 'opacity-50' : ''}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
