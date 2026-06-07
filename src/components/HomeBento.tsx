@@ -60,26 +60,26 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
 
   // Top artist: pick the first song with an artist photo, else first song's artist.
   const topArtist = useMemo(() => {
-    const withPhoto = songs.find((s) => s.artist_photo_url);
-    const seed = withPhoto || songs[0];
+    const withPhoto = pool.find((s) => s.artist_photo_url);
+    const seed = withPhoto || pool[0];
     if (!seed) return null;
     return {
       id: seed.artist_id,
       name: seed.artist,
       photo: seed.artist_photo_url || seed.cover_url,
     };
-  }, [songs]);
+  }, [pool]);
 
   const featured = useMemo(() => {
-    const album = songs.find((s) => s.album && s.cover_url);
+    const album = pool.find((s) => s.album && s.cover_url);
     return album;
-  }, [songs]);
+  }, [pool]);
 
   const handleResume = () => {
     if (!hero) return;
     triggerHaptic('selection');
     if (currentSong) return; // already playing, tap is no-op visual
-    playSong(hero, null, songs.slice(0, 30));
+    playSong(hero, null, pool.slice(0, 30));
   };
 
   const handleMood = (mood: string) => {
@@ -187,7 +187,7 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
                 key={s.id}
                 onClick={() => {
                   triggerHaptic('selection');
-                  playSong(s, null, songs);
+                  playSong(s, null, pool);
                 }}
                 className="w-full flex items-center gap-2 text-left active:opacity-70"
               >
@@ -216,7 +216,7 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
           {...fadeUp(3)}
           onClick={() => {
             triggerHaptic('selection');
-            const albumSongs = songs.filter((s) => s.album === featured.album);
+            const albumSongs = pool.filter((s) => s.album === featured.album);
             if (albumSongs[0]) playSong(albumSongs[0], null, albumSongs);
           }}
           className="w-full bg-[#141414] rounded-3xl p-4 border border-white/5 flex items-center gap-4 text-left active:scale-[0.98] transition-transform"
@@ -281,7 +281,7 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
             {...fadeUp(5)}
             onClick={() => {
               triggerHaptic('selection');
-              playSong(newRelease, null, songs);
+              playSong(newRelease, null, pool);
             }}
             className="rounded-3xl p-4 border border-white/5 flex flex-col h-32 text-left relative overflow-hidden active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)' }}
