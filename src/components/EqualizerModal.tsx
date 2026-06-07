@@ -335,7 +335,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
                     min={0}
                     max={100}
                     step={5}
-                    onValueChange={([value]) => { setBassBoost(value); setActivePreset('custom'); }}
+                        onValueChange={([value]) => setEQSettings({ bassBoost: value, activePreset: 'custom' })}
                     className="w-full [&_[role=slider]]:bg-rose-500 [&_[role=slider]]:border-rose-400 [&_[data-radix-slider-range]]:bg-rose-500/60"
                   />
                 </div>
@@ -354,7 +354,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
                     min={0}
                     max={45}
                     step={5}
-                    onValueChange={([value]) => setReverb(value)}
+                    onValueChange={([value]) => setEQSettings({ reverb: value })}
                     className="w-full [&_[role=slider]]:bg-rose-500 [&_[role=slider]]:border-rose-400 [&_[data-radix-slider-range]]:bg-rose-500/60"
                   />
                 </div>
@@ -373,7 +373,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
                     min={50}
                     max={200}
                     step={25}
-                    onValueChange={([value]) => setPlaybackSpeed(value / 100)}
+                    onValueChange={([value]) => setEQSettings({ playbackSpeed: value / 100 })}
                     className="w-full [&_[role=slider]]:bg-rose-500 [&_[role=slider]]:border-rose-400 [&_[data-radix-slider-range]]:bg-rose-500"
                   />
                   <div className="flex justify-between mt-1">
@@ -459,7 +459,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
               </div>
               <Switch
                 checked={spatialAudio}
-                onCheckedChange={setSpatialAudio}
+                onCheckedChange={(value) => setEQSettings({ spatialAudio: value })}
                 className="data-[state=checked]:bg-primary"
               />
             </div>
@@ -490,7 +490,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
               </div>
               <Switch
                 checked={lateNight}
-                onCheckedChange={setLateNight}
+                onCheckedChange={(value) => setEQSettings({ lateNight: value })}
                 className="data-[state=checked]:bg-primary"
               />
             </div>
