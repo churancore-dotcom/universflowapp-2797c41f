@@ -5,7 +5,10 @@
 // Each theme defines a COMPLETE token set so no element renders unstyled
 // in any mode (Pearl/white especially).
 
-type ThemeMode = 'default' | 'light' | 'black' | 'sunset' | 'ocean' | 'midnight-gold' | 'crimson';
+// Only two themes are user-selectable: Pearl (white) and Onyx (pure black).
+// 'default' is kept as an alias of 'black' so any legacy localStorage value
+// or component referencing it still resolves to a valid token set.
+type ThemeMode = 'default' | 'light' | 'black';
 
 interface ThemeTokens {
   background: string; foreground: string;
