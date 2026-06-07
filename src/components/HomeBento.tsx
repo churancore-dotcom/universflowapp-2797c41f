@@ -1,8 +1,8 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Disc3, Heart, Pause, Play, Radio, Sparkles } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pause, Play } from 'lucide-react';
 import { Song, usePlayer } from '@/contexts/PlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +53,7 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
   const { currentSong, queue, playSong, togglePlay, isPlaying } = usePlayer();
   const { progress, duration } = usePlayerProgress();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: streamSongs = [] } = useQuery({
     queryKey: ['home-bento', 'stream-fallback'],
@@ -69,6 +70,23 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
       return (data || []).map(songFromRow);
     },
   });
+
+  useEffect(() => {
+    const channel = supabase.channel('home-bento-live-data');
+    ['stream_songs', 'recently_played', 'user_library', 'songs'].forEach((table) => {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+        queryClient.invalidateQueries({ queryKey: ['home-bento'] });
+        queryClient.invalidateQueries({ queryKey: ['home', 'songs'] });
+      });
+    });
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!currentSong?.id) return;
+    queryClient.invalidateQueries({ queryKey: ['home-bento', 'recent', user?.id ?? 'anon'] });
+  }, [currentSong?.id, queryClient, user?.id]);
 
   const { data: recentSongs = [] } = useQuery({
     queryKey: ['home-bento', 'recent', user?.id ?? 'anon'],
