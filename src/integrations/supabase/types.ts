@@ -1320,6 +1320,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_eq_settings: {
+        Row: {
+          settings: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          settings?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          settings?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_library: {
         Row: {
           added_at: string
