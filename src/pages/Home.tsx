@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDownloads } from '@/contexts/DownloadContext';
 
 import AllSongsSection from '@/components/AllSongsSection';
+import HomeBento from '@/components/HomeBento';
 
 import GlobalTopTracksSection from '@/components/GlobalTopTracksSection';
 import FeaturedArtistsSection from '@/components/FeaturedArtistsSection';
@@ -285,9 +286,14 @@ const Home = () => {
                 <img src={appLogo} alt="Univers Flow logo" width={40} height={40} {...({ fetchpriority: "high" } as any)} decoding="async" className="w-full h-full object-cover" />
               </div>
               <div>
-                <p className="text-[16px] font-bold text-foreground tracking-tight">{greeting()}</p>
-                <p className="text-[11px] text-muted-foreground/50 font-medium tracking-wide">
-                  Your music, anytime
+                <p
+                  className="text-[24px] leading-none text-foreground tracking-[0.02em]"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                >
+                  {greeting().toUpperCase()}
+                </p>
+                <p className="text-[10px] text-[#FFB199]/70 font-bold tracking-[0.2em] uppercase mt-1">
+                  Universflow
                 </p>
               </div>
             </div>
@@ -336,74 +342,8 @@ const Home = () => {
             <div className="space-y-3">
               {/* Live admin announcement banner */}
               <AnnouncementBanner />
-              {/* Hero Quick-Listen Banner */}
-              {currentSong && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="rounded-3xl overflow-hidden relative"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                    border: '0.5px solid rgba(255,255,255,0.10)',
-                    backdropFilter: 'blur(30px)',
-                    WebkitBackdropFilter: 'blur(30px)',
-                  }}
-                >
-                  {/* Album art background blur */}
-                  {currentSong.cover_url && (
-                    <img
-                      src={currentSong.cover_url}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover opacity-25 blur-2xl saturate-150"
-                    />
-                  )}
-                  <div className="relative flex items-center gap-3.5 p-4">
-                    <div
-                      className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0"
-                      style={{
-                        boxShadow: '0 6px 24px rgba(0,0,0,0.4)',
-                        border: '0.5px solid rgba(255,255,255,0.10)',
-                      }}
-                    >
-                      {currentSong.cover_url ? (
-                        <img src={currentSong.cover_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                          <Headphones className="w-7 h-7 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-[10px] uppercase tracking-[0.15em] font-bold mb-1"
-                        style={{ color: 'hsl(var(--primary))' }}
-                      >
-                        Now Playing
-                      </p>
-                      <p className="text-[15px] font-bold text-foreground truncate leading-tight">{currentSong.title}</p>
-                      <p className="text-[12px] text-muted-foreground/60 truncate mt-0.5">{currentSong.artist}</p>
-                    </div>
-                    <div
-                      className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
-                      style={{
-                        background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.1))',
-                        border: '0.5px solid hsl(var(--primary) / 0.2)',
-                      }}
-                    >
-                      <div className="flex items-end gap-[3px] h-4">
-                        {[0, 1, 2, 3].map(i => (
-                          <div
-                            key={i}
-                            className="w-[3px] bg-primary rounded-full animate-audio-wave"
-                            style={{ animationDelay: `${i * 0.12}s` }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              {/* New Bento Hero — Continue Listening + quick tiles */}
+              {!isOffline && <HomeBento songs={allSongs} />}
 
               {/* Online-only discovery sections — hidden when offline */}
               {!isOffline && (

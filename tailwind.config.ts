@@ -18,8 +18,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Space Grotesk", "Inter", "system-ui", "sans-serif"],
+        sans: ["Barlow", "Inter", "system-ui", "sans-serif"],
+        display: ["'Bebas Neue'", "Space Grotesk", "Inter", "system-ui", "sans-serif"],
+        body: ["Barlow", "Inter", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
