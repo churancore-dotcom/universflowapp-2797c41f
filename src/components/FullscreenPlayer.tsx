@@ -273,18 +273,27 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
             {/* Controls Section - fixed at bottom */}
             <div className="flex-shrink-0 space-y-2 mt-2">
               {/* Title and Artist */}
-              <div className="flex items-start justify-between gap-3 rounded-3xl bg-black/20 px-3 py-2.5 backdrop-blur-md">
+              <div className="relative overflow-hidden flex items-start justify-between gap-3 rounded-3xl px-3 py-3 uf-rose-gradient">
+                {currentSong.cover_url && (
+                  <img
+                    src={currentSong.cover_url}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-y-0 right-0 h-full w-2/3 object-cover pointer-events-none"
+                    style={{ filter: 'blur(18px) saturate(140%)', opacity: 0.42, WebkitMaskImage: 'linear-gradient(to left, #000 30%, transparent 100%)', maskImage: 'linear-gradient(to left, #000 30%, transparent 100%)' }}
+                  />
+                )}
                 <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div 
                     key={currentSong.id + '-info'}
-                    className="flex-1 min-w-0"
+                    className="relative z-10 flex-1 min-w-0"
                     variants={songInfoVariants}
                     initial="initial"
                     animate="animate"
                     exit="exit"
                   >
                     <h2
-                      className="text-lg font-bold text-white leading-tight"
+                      className="text-[24px] font-display tracking-wide text-black leading-none"
                       style={{
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -295,7 +304,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                       {currentSong.title}
                     </h2>
                     <button 
-                      className="text-sm text-rose-400 font-medium block active:opacity-70 mt-1 text-left" 
+                      className="text-sm text-black/65 font-bold block active:opacity-70 mt-1 text-left" 
                       style={{
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -314,7 +323,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                     </button>
                   </motion.div>
                 </AnimatePresence>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="relative z-10 flex items-center gap-1 flex-shrink-0">
                   <FollowArtistButton
                     artistName={currentSong.artist}
                     artistImage={currentSong.cover_url}
