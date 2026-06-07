@@ -1,0 +1,150 @@
+import { useEffect, useSyncExternalStore } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { StudioSpaceId } from '@/lib/audioEngine';
+
+export const EQ_SETTINGS_KEY = 'eq_settings';
+
+export interface EQSettings {
+  bands: number[];
+  bassBoost: number;
+  reverb: number;
+  playbackSpeed: number;
+  spatialAudio: boolean;
+  studioSpace: StudioSpaceId;
+  lateNight: boolean;
+  activePreset: string;
+}
+
+export const DEFAULT_EQ_SETTINGS: EQSettings = {
+  bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  bassBoost: 0,
+  reverb: 0,
+  playbackSpeed: 1,
+  spatialAudio: false,
+  studioSpace: 'off',
+  lateNight: false,
+  activePreset: 'flat',
+};
+
+const listeners = new Set<() => void>();
+let currentSettings: EQSettings = readLocalSettings();
+
+function clamp(value: unknown, min: number, max: number, fallback: number) {
+  const n = typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+export function normalizeEQSettings(input: Partial<EQSettings> | null | undefined): EQSettings {
+  const rawBands = Array.isArray(input?.bands) ? input!.bands : DEFAULT_EQ_SETTINGS.bands;
+  const bands = DEFAULT_EQ_SETTINGS.bands.map((fallback, i) => clamp(rawBands[i], -12, 12, fallback));
+  return {
+    bands,
+    bassBoost: clamp(input?.bassBoost, 0, 100, DEFAULT_EQ_SETTINGS.bassBoost),
+    reverb: clamp(input?.reverb, 0, 45, DEFAULT_EQ_SETTINGS.reverb),
+    playbackSpeed: clamp(input?.playbackSpeed, 0.5, 2, DEFAULT_EQ_SETTINGS.playbackSpeed),
+    spatialAudio: !!input?.spatialAudio,
+    studioSpace: (input?.studioSpace as StudioSpaceId) || DEFAULT_EQ_SETTINGS.studioSpace,
+    lateNight: !!input?.lateNight,
+    activePreset: input?.activePreset || DEFAULT_EQ_SETTINGS.activePreset,
+  };
+}
+
+function readLocalSettings(): EQSettings {
+  try {
+    const stored = localStorage.getItem(EQ_SETTINGS_KEY);
+    if (stored) return normalizeEQSettings(JSON.parse(stored));
+  } catch {}
+  return DEFAULT_EQ_SETTINGS;
+}
+
+function writeLocalSettings(settings: EQSettings) {
+  try {
+    localStorage.setItem(EQ_SETTINGS_KEY, JSON.stringify(settings));
+  } catch {}
+}
+
+export function getEQSettings() {
+  return currentSettings;
+}
+
+export function setEQSettings(update: Partial<EQSettings> | ((current: EQSettings) => EQSettings | Partial<EQSettings>)) {
+  const patch = typeof update === 'function' ? update(currentSettings) : update;
+  const next = normalizeEQSettings({ ...currentSettings, ...patch });
+  if (JSON.stringify(next) === JSON.stringify(currentSettings)) return;
+  currentSettings = next;
+  writeLocalSettings(next);
+  listeners.forEach((listener) => listener());
+  try { window.dispatchEvent(new CustomEvent('uf-eq-changed', { detail: next })); } catch {}
+}
+
+export function subscribeEQSettings(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function useEQSettings() {
+  return useSyncExternalStore(subscribeEQSettings, getEQSettings, getEQSettings);
+}
+
+export function getEQPresetLabel(settings = currentSettings) {
+  if (settings.activePreset && settings.activePreset !== 'custom') return settings.activePreset.replace(/-/g, ' ');
+  if (settings.studioSpace && settings.studioSpace !== 'off') return settings.studioSpace.replace(/-/g, ' ');
+  const activeBands = settings.bands.some((gain) => Math.abs(gain) >= 0.5);
+  if (activeBands || settings.bassBoost > 0 || settings.reverb > 0 || settings.spatialAudio || settings.lateNight || settings.playbackSpeed !== 1) return 'custom';
+  return 'flat';
+}
+
+export function useUserEQSettingsSync(userId?: string | null) {
+  useEffect(() => {
+    if (!userId) return;
+
+    let cancelled = false;
+    let saveTimer: number | null = null;
+    let lastRemoteJSON = '';
+
+    const loadRemote = async () => {
+      const { data } = await (supabase as any)
+        .from('user_eq_settings')
+        .select('settings, updated_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.settings) {
+        const remote = normalizeEQSettings(data.settings);
+        lastRemoteJSON = JSON.stringify(remote);
+        setEQSettings(remote);
+      } else {
+        await (supabase as any).from('user_eq_settings').upsert({ user_id: userId, settings: getEQSettings() }, { onConflict: 'user_id' });
+      }
+    };
+
+    const unsubscribe = subscribeEQSettings(() => {
+      const settings = getEQSettings();
+      const json = JSON.stringify(settings);
+      if (json === lastRemoteJSON) return;
+      if (saveTimer) window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(async () => {
+        lastRemoteJSON = JSON.stringify(getEQSettings());
+        await (supabase as any).from('user_eq_settings').upsert({ user_id: userId, settings: getEQSettings() }, { onConflict: 'user_id' });
+      }, 350);
+    });
+
+    const channel = supabase
+      .channel(`user-eq-settings-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_eq_settings', filter: `user_id=eq.${userId}` }, (payload) => {
+        const settings = normalizeEQSettings((payload.new as any)?.settings);
+        lastRemoteJSON = JSON.stringify(settings);
+        setEQSettings(settings);
+      })
+      .subscribe();
+
+    loadRemote();
+
+    return () => {
+      cancelled = true;
+      if (saveTimer) window.clearTimeout(saveTimer);
+      unsubscribe();
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+}

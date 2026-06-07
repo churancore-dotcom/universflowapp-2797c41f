@@ -270,7 +270,7 @@ const PremiumPage = memo(function PremiumPage() {
                 border: '0.5px solid hsl(var(--primary) / 0.4)',
               }}
             >
-              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center bg-primary/15">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-3xl flex items-center justify-center bg-primary/15">
                 <Crown className="w-7 h-7 text-primary" fill="currentColor" />
               </div>
               <p className="text-[22px] font-bold mb-1">You're Premium</p>
@@ -407,7 +407,7 @@ const PremiumPage = memo(function PremiumPage() {
             style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
           >
             <div
-              className="max-w-md mx-auto rounded-2xl p-3 pl-5 pointer-events-auto flex items-center gap-3"
+              className="max-w-md mx-auto rounded-3xl p-3 pl-5 pointer-events-auto flex items-center gap-3"
               style={{
                 background: 'hsl(var(--background) / 0.85)',
                 border: '0.5px solid hsl(var(--border))',
@@ -475,7 +475,7 @@ const PlanCard = memo(function PlanCard({
     <motion.button
       onClick={onSelect}
       whileTap={{ scale: 0.99 }}
-      className="w-full text-left rounded-2xl px-4 py-4 flex items-center gap-4 relative transition-colors"
+      className="w-full text-left rounded-3xl px-4 py-4 flex items-center gap-4 relative transition-colors"
       style={{
         background: selected ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--card) / 0.6)',
         border: selected
@@ -708,7 +708,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
           <>
             <div className="text-center mb-5">
               <div
-                className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center"
+                className="w-14 h-14 mx-auto mb-3 rounded-3xl flex items-center justify-center"
                 style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}
               >
                 <Crown className="w-7 h-7 text-primary-foreground" />
@@ -721,7 +721,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
             </div>
 
             <div
-              className="rounded-2xl p-5 mb-3 text-center"
+              className="rounded-3xl p-5 mb-3 text-center"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--accent) / 0.12))',
                 border: '0.5px solid hsl(var(--primary) / 0.3)',
@@ -737,7 +737,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
 
             <button
               onClick={copyUpi}
-              className="w-full rounded-2xl p-4 mb-4 flex items-center justify-between"
+              className="w-full rounded-3xl p-4 mb-4 flex items-center justify-between"
               style={{ background: 'hsl(var(--muted) / 0.4)', border: '0.5px solid hsl(var(--border) / 0.5)' }}
             >
               <div className="text-left">
@@ -749,7 +749,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
 
             <button
               onClick={openUpiApp}
-              className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2 mb-3"
+              className="w-full py-4 rounded-3xl font-bold text-[16px] flex items-center justify-center gap-2 mb-3"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
                 color: 'hsl(var(--primary-foreground))',
@@ -761,7 +761,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
 
             <button
               onClick={() => { haptics.light(); setStep('confirm'); }}
-              className="w-full py-3.5 rounded-2xl font-semibold text-[15px]"
+              className="w-full py-3.5 rounded-3xl font-semibold text-[15px]"
               style={{ background: 'hsl(var(--muted) / 0.5)', border: '0.5px solid hsl(var(--border) / 0.5)' }}
             >
               I've paid · Submit transaction ID
@@ -800,7 +800,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
               placeholder="e.g. 412345678901"
               autoComplete="off"
               maxLength={30}
-              className="w-full px-4 py-4 rounded-2xl text-[16px] font-mono tracking-wider mb-3 bg-transparent outline-none"
+              className="w-full px-4 py-4 rounded-3xl text-[16px] font-mono tracking-wider mb-3 bg-transparent outline-none"
               style={{
                 background: 'hsl(var(--muted) / 0.4)',
                 border: '1px solid hsl(var(--border))',
@@ -809,7 +809,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
             />
 
             <div
-              className="rounded-2xl p-3 mb-4 text-[12px] leading-relaxed"
+              className="rounded-3xl p-3 mb-4 text-[12px] leading-relaxed"
               style={{ background: 'hsl(var(--primary) / 0.08)', border: '0.5px solid hsl(var(--primary) / 0.2)' }}
             >
               <p className="text-foreground/80">
@@ -821,7 +821,7 @@ const UpiCheckoutSheet = memo(function UpiCheckoutSheet({ settings, plan, onClos
             <button
               onClick={submitUtr}
               disabled={submitting || utr.trim().length < 6}
-              className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-4 rounded-3xl font-bold text-[16px] flex items-center justify-center gap-2 disabled:opacity-50"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
                 color: 'hsl(var(--primary-foreground))',
@@ -880,7 +880,7 @@ const SubmittedConfirmation = memo(function SubmittedConfirmation({
         </p>
         <button
           onClick={onClose}
-          className="w-full py-4 rounded-2xl font-bold text-[16px]"
+          className="w-full py-4 rounded-3xl font-bold text-[16px]"
           style={{
             background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
             color: 'hsl(var(--primary-foreground))',
@@ -914,7 +914,7 @@ const SubmittedConfirmation = memo(function SubmittedConfirmation({
       </p>
       <button
         onClick={onClose}
-        className="w-full py-4 rounded-2xl font-bold text-[16px]"
+        className="w-full py-4 rounded-3xl font-bold text-[16px]"
         style={{
           background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
           color: 'hsl(var(--primary-foreground))',
@@ -981,7 +981,7 @@ const PendingProgressBanner = memo(function PendingProgressBanner({ pending }: P
         <motion.div
           animate={{ scale: [1, 1.08, 1] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+          className="w-11 h-11 rounded-3xl flex items-center justify-center shrink-0"
           style={{ background: 'hsl(var(--primary) / 0.2)' }}
         >
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -1007,7 +1007,7 @@ const PendingProgressBanner = memo(function PendingProgressBanner({ pending }: P
           return (
             <div
               key={s.label}
-              className="flex items-center gap-3 p-3 rounded-2xl"
+              className="flex items-center gap-3 p-3 rounded-3xl"
               style={{
                 background: active
                   ? 'hsl(var(--primary) / 0.12)'
@@ -1054,7 +1054,7 @@ const PendingProgressBanner = memo(function PendingProgressBanner({ pending }: P
       </div>
 
       <div
-        className="rounded-2xl p-3 flex items-center gap-2 relative"
+        className="rounded-3xl p-3 flex items-center gap-2 relative"
         style={{ background: 'hsl(var(--background) / 0.5)', border: '0.5px solid hsl(var(--border) / 0.5)' }}
       >
         <Clock className="w-4 h-4 text-primary shrink-0" />

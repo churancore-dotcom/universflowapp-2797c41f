@@ -201,7 +201,7 @@ const Settings = () => {
               </div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase">Playback</h2>
             </div>
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+            <div className="rounded-3xl overflow-hidden bg-card border border-border/50">
               <div className="px-4 py-3 border-b border-border/50">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -288,7 +288,7 @@ const Settings = () => {
               </div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase">Support</h2>
             </div>
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+            <div className="rounded-3xl overflow-hidden bg-card border border-border/50">
               <button onClick={() => navigate(isPremium ? '/subscription' : '/premium')} className="w-full px-4 py-3 flex items-center justify-between border-b border-border/50 active:bg-muted/30">
                 <div className="flex items-center gap-2">
                   {isPremium && <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-[10px] font-medium text-primary">Premium</span>}
@@ -317,7 +317,7 @@ const Settings = () => {
               </div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase">Notifications</h2>
             </div>
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+            <div className="rounded-3xl overflow-hidden bg-card border border-border/50">
               <div className="px-4 py-3 flex items-center justify-between border-b border-border/50">
                 <span className="text-sm">Push Notifications</span>
                 <Switch checked={notifications} onCheckedChange={handleNotifications} className="data-[state=checked]:bg-primary scale-90" />
@@ -337,7 +337,7 @@ const Settings = () => {
               </div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase">Appearance</h2>
             </div>
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+            <div className="rounded-3xl overflow-hidden bg-card border border-border/50">
               <div className="px-4 py-3">
                 <span className="text-sm mb-3 block">Theme</span>
                 <div className="grid grid-cols-3 gap-3">
@@ -348,7 +348,7 @@ const Settings = () => {
                       className="flex flex-col items-center gap-1.5"
                     >
                       <div
-                        className="w-full aspect-square rounded-2xl relative flex items-center justify-center transition-all overflow-hidden"
+                        className="w-full aspect-square rounded-3xl relative flex items-center justify-center transition-all overflow-hidden"
                         style={{
                           background: t.preview,
                           border: theme === t.id ? `2.5px solid hsl(var(--primary))` : '2px solid hsl(var(--border))',
@@ -382,7 +382,7 @@ const Settings = () => {
               </div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase">Storage</h2>
             </div>
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+            <div className="rounded-3xl overflow-hidden bg-card border border-border/50">
               <button onClick={handleClearCache} className="w-full px-4 py-3 flex items-center justify-between text-destructive active:bg-destructive/10">
                 <span className="text-sm font-medium">Clear Cache</span>
                 <span className="text-sm text-muted-foreground">{cacheSize}</span>
@@ -398,7 +398,7 @@ const Settings = () => {
               </div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase">About</h2>
             </div>
-            <div className="rounded-xl overflow-hidden bg-card border border-border/50">
+            <div className="rounded-3xl overflow-hidden bg-card border border-border/50">
               <div className="px-4 py-3 flex items-center justify-between border-b border-border/50">
                 <span className="text-sm">Version</span>
                 <span className="text-sm text-muted-foreground">1.0.0</span>
