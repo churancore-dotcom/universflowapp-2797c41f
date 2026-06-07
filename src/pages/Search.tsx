@@ -205,6 +205,7 @@ const Search = () => {
   }, [indexedResults]);
 
   const libraryResults: Song[] = [];
+  const hasQuery = query.length > 1;
 
   const artistNameSearch = hasQuery && artistResults.some((artist) => {
     const artistName = normalizeText(artist.name);
@@ -249,8 +250,6 @@ const Search = () => {
       source: 'indexed' as const,
     })));
   }, [playSong, displayedIndexedResults]);
-
-  const hasQuery = query.length > 1;
 
   return (
     <TabTransition>
