@@ -7,6 +7,7 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { usePlayerProgress } from '@/lib/playerProgressStore';
 import { triggerHaptic } from '@/hooks/useHaptics';
 import { isLockscreenOpen, subscribeLockscreen } from '@/lib/lockscreenState';
+import { getEQPresetLabel, useEQSettings } from '@/lib/eqSettings';
 
 // Swipe thresholds
 const SWIPE_UP_THRESHOLD = -50;
@@ -36,6 +37,8 @@ const MiniPlayer = memo(function MiniPlayer() {
     setExpanded
   } = usePlayer();
   const { progress, duration } = usePlayerProgress();
+  const eqSettings = useEQSettings();
+  const eqLabel = getEQPresetLabel(eqSettings);
 
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -264,7 +267,7 @@ const MiniPlayer = memo(function MiniPlayer() {
                     {currentSong.title}
                   </p>
                   <p className="text-[12px] text-black/60 truncate mt-0.5 pr-1">
-                    {currentSong.artist}
+                    {currentSong.artist} · EQ {eqLabel.toUpperCase()}
                   </p>
                 </motion.div>
               </AnimatePresence>
