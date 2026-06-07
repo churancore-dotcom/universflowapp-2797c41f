@@ -146,17 +146,12 @@ const Profile = () => {
   return (
     <TabTransition>
       <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
-        <header
-          className="flex-shrink-0 z-30 px-4 pt-3 pb-2 safe-area-pt"
-          style={{
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(40px)',
-            WebkitBackdropFilter: 'blur(40px)',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">Profile</h1>
-          </div>
+        <header className="flex-shrink-0 z-30 px-3 pt-3 pb-2 safe-area-pt">
+          <RoseHero
+            eyebrow={isPremium ? 'Premium member' : 'Universflow'}
+            title={(displayName || 'PROFILE').toUpperCase()}
+            subtitle={user?.email}
+          />
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 pt-3 pb-32" style={{ WebkitOverflowScrolling: 'touch' }}>
