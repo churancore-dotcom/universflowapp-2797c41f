@@ -102,28 +102,35 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
     queryFn: async (): Promise<Song[]> => {
       const { data, error } = await supabase
         .from('user_library')
-        .select('song_id, added_at')
+        .select('song_id, added_at, track_source')
         .eq('user_id', user!.id)
-        .eq('track_source', 'catalog')
         .order('added_at', { ascending: false })
         .limit(12);
       if (error) throw error;
-      const ids = (data || []).map((r) => r.song_id).filter(isCatalogId);
-      if (ids.length === 0) return [];
-      const { data: rows, error: songError } = await supabase
-        .from('songs')
-        .select('id,title,artist,album,cover_url,audio_url,duration,genre,mood,created_at,artist_id')
-        .in('id', ids)
-        .eq('is_visible', true);
-      if (songError) throw songError;
-      const byId = new Map((rows || []).map((row: any) => [row.id, songFromRow(row)]));
-      return ids.map((id) => byId.get(id)).filter(Boolean) as Song[];
+      const rows = data || [];
+      const catalogIds = rows.map((r) => r.song_id).filter(isCatalogId);
+      const streamIds = rows.map((r) => r.song_id).filter((id) => !isCatalogId(id));
+
+      const [catalogRes, streamRes] = await Promise.all([
+        catalogIds.length
+          ? supabase.from('songs').select('id,title,artist,album,cover_url,audio_url,duration,genre,mood,created_at,artist_id').in('id', catalogIds).eq('is_visible', true)
+          : Promise.resolve({ data: [] as any[], error: null }),
+        streamIds.length
+          ? supabase.from('stream_songs').select('track_id,title,artist,cover_url,audio_url,duration,genre,mood,album,last_seen_at,artist_image_url').in('track_id', streamIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+      if (catalogRes.error) throw catalogRes.error;
+      if (streamRes.error) throw streamRes.error;
+      const byId = new Map<string, Song>();
+      (catalogRes.data || []).forEach((row: any) => byId.set(row.id, songFromRow(row)));
+      (streamRes.data || []).forEach((row: any) => byId.set(row.track_id, songFromRow(row)));
+      return rows.map((row) => byId.get(row.song_id)).filter(Boolean) as Song[];
     },
   });
 
   const pool = useMemo(() => dedupeSongs([...songs, ...streamSongs]), [songs, streamSongs]);
   const recent = useMemo(() => dedupeSongs([...(currentSong ? [currentSong] : []), ...recentSongs, ...queue, ...pool]).slice(0, 2), [currentSong, recentSongs, queue, pool]);
-  const liked = useMemo(() => dedupeSongs([...likedSongs, ...pool.filter((s) => s.cover_url)]).slice(0, 3), [likedSongs, pool]);
+  const liked = useMemo(() => dedupeSongs(likedSongs).slice(0, 3), [likedSongs]);
   const newRelease = useMemo(() => pool.find((s) => s.created_at || s.cover_url) || pool[0], [pool]);
   const featured = useMemo(() => pool.find((s) => s.album && s.cover_url), [pool]);
   const moodList = useMemo(() => {
