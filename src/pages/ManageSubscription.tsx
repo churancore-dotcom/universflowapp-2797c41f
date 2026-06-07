@@ -176,11 +176,9 @@ const ManageSubscription = () => {
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={iosSpring}
-            className="relative overflow-hidden rounded-3xl p-6"
+            className="relative overflow-hidden rounded-3xl p-6 uf-rose-gradient"
             style={{
-              background:
-                'linear-gradient(135deg, #fbbf24 0%, #f59e0b 45%, #d97706 100%)',
-              boxShadow: '0 24px 60px -20px rgba(245, 158, 11, 0.55)',
+              boxShadow: '0 24px 60px -20px rgba(255, 45, 85, 0.55)',
             }}
           >
             {/* Decorative blobs */}
@@ -193,7 +191,7 @@ const ManageSubscription = () => {
                   <Crown className="w-3.5 h-3.5 text-white" />
                   <span className="text-[10px] font-bold tracking-wider text-white uppercase">Premium</span>
                 </div>
-                <h2 className="text-2xl font-bold text-white drop-shadow">
+                <h2 className="text-3xl text-white drop-shadow uf-display-title">
                   {planLabel(subscription?.subscription_type)}
                 </h2>
                 <p className="text-sm text-white/85 mt-1">
