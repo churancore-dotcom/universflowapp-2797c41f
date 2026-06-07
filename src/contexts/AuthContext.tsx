@@ -110,6 +110,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (existingSession?.user) {
         await ensureUserProfile(existingSession.user);
         await checkAdminRole(existingSession.user.id);
+
+        // Validate the refresh token while online. If it's invalid (signed out
+        // elsewhere, rotated keys, stale session), sign out cleanly instead of
+        // looping on 401s from authenticated edge functions like music-indexer.
+        if (navigator.onLine) {
+          const { error: refreshErr } = await supabase.auth.refreshSession();
+          if (refreshErr) {
+            await supabase.auth.signOut().catch(() => {});
+          }
+        }
       }
 
       setIsLoading(false);
