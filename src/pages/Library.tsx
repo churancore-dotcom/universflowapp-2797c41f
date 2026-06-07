@@ -251,13 +251,9 @@ const Library = () => {
 
         <main className="flex-1 overflow-hidden px-3 pt-2.5 flex flex-col relative z-10">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            {/* Tabs — glassmorphism */}
+            {/* Tabs — bento surface */}
             <TabsList
-              className="w-full h-11 p-1 mb-3 rounded-xl grid grid-cols-4 flex-shrink-0"
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '0.5px solid rgba(255, 255, 255, 0.06)',
-              }}
+              className="w-full h-12 p-1 mb-3 rounded-3xl grid grid-cols-4 flex-shrink-0 bg-card border border-white/5"
             >
               {[
                 { value: 'liked', icon: Heart, label: 'Liked' },
@@ -272,7 +268,7 @@ const Library = () => {
                     key={tab.value}
                     value={tab.value}
                     disabled={disabled}
-                    className={`h-full rounded-lg gap-1 text-[10px] font-semibold data-[state=active]:bg-primary/15 data-[state=active]:text-primary flex flex-col items-center justify-center py-0.5 transition-all ${disabled ? 'opacity-30 pointer-events-none' : ''}`}
+                    className={`h-full rounded-2xl gap-1 text-[10px] font-bold data-[state=active]:uf-rose-gradient data-[state=active]:text-black flex flex-col items-center justify-center py-0.5 transition-all ${disabled ? 'opacity-30 pointer-events-none' : ''}`}
                   >
                     <Icon className="w-3.5 h-3.5" />
                     <span>{tab.label}</span>
