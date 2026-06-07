@@ -23,6 +23,7 @@ import CheckEmail from "./pages/CheckEmail";
 import NotFound from "./pages/NotFound";
 import { usePushRegistration } from "./hooks/usePushRegistration";
 import { usePlaybackSync } from "./hooks/usePlaybackSync";
+import { useUserEQSettingsSync } from "./lib/eqSettings";
 
 // Eager load main tabs for INSTANT navigation (Spotify-like feel).
 // Admin and rarely-visited pages stay lazy below.
@@ -284,8 +285,10 @@ const PostAuthGate = () => {
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const { user } = useAuth();
   usePushRegistration();
   usePlaybackSync();
+  useUserEQSettingsSync(user?.id);
 
   const handleSplashComplete = () => setShowSplash(false);
 
