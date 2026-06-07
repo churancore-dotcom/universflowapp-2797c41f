@@ -444,7 +444,7 @@ const Library = () => {
 
               <TabsContent value="playlists" className="mt-0">
                 <h2 className="sr-only">Your Playlists</h2>
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
+                <div className="mb-3">
                   <motion.button
                     className="flex items-center gap-3 p-3.5 rounded-xl"
                     style={{
