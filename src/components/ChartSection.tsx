@@ -18,7 +18,7 @@ interface Props {
 const META: Record<ChartType, { title: string; Icon: typeof Flame; color: string }> = {
   trending: { title: 'Trending Now',  Icon: TrendingUp, color: '#FF2D55' },
   viral:    { title: 'Viral',         Icon: Flame,      color: '#FF6B2D' },
-  latest:   { title: 'New Releases',  Icon: Sparkles,   color: '#5AC8FA' },
+  latest:   { title: 'New Releases',  Icon: Disc3,      color: '#5AC8FA' },
 };
 
 function detectFallbackCountry(): string {
