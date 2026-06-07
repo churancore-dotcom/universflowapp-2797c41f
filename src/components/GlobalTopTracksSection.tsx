@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Music2, Sparkles } from 'lucide-react';
+import { Loader2, Music2, Disc3 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { usePlayer, Song } from '@/contexts/PlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,7 +106,7 @@ const GlobalTopTracksSection = () => {
     return (
       <section className="space-y-3">
         <div className="flex items-center gap-2 px-1">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <Disc3 className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">Top 30 from Your Artists</h2>
         </div>
         <div className="rounded-3xl border border-border/50 bg-card/50 p-5 text-center">
@@ -122,7 +122,7 @@ const GlobalTopTracksSection = () => {
     return (
       <section className="space-y-3">
         <div className="flex items-center gap-2 px-1">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <Disc3 className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">Top 30 from Your Artists</h2>
         </div>
         <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
@@ -144,7 +144,7 @@ const GlobalTopTracksSection = () => {
     <section className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <Disc3 className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">Top 30 from Your Artists</h2>
         </div>
       </div>

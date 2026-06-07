@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { User, Sparkles, ChevronRight } from 'lucide-react';
+import { User, Disc3, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/hooks/useHaptics';
 import { getUserArtistPrefs, followArtist, type UserArtistPref } from '@/lib/userArtistPrefs';
@@ -103,7 +103,7 @@ const FeaturedArtistsSection = () => {
               className="w-6 h-6 rounded-lg flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.1))' }}
             >
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <Disc3 className="w-3.5 h-3.5 text-primary" />
             </div>
             <h2 className="text-[16px] font-bold tracking-tight text-foreground">Featured Artists</h2>
           </div>

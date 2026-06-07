@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { Music2, Sparkles } from 'lucide-react';
+import { Music2, Disc3 } from 'lucide-react';
 import { Song, usePlayer } from '@/contexts/PlayerContext';
 import { useDownloads } from '@/contexts/DownloadContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +44,7 @@ const FollowedArtistSongsSection = memo(function FollowedArtistSongsSection({ so
     <section className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <Disc3 className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">From Your Artists</h2>
         </div>
       </div>
