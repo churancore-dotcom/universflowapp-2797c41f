@@ -161,21 +161,11 @@ const Profile = () => {
           </div>
 
           {/* Profile Card */}
-          <div
-            className="rounded-2xl p-4 mb-4"
-            style={{
-              background: 'rgba(28, 28, 30, 0.8)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-          >
+          <div className="uf-bento-card p-4 mb-4">
             <div className="flex items-center gap-4 min-h-[86px]">
               <div
                 className="relative w-14 h-14 rounded-full flex items-center justify-center"
-                style={{
-                  background: isPremium
-                    ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
-                    : 'linear-gradient(135deg, hsl(211 100% 50%), hsl(328 100% 54%))',
-                }}
+                  style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(18 100% 82%))' }}
               >
                 <User className="w-7 h-7 text-white" />
                 {isPremium && (
@@ -272,17 +262,17 @@ const Profile = () => {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
-              { icon: Heart, label: 'Liked', value: stats.likedSongs, color: 'from-pink-500 to-rose-500' },
-              { icon: Clock, label: 'Plays', value: stats.recentPlays, color: 'from-cyan-500 to-blue-500' },
-              { icon: Music, label: 'Playlists', value: stats.playlists, color: 'from-purple-500 to-violet-500' },
+              { icon: Heart, label: 'Liked', value: stats.likedSongs },
+              { icon: Clock, label: 'Plays', value: stats.recentPlays },
+              { icon: Music, label: 'Playlists', value: stats.playlists },
             ].map((stat) => {
               const Icon = stat.icon;
               return (
-                <div key={stat.label} className="rounded-xl p-3 text-center" style={{ background: 'rgba(28, 28, 30, 0.8)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                  <div className={`w-8 h-8 rounded-lg mx-auto mb-1.5 flex items-center justify-center bg-gradient-to-br ${stat.color}`}>
-                    <Icon className="w-4 h-4 text-white" />
+                <div key={stat.label} className="rounded-3xl p-3 text-center bg-card border border-white/5">
+                  <div className="w-8 h-8 rounded-2xl mx-auto mb-1.5 flex items-center justify-center uf-rose-gradient">
+                    <Icon className="w-4 h-4 text-black" />
                   </div>
-                  <p className="text-lg font-bold">{profileSettled ? stat.value : '—'}</p>
+                  <p className="text-[24px] font-display leading-none tracking-wide">{profileSettled ? stat.value : '—'}</p>
                   <p className="text-[10px] text-muted-foreground">{stat.label}</p>
                 </div>
               );
@@ -290,7 +280,7 @@ const Profile = () => {
           </div>
 
           {/* Menu Items */}
-          <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(28, 28, 30, 0.8)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div className="rounded-3xl overflow-hidden bg-card border border-white/5">
             {profileSettled && isAdmin && (
               <button onClick={() => navigate('/admin')} className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-white/[0.06] active:bg-white/5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20"><Shield className="w-4 h-4 text-primary" /></div>
