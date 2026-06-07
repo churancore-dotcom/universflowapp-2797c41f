@@ -57,17 +57,24 @@ const BottomNav = memo(function BottomNav() {
   return (
     <AnimatePresence>
       <motion.nav
-        className="fixed left-0 right-0 bottom-0 w-full z-50 safe-area-pb"
+        className="fixed left-0 right-0 bottom-0 w-full z-50 safe-area-pb overflow-hidden"
         initial={{ y: 100 }}
         animate={{ y: isVisible ? 0 : 100 }}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
         style={{ 
-          background: 'rgba(18, 18, 20, 0.94)',
-          backdropFilter: 'blur(40px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-          borderTop: '0.5px solid rgba(255, 255, 255, 0.08)'
+          background: 'hsl(var(--background) / 0.94)',
+          borderTop: '0.5px solid hsl(0 0% 100% / 0.08)'
         }}
       >
+        {currentSong?.cover_url && (
+          <img
+            src={currentSong.cover_url}
+            alt=""
+            aria-hidden
+            className="absolute inset-x-0 -top-10 h-24 w-full object-cover pointer-events-none"
+            style={{ filter: 'blur(28px) saturate(140%)', opacity: 0.18 }}
+          />
+        )}
         <div className="flex items-center justify-around py-1.5">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
