@@ -286,9 +286,14 @@ const Home = () => {
                 <img src={appLogo} alt="Univers Flow logo" width={40} height={40} {...({ fetchpriority: "high" } as any)} decoding="async" className="w-full h-full object-cover" />
               </div>
               <div>
-                <p className="text-[16px] font-bold text-foreground tracking-tight">{greeting()}</p>
-                <p className="text-[11px] text-muted-foreground/50 font-medium tracking-wide">
-                  Your music, anytime
+                <p
+                  className="text-[24px] leading-none text-foreground tracking-[0.02em]"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                >
+                  {greeting().toUpperCase()}
+                </p>
+                <p className="text-[10px] text-[#FFB199]/70 font-bold tracking-[0.2em] uppercase mt-1">
+                  Universflow
                 </p>
               </div>
             </div>
