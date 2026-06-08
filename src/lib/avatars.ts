@@ -1,4 +1,4 @@
-import type { AvatarVariant } from '@/components/PortraitAvatar';
+import type { AvatarVariant } from '@/components/VideoAvatar';
 
 export interface PresetAvatar {
   id: AvatarVariant;
@@ -7,16 +7,14 @@ export interface PresetAvatar {
 }
 
 export const PRESET_AVATARS: PresetAvatar[] = [
-  { id: 'hoodie-guy',     name: 'Wave Hi',  tag: 'Waves at you' },
-  { id: 'sweater-girl',   name: 'Glow',     tag: 'Sparkles & sway' },
-  { id: 'glasses-beard',  name: 'Aura',     tag: 'Soft glow ring' },
-  { id: 'leather-bob',    name: 'Rockstar', tag: 'Bobbing sparkles' },
-  { id: 'chain-guy',      name: 'Vibing',   tag: 'Music notes' },
-  { id: 'pink-sweater',   name: 'In Love',  tag: 'Floating hearts' },
-  { id: 'white-hoodie',   name: 'Halo',     tag: 'Pulsing ring' },
-  { id: 'afro-yellow',    name: 'Hello!',   tag: 'Waves at you' },
-  { id: 'headphones-boy', name: 'DJ',       tag: 'Beats & notes' },
-  { id: 'pink-beanie',    name: 'Crush',    tag: 'Floating hearts' },
+  { id: 'headphones-boy', name: 'Headphones', tag: 'Lost in the beat' },
+  { id: 'wavy-girl',      name: 'Cosy',       tag: 'Soft & smiling' },
+  { id: 'glasses-beard',  name: 'Specs',      tag: 'Looking sharp' },
+  { id: 'chain-guy',      name: 'Drip',       tag: 'Iced out' },
+  { id: 'coffee-girl',    name: 'Café',       tag: 'Sipping coffee' },
+  { id: 'peace-guy',      name: 'Peace',      tag: 'Peace & wink' },
+  { id: 'kiss-girl',      name: 'Muah',       tag: 'Blowing a kiss' },
+  { id: 'thumbs-guy',     name: 'Good Vibes', tag: 'Thumbs up' },
 ];
 
 export const isPresetAvatar = (value: string | null | undefined): value is AvatarVariant => {
