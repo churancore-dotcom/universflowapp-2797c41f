@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon, Music, X, Globe, Radio, Loader2, Clock, Trash2 } from 'lucide-react';
 import { usePlayer, Song } from '@/contexts/PlayerContext';
 import { useDownloads } from '@/contexts/DownloadContext';
@@ -129,6 +129,12 @@ const Search = () => {
   const { playSong, currentSong, isPlaying } = usePlayer();
   const { getDownloadedUrl } = useDownloads();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+
+  useEffect(() => {
+    const urlQuery = params.get('q')?.trim() || '';
+    if (urlQuery && urlQuery !== query.trim()) setQuery(urlQuery);
+  }, [params]);
 
   // Refresh history snapshot whenever the currently playing song changes
   useEffect(() => {
@@ -166,9 +172,7 @@ const Search = () => {
         const tagJobs: Promise<IndexedTrack[]>[] = [];
         if (language) tagJobs.push(getTagTopTracks(language, 150));
         if (mood) tagJobs.push(getTagTopTracks(mood, 150));
-        const literalJob = pureBrowse
-          ? Promise.resolve([] as IndexedTrack[])
-          : searchIndexedTracks(trimmedQuery, 200);
+        const literalJob = searchIndexedTracks(trimmedQuery, 200);
         const youtubeJob = searchYouTubeMusicTracks(smartQuery, 120);
         const saavnJob = searchJioSaavnTracks(trimmedQuery, 60).catch(() => [] as IndexedTrack[]);
 
@@ -182,7 +186,7 @@ const Search = () => {
           .slice(0, 300);
 
         setCached(SEARCH_CACHE_NAMESPACE, trimmedQuery, merged);
-        setArtistResults(artists.filter((artist) => !!artist.image_url || normalizeText(artist.name).includes(normalizeText(trimmedQuery))).slice(0, 30));
+        setArtistResults(artists.filter((artist) => !!artist.image_url).slice(0, 1));
         setIndexedResults(merged);
         setSearchHistory(getSongHistory());
       } catch {
@@ -206,6 +210,7 @@ const Search = () => {
 
   const libraryResults: Song[] = [];
   const hasQuery = query.length > 1;
+  const featuredArtist = artistResults[0];
 
   const artistNameSearch = hasQuery && artistResults.some((artist) => {
     const artistName = normalizeText(artist.name);
@@ -438,19 +443,28 @@ const Search = () => {
           {searching ? <SearchSkeleton /> : (
             <>
               {/* Indexed stream results */}
-              {artistResults.length > 0 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-5">
-                  <h2 className="text-sm font-bold mb-3">Artists · {artistResults.length} results</h2>
-                  <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-                    {artistResults.map((artist) => (
-                      <button key={artist.name} type="button" onClick={() => navigate(`/artists?focus=${encodeURIComponent(artist.name)}`)} className="w-24 flex-shrink-0 text-center active:scale-[0.96] transition-transform">
-                        <div className="w-20 h-20 mx-auto mb-2 rounded-full overflow-hidden bg-card border border-white/10">
-                          {artist.image_url && <img src={artist.image_url} alt={artist.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />}
-                        </div>
-                        <p className="text-[12px] font-bold text-foreground truncate">{artist.name}</p>
-                      </button>
-                    ))}
-                  </div>
+              {featuredArtist && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+                  <h2 className="text-sm font-bold mb-3">Artist</h2>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/artists?focus=${encodeURIComponent(featuredArtist.name)}`)}
+                    className="relative w-full h-36 overflow-hidden rounded-2xl text-left active:scale-[0.98] transition-transform bg-card border border-white/10"
+                  >
+                    <img
+                      src={featuredArtist.image_url}
+                      alt={`${featuredArtist.name} artist photo`}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute left-4 right-4 bottom-4">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/60">Real artist profile</p>
+                      <p className="text-2xl leading-none font-display tracking-wide text-white truncate mt-1">{featuredArtist.name}</p>
+                    </div>
+                  </button>
                 </motion.div>
               )}
 

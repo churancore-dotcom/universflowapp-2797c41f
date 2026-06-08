@@ -229,7 +229,7 @@ const Home = () => {
       <div className="h-[100dvh] bg-background relative flex flex-col overflow-hidden">
         <SEOHead
           title="Univers Flow — Free Music Streaming & Playlists"
-          description="Your personalized music feed: trending tracks, featured artists, auto-generated mixes, and your now-playing card. Stream and download free."
+          description="Your personalized music feed: trending tracks, featured artists, smart mixes, and your now-playing card. Stream and download free."
           path="/home"
           jsonLdId="home-jsonld"
           jsonLd={{
@@ -237,7 +237,7 @@ const Home = () => {
             '@type': 'CollectionPage',
             name: 'Univers Flow — Home',
             url: 'https://universflow.in/home',
-            description: 'Personalized music feed with trending tracks, featured artists, and auto-generated mixes.',
+            description: 'Personalized music feed with trending tracks, featured artists, and smart mixes.',
             isPartOf: { '@type': 'WebSite', name: 'Univers Flow', url: 'https://universflow.in' },
           }}
         />

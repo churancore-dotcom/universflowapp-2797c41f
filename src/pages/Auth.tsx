@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, AtSign, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { FadeTransition } from '@/components/PageTransition';
 import SEOHead from '@/components/SEOHead';
@@ -252,9 +252,8 @@ const Auth = () => {
                         autoFocus
                       />
                     </div>
-                    <p className="mt-1.5 text-[10.5px] text-muted-foreground/80 flex items-center gap-1 px-1">
-                      <Sparkles className="w-3 h-3 text-primary" />
-                      We'll pick a fresh animated avatar for you
+                    <p className="mt-1.5 text-[10.5px] text-muted-foreground/80 px-1">
+                      Fresh animated avatar included
                     </p>
                   </motion.div>
                 )}

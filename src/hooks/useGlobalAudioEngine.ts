@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { connectAudioElement, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe } from '@/lib/audioEngine';
+import { connectAudioElement, getState, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe } from '@/lib/audioEngine';
 import { getEQSettings, isEqActive } from '@/lib/eqSettings';
 
 /**
@@ -47,8 +47,9 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
       // User has effects on (or had them on earlier this session) — attach
       // and push current settings.
       const ok = connectAudioElement(audioElement);
-      if (ok) {
-        isAttached = true;
+      if (ok) isAttached = true;
+
+      if (getState() === 'processed') {
         setBands(s.bands, s.bassBoost);
         setReverb(s.reverb);
         engineSetStudioSpace(s.studioSpace);
@@ -80,7 +81,7 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     };
 
     // User toggled EQ in modal — apply right now.
-    const onEqChanged = () => reapply(90);
+    const onEqChanged = () => reapply(180);
 
     doReapply();
     audioElement.addEventListener('loadstart', onMediaReady);
@@ -91,6 +92,7 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
     document.addEventListener('pointerdown', onPointer, { once: true });
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('uf-eq-changed', onEqChanged);
+    window.addEventListener('uf-eq-source-ready', onEqChanged);
 
     return () => {
       if (reapplyTimer != null) clearTimeout(reapplyTimer);
@@ -102,6 +104,7 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
       document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('uf-eq-changed', onEqChanged);
+      window.removeEventListener('uf-eq-source-ready', onEqChanged);
     };
   }, [audioElement]);
 }

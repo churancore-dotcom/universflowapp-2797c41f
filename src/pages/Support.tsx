@@ -225,7 +225,7 @@ const Support = () => {
                 </p>
 
                 <div className="flex justify-center gap-2 flex-wrap mt-5">
-                  {['💜', '🎵', '🎧', '✨', '🌟', '🚀', '🙏'].map((emoji, i) => (
+                  {['💜', '🎵', '🎧', '🎼', '🎶', '🚀', '🙏'].map((emoji, i) => (
                     <motion.span
                       key={i}
                       initial={{ scale: 0, y: 10 }}

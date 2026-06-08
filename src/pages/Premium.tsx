@@ -41,7 +41,7 @@ const FEATURES = [
   { icon: Building2,    title: 'Studio Spaces',           desc: 'Vinyl Booth, Cathedral, Stadium — pick your room.' },
   { icon: Moon,         title: 'Late Night Mode',         desc: 'Whispered details lifted, loud peaks tamed.' },
   { icon: Download,     title: 'Unlimited Downloads',     desc: 'Save anything. Listen offline. Anywhere.' },
-  { icon: Music2,       title: 'AI Playlists',            desc: 'Mood-matched playlists, made instantly.' },
+  { icon: Music2,       title: 'Mood Playlists',          desc: 'Mood-matched playlists, made instantly.' },
   { icon: InfinityIcon, title: 'Crossfade & Gapless',     desc: 'Seamless transitions, end to end.' },
   { icon: Disc3,     title: 'Premium-Only Tracks',     desc: 'Early drops and exclusive releases.' },
   { icon: ShieldCheck,  title: 'Priority Support',        desc: 'Skip the line — we answer first.' },

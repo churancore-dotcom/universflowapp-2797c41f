@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Music, Image, X, Check, Loader2, AlertCircle, Link, Globe, Youtube, Sparkles, Zap, Brain, Shield, Database } from 'lucide-react';
+import { Upload, Music, Image, X, Check, Loader2, AlertCircle, Link, Globe, Youtube, Disc3, Zap, Shield, Database, ListChecks } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -762,7 +762,7 @@ const UploadMusic = () => {
                 ) : urlValidated ? (
                   <Check className="w-4 h-4 text-green-500" />
                 ) : (
-                  <Sparkles className="w-4 h-4" />
+                  <Disc3 className="w-4 h-4" />
                 )}
               </Button>
             </div>
@@ -780,10 +780,10 @@ const UploadMusic = () => {
                     {extractionStage === 'analyzing' && (
                       <>
                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
-                          <Brain className="w-5 h-5 text-primary" />
+                          <Disc3 className="w-5 h-5 text-primary" />
                         </motion.div>
                         <div>
-                          <p className="text-sm font-medium text-primary">Analyzing with AI...</p>
+                          <p className="text-sm font-medium text-primary">Reading metadata...</p>
                           <p className="text-xs text-muted-foreground">Extracting metadata from URL</p>
                         </div>
                       </>
@@ -1060,7 +1060,7 @@ const MetadataCard = ({ metadata, setMetadata, genres, moods, isUploading, uploa
     {/* Section Placement */}
     <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 space-y-3">
       <Label className="text-sm font-semibold flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary" />
+        <ListChecks className="w-4 h-4 text-primary" />
         Display Sections
       </Label>
       <p className="text-xs text-muted-foreground">Choose where this song should appear</p>

@@ -85,7 +85,7 @@ const RateUsPopup = ({ onOpenReview }: Props) => {
                   className="w-full h-11 rounded-2xl font-semibold text-sm text-white"
                   style={{ background: 'linear-gradient(135deg, #FF2D55, #FF6482)' }}
                 >
-                  Let's do it ✨
+                  Let's do it
                 </button>
                 <button
                   onClick={() => dismiss(true)}

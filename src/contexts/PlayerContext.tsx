@@ -138,6 +138,7 @@ const DIRECT_PLAYABLE_HOST_SNIPPETS = [
   'supabase.co',
   'the-standard.io',
   'private.coffee',
+  'saavncdn.com',
 ];
 
 const shouldProxyStreamUrl = (sourceUrl: string) => {
@@ -181,6 +182,8 @@ const buildStreamProxyUrl = (sourceUrl: string) => {
   if (!isEqProcessingEnabled()) return sourceUrl;
   return `${projectUrl}/functions/v1/music-indexer?audio=${encodeURIComponent(sourceUrl)}`;
 };
+
+const isAudioProxyUrl = (url?: string | null) => Boolean(url?.includes('/functions/v1/music-indexer?audio='));
 
 const isEqProcessingEnabled = () => {
   try { return isEqActive(getEQSettings()); } catch { return false; }
@@ -509,9 +512,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!a || !a.src) return;
       if (!isEqProcessingEnabled()) return;
       // Already going through our edge-function proxy → already CORS-safe.
-      if (a.src.includes('/functions/v1/music-indexer?audio=')) return;
+      if (isAudioProxyUrl(a.src)) {
+        window.dispatchEvent(new CustomEvent('uf-eq-source-ready'));
+        return;
+      }
       // Same-origin or already-CORS-safe hosts also work.
-      if (!shouldProxyStreamUrl(a.src)) return;
+      if (!shouldProxyStreamUrl(a.src)) {
+        window.dispatchEvent(new CustomEvent('uf-eq-source-ready'));
+        return;
+      }
 
       const wasPlaying = !a.paused;
       const at = a.currentTime;
@@ -523,6 +532,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const restore = () => {
           try { a.currentTime = at; } catch { /* ignore */ }
           a.removeEventListener('loadedmetadata', restore);
+          window.dispatchEvent(new CustomEvent('uf-eq-source-ready'));
           if (wasPlaying) a.play().catch(() => {});
         };
         a.addEventListener('loadedmetadata', restore, { once: true });

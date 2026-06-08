@@ -47,9 +47,8 @@ const StructuredData = () => {
         "High quality audio",
         "No ads for premium",
         "Cross-platform sync",
-        "AI-powered recommendations",
+        "Mood playlists",
         "Equalizer settings",
-        "Sleep timer",
         "Social sharing"
       ],
       "screenshot": "https://storage.googleapis.com/gpt-engineer-file-uploads/d6CK1hptEYS0iYCrQMmYcx7HukD2/social-images/social-1768315544947-Screenshot 2026-01-13 201134.png",

@@ -163,9 +163,20 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
     };
     recentSongs.forEach((s) => { bump(s.mood, 3); bump(s.genre, 2); });
     likedSongs.forEach((s) => { bump(s.mood, 2); bump(s.genre, 1); });
-    pool.forEach((s) => { bump(s.mood, 1); });
-    return Array.from(tally.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+    pool.forEach((s) => { bump(s.mood, 1); bump(s.genre, 1); });
+    const discovered = Array.from(tally.entries()).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+    return (discovered.length ? discovered : ['Chill', 'Romantic', 'Party', 'Focus']).slice(0, 4);
   }, [recentSongs, likedSongs, pool]);
+
+  const moodSearchTerm = (mood: string) => {
+    const lower = mood.toLowerCase();
+    if (lower.includes('slow') && lower.includes('reverb')) return 'slow reverb songs';
+    if (lower.includes('bass')) return 'bass boosted songs';
+    if (lower === 'energetic') return 'workout songs';
+    if (lower === 'calm') return 'chill songs';
+    if (lower === 'uplifting') return 'happy songs';
+    return `${mood} songs`;
+  };
 
 
   const hero = currentSong || recent[0] || pool[0];
@@ -307,7 +318,7 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {moodList.map((m, i) => (
-                <button key={m} onClick={() => navigate(`/search?q=${encodeURIComponent(m)}`)} className="px-2.5 py-1 text-[10px] font-bold rounded-md active:scale-95 transition-transform" style={i === 0 ? { background: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.3)' } : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
+                <button key={m} onClick={() => navigate(`/search?q=${encodeURIComponent(moodSearchTerm(m))}`)} className="px-2.5 py-1 text-[10px] font-bold rounded-md active:scale-95 transition-transform" style={i === 0 ? { background: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.3)' } : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
                   {m.toUpperCase()}
                 </button>
               ))}
