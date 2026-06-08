@@ -151,10 +151,22 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
   const liked = useMemo(() => dedupeSongs(likedSongs).slice(0, 3), [likedSongs]);
   const newRelease = useMemo(() => pool.find((s) => s.created_at || s.cover_url) || pool[0], [pool]);
   const featured = useMemo(() => pool.find((s) => s.album && s.cover_url), [pool]);
+  // Smart Moods: prefer moods/genres inferred from the user's actual recent listening,
+  // then fall back to the broader pool when history is empty.
   const moodList = useMemo(() => {
-    const realMoods = pool.map((s) => s.mood || s.genre).filter(Boolean) as string[];
-    return Array.from(new Set(realMoods.map((m) => m.trim()).filter(Boolean))).slice(0, 4);
-  }, [pool]);
+    const tally = new Map<string, number>();
+    const bump = (val: string | undefined, weight: number) => {
+      if (!val) return;
+      const k = val.trim();
+      if (!k) return;
+      tally.set(k, (tally.get(k) || 0) + weight);
+    };
+    recentSongs.forEach((s) => { bump(s.mood, 3); bump(s.genre, 2); });
+    likedSongs.forEach((s) => { bump(s.mood, 2); bump(s.genre, 1); });
+    pool.forEach((s) => { bump(s.mood, 1); });
+    return Array.from(tally.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+  }, [recentSongs, likedSongs, pool]);
+
 
   const hero = currentSong || recent[0] || pool[0];
   const heroPlaying = !!currentSong && currentSong.id === hero?.id && isPlaying;

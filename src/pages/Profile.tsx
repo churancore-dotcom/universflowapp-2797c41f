@@ -27,6 +27,7 @@ const Profile = () => {
   const { isPremium, isLoading: premiumLoading } = usePremium();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ likedSongs: 0, recentPlays: 0, playlists: 0 });
+  const [listenStats, setListenStats] = useState<{ minutes: number; topArtist: string | null; topSong: string | null }>({ minutes: 0, topArtist: null, topSong: null });
   const [statsReady, setStatsReady] = useState(false);
   const [showRedeemCode, setShowRedeemCode] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -74,20 +75,37 @@ const Profile = () => {
   const fetchStats = async () => {
     if (!user) { setStatsReady(true); return; }
     try {
-      const [liked, recent, playlists] = await Promise.all([
+      const [liked, recent, playlists, plays] = await Promise.all([
         supabase.from('user_library').select('id').eq('user_id', user.id),
         supabase.from('recently_played').select('id').eq('user_id', user.id),
         supabase.from('playlists').select('id').eq('user_id', user.id),
+        supabase.from('song_play_events').select('title,artist,duration_played').eq('user_id', user.id).order('played_at', { ascending: false }).limit(500),
       ]);
       setStats({
         likedSongs: liked.data?.length || 0,
         recentPlays: recent.data?.length || 0,
         playlists: playlists.data?.length || 0,
       });
+      // Compute listening stats from play events
+      const rows = (plays.data as any[]) || [];
+      const totalSeconds = rows.reduce((sum, r) => sum + (Number(r.duration_played) || 0), 0);
+      const artistCount = new Map<string, number>();
+      const songCount = new Map<string, number>();
+      rows.forEach((r) => {
+        if (r.artist) artistCount.set(r.artist, (artistCount.get(r.artist) || 0) + 1);
+        if (r.title) songCount.set(r.title, (songCount.get(r.title) || 0) + 1);
+      });
+      const top = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+      setListenStats({
+        minutes: Math.round(totalSeconds / 60),
+        topArtist: top(artistCount),
+        topSong: top(songCount),
+      });
     } finally {
       setStatsReady(true);
     }
   };
+
 
   const handleSaveUsername = async () => {
     if (!user || !newUsername.trim()) return;
@@ -258,8 +276,28 @@ const Profile = () => {
           {/* Cross-Device Resume */}
           {profileSettled && user && <CrossDeviceResumeCard />}
 
+          {/* Listening Stats Hero — real data from song_play_events */}
+          {profileSettled && user && (
+            <div className="uf-bento-card p-4 mb-4 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-30 blur-3xl uf-rose-gradient pointer-events-none" />
+              <span className="text-white/40 text-[10px] font-extrabold uppercase tracking-[0.18em]">Your Listening</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-[44px] leading-none font-display tracking-tight">{listenStats.minutes.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">minutes streamed</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3 relative z-10">
+                <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-2.5">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5">Top Artist</p>
+                  <p className="text-sm font-semibold truncate">{listenStats.topArtist || '—'}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-2.5">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5">Top Song</p>
+                  <p className="text-sm font-semibold truncate">{listenStats.topSong || '—'}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
               { icon: Heart, label: 'Liked', value: stats.likedSongs },

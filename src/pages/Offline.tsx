@@ -5,9 +5,11 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { useDownloads } from '@/contexts/DownloadContext';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
+import RoseHero from '@/components/RoseHero';
 import { triggerHaptic } from '@/hooks/useHaptics';
 import { iosSpring, staggerContainer, staggerItem } from '@/lib/animations';
 import SEOHead from '@/components/SEOHead';
+
 
 interface CachedSong {
   id: string;
@@ -114,30 +116,29 @@ const Offline = memo(function Offline() {
       keywords="offline player, downloaded songs, Univers Flow offline library"
     />
     <div className="min-h-screen bg-background flex flex-col pb-40 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-      {/* Header */}
-      <div className="sticky top-0 z-40 px-4 pt-4 pb-3 bg-background/80 backdrop-blur-xl safe-area-pt">
-        <div className="flex items-center gap-3">
+      {/* Header — rose-ember hero to match the rest of the app */}
+      <header className="sticky top-0 z-40 px-3 pt-3 pb-3 bg-background/80 backdrop-blur-xl safe-area-pt">
+        <div className="flex items-start gap-2">
           {isOnline && (
             <button
               onClick={() => navigate(-1)}
-              className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center"
+              aria-label="Go back"
+              className="mt-2 w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.06] flex items-center justify-center active:scale-95 transition-transform"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center">
-            <WifiOff className="w-6 h-6 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-foreground">
-              {isOnline ? 'Downloaded Music' : 'Offline Mode'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {cachedSongs.length} songs • {storageUsed} used
-            </p>
+          <div className="flex-1 min-w-0">
+            <RoseHero
+              eyebrow={isOnline ? 'Downloaded' : 'Offline mode'}
+              title="YOUR LIBRARY"
+              subtitle={`${cachedSongs.length} songs · ${storageUsed} used`}
+              compact
+            />
           </div>
         </div>
-      </div>
+      </header>
+
 
       {/* Content */}
       <div className="flex-1 px-4">
