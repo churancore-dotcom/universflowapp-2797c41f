@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { connectAudioElement, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe } from '@/lib/audioEngine';
+import { connectAudioElement, getState, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe } from '@/lib/audioEngine';
 import { getEQSettings, isEqActive } from '@/lib/eqSettings';
 
 /**
@@ -47,8 +47,9 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
       // User has effects on (or had them on earlier this session) — attach
       // and push current settings.
       const ok = connectAudioElement(audioElement);
-      if (ok) {
-        isAttached = true;
+      if (ok) isAttached = true;
+
+      if (getState() === 'processed') {
         setBands(s.bands, s.bassBoost);
         setReverb(s.reverb);
         engineSetStudioSpace(s.studioSpace);
