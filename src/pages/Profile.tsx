@@ -14,7 +14,8 @@ import EmailVerificationCard from '@/components/EmailVerificationCard';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import AvatarPickerModal from '@/components/AvatarPickerModal';
-import { resolveAvatar } from '@/lib/avatars';
+import AnimatedAvatar from '@/components/AnimatedAvatar';
+import { resolveAvatar, isPresetAvatar } from '@/lib/avatars';
 import { Camera } from 'lucide-react';
 
 interface ProfileData {
@@ -184,7 +185,9 @@ const Profile = () => {
                   className="w-24 h-24 rounded-full flex items-center justify-center ring-4 ring-white/10 shadow-2xl overflow-hidden"
                   style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(18 100% 78%))' }}
                 >
-                  {resolveAvatar(profileData.avatar_url) ? (
+                  {isPresetAvatar(profileData.avatar_url) ? (
+                    <AnimatedAvatar variant={profileData.avatar_url} size={96} />
+                  ) : resolveAvatar(profileData.avatar_url) ? (
                     <img
                       src={resolveAvatar(profileData.avatar_url)!}
                       alt="Profile avatar"
