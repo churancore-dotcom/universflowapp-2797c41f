@@ -79,7 +79,7 @@ const BAND_DEFS: Array<{ freq: number; type: BiquadFilterType; q: number }> = [
 
 function ensureCtx(): AudioContext | null {
   if (engine.ctx && engine.ctx.state !== 'closed') return engine.ctx;
-  const AC = window.AudioContext || (window as any).webkitAudioContext;
+  const AC = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return null;
   try {
     const ctx = new AC({ latencyHint: 'playback' });
@@ -140,6 +140,19 @@ const SPACE_PROFILES: Record<Exclude<StudioSpaceId, 'off'>, SpaceProfile> = {
 };
 
 let currentSpaceId: StudioSpaceId = 'off';
+let currentReverbPercent = 0;
+
+function applyReverbMix(percent: number) {
+  if (engine.mode !== 'processed' || !engine.ctx || !engine.dryGain || !engine.wetGain) return;
+  const ctx = engine.ctx;
+  const now = ctx.currentTime;
+  const wet = Math.max(0, Math.min(0.35, percent / 100 * 0.45));
+  const dry = 1 - wet * 0.4;
+  engine.dryGain.gain.cancelScheduledValues(now);
+  engine.wetGain.gain.cancelScheduledValues(now);
+  engine.dryGain.gain.setTargetAtTime(dry, now, SMOOTH);
+  engine.wetGain.gain.setTargetAtTime(wet, now, SMOOTH);
+}
 
 /** Build a stereo IR from a SpaceProfile. */
 function buildSpaceIR(ctx: AudioContext, p: SpaceProfile): AudioBuffer {
@@ -202,10 +215,7 @@ export function setStudioSpace(spaceId: StudioSpaceId) {
   const now = ctx.currentTime;
   if (spaceId === 'off') {
     engine.convolver.buffer = getReverbIR(ctx);
-    engine.wetGain.gain.cancelScheduledValues(now);
-    engine.dryGain.gain.cancelScheduledValues(now);
-    engine.wetGain.gain.setTargetAtTime(0, now, SMOOTH);
-    engine.dryGain.gain.setTargetAtTime(1, now, SMOOTH);
+    applyReverbMix(currentReverbPercent);
     return;
   }
   const profile = SPACE_PROFILES[spaceId];
@@ -391,6 +401,15 @@ export function connectAudioElement(el: HTMLAudioElement): boolean {
   if (engine.el === el && engine.signature === sig && sig !== null) {
     if (ctx.state === 'suspended') ctx.resume().catch(() => { });
     if (engine.mode === 'processed') return true;
+    if (engine.mode === 'direct' && isCorsSafe(el)) {
+      const existingSource = sourceCache.get(el);
+      if (existingSource) {
+        disconnectAll();
+        buildProcessedChain(ctx, existingSource);
+        setMode('processed');
+        return true;
+      }
+    }
   }
 
   disconnectAll();
@@ -481,15 +500,9 @@ export function setBands(gainsDb: number[], bassBoostPercent = 0) {
 
 /** 0..100 wet mix. Capped at 35% wet so vocals stay intelligible. */
 export function setReverb(percent: number) {
-  if (engine.mode !== 'processed' || !engine.ctx || !engine.dryGain || !engine.wetGain) return;
-  const ctx = engine.ctx;
-  const now = ctx.currentTime;
-  const wet = Math.max(0, Math.min(0.35, percent / 100 * 0.45));
-  const dry = 1 - wet * 0.4;
-  engine.dryGain.gain.cancelScheduledValues(now);
-  engine.wetGain.gain.cancelScheduledValues(now);
-  engine.dryGain.gain.setTargetAtTime(dry, now, SMOOTH);
-  engine.wetGain.gain.setTargetAtTime(wet, now, SMOOTH);
+  currentReverbPercent = Math.max(0, Math.min(100, percent));
+  if (currentSpaceId !== 'off') return;
+  applyReverbMix(currentReverbPercent);
 }
 
 function startSpatialLfo() {
@@ -514,7 +527,7 @@ function startSpatialLfo() {
   engine.panLfoGain = lfoGain;
 
   // Add a touch of reverb for the "room" cue
-  if (engine.dryGain && engine.wetGain) {
+  if (currentSpaceId === 'off' && engine.dryGain && engine.wetGain) {
     const now = ctx.currentTime;
     engine.wetGain.gain.cancelScheduledValues(now);
     engine.dryGain.gain.cancelScheduledValues(now);
@@ -538,6 +551,7 @@ function stopSpatialLfo() {
     engine.stereoPanner.pan.cancelScheduledValues(now);
     engine.stereoPanner.pan.setTargetAtTime(0, now, SMOOTH);
   }
+  if (currentSpaceId === 'off') applyReverbMix(currentReverbPercent);
 }
 
 /** Toggle 8D auto-rotating spatial mode. Single boolean — no extra knobs. */

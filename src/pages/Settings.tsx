@@ -14,6 +14,7 @@ import EmailVerificationCard from '@/components/EmailVerificationCard';
 import EqualizerModal from '@/components/EqualizerModal';
 
 import { applyTheme, type ThemeMode } from '@/lib/themeBoot';
+import { setEQSettings } from '@/lib/eqSettings';
 import SEOHead from '@/components/SEOHead';
 
 
@@ -27,7 +28,12 @@ const writeEq = (patch: Record<string, unknown>) => {
   try {
     const cur = readEq();
     localStorage.setItem(EQ_KEY, JSON.stringify({ ...cur, ...patch }));
+    setEQSettings(patch as Parameters<typeof setEQSettings>[0]);
   } catch { /* ignore */ }
+};
+
+type CapacitorWindow = Window & typeof globalThis & {
+  Capacitor?: { isNativePlatform?: () => boolean };
 };
 
 const Settings = () => {
@@ -84,8 +90,8 @@ const Settings = () => {
     setNotifications(val);
     localStorage.setItem('uf_notifications', String(val));
     if (!val) return;
-    const isNative = typeof (window as any).Capacitor !== 'undefined'
-      && (window as any).Capacitor.isNativePlatform?.() === true;
+    const capacitor = (window as CapacitorWindow).Capacitor;
+    const isNative = typeof capacitor !== 'undefined' && capacitor.isNativePlatform?.() === true;
     if (isNative) {
       const { requestPushPermissionAndRegister } = await import('@/hooks/usePushRegistration');
       const result = await requestPushPermissionAndRegister();
