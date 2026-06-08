@@ -1,36 +1,35 @@
-import a1 from '@/assets/avatars/avatar-1.jpg';
-import a2 from '@/assets/avatars/avatar-2.jpg';
-import a3 from '@/assets/avatars/avatar-3.jpg';
-import a4 from '@/assets/avatars/avatar-4.jpg';
-import a5 from '@/assets/avatars/avatar-5.jpg';
-import a6 from '@/assets/avatars/avatar-6.jpg';
-import a7 from '@/assets/avatars/avatar-7.jpg';
-import a8 from '@/assets/avatars/avatar-8.jpg';
-import a9 from '@/assets/avatars/avatar-9.jpg';
-import a10 from '@/assets/avatars/avatar-10.jpg';
+import type { AvatarVariant } from '@/components/AnimatedAvatar';
 
 export interface PresetAvatar {
-  id: string;
-  url: string;
+  id: AvatarVariant;
   name: string;
+  tag: string;
 }
 
 export const PRESET_AVATARS: PresetAvatar[] = [
-  { id: 'hoodie-guy', url: a1, name: 'Hoodie' },
-  { id: 'sweater-girl', url: a2, name: 'Wavy' },
-  { id: 'glasses-beard', url: a3, name: 'Specs' },
-  { id: 'leather-bob', url: a4, name: 'Rockstar' },
-  { id: 'chain-guy', url: a5, name: 'Chain' },
-  { id: 'pink-sweater', url: a6, name: 'Sundown' },
-  { id: 'white-hoodie', url: a7, name: 'Crisp' },
-  { id: 'afro-yellow', url: a8, name: 'Sunny' },
-  { id: 'headphones-boy', url: a9, name: 'Beats' },
-  { id: 'pink-beanie', url: a10, name: 'Cozy' },
+  { id: 'wave', name: 'Hi there', tag: 'Waves at you' },
+  { id: 'vibe', name: 'Vibing', tag: 'Head bobs to music' },
+  { id: 'dj', name: 'DJ Mode', tag: 'Beats & headphones' },
+  { id: 'cool', name: 'Too Cool', tag: 'Shades on' },
+  { id: 'wink', name: 'Wink', tag: 'Cheeky wink' },
+  { id: 'star', name: 'Starlight', tag: 'Sparkles around' },
+  { id: 'heart', name: 'In Love', tag: 'Beating heart' },
+  { id: 'dance', name: 'Dance', tag: 'Side to side' },
+  { id: 'rockstar', name: 'Rockstar', tag: 'Headband on' },
+  { id: 'sleepy', name: 'Sleepy', tag: 'Catching Zzz' },
 ];
 
+export const isPresetAvatar = (value: string | null | undefined): value is AvatarVariant => {
+  if (!value) return false;
+  return PRESET_AVATARS.some(a => a.id === value);
+};
+
+/**
+ * Returns the URL for a stored image avatar, or null if the value
+ * refers to a preset animated avatar (caller should render <AnimatedAvatar />).
+ */
 export const resolveAvatar = (url: string | null | undefined): string | null => {
   if (!url) return null;
-  const preset = PRESET_AVATARS.find(a => a.id === url);
-  if (preset) return preset.url;
+  if (isPresetAvatar(url)) return null;
   return url;
 };
