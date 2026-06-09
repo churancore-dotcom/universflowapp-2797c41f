@@ -344,11 +344,11 @@ function applyLateNightToLimiter() {
     // Makeup gain — quiet content now sits ~6dB louder
     engine.preGain.gain.setTargetAtTime(1.6, now, SMOOTH);
   } else {
-    c.threshold.setTargetAtTime(-1, now, SMOOTH);
-    c.knee.setTargetAtTime(0, now, SMOOTH);
-    c.ratio.setTargetAtTime(20, now, SMOOTH);
-    c.attack.setTargetAtTime(0.003, now, SMOOTH);
-    c.release.setTargetAtTime(0.1, now, SMOOTH);
+    c.threshold.setTargetAtTime(-6, now, SMOOTH);
+    c.knee.setTargetAtTime(12, now, SMOOTH);
+    c.ratio.setTargetAtTime(4, now, SMOOTH);
+    c.attack.setTargetAtTime(0.01, now, SMOOTH);
+    c.release.setTargetAtTime(0.18, now, SMOOTH);
     engine.preGain.gain.setTargetAtTime(0.92, now, SMOOTH);
   }
 }
