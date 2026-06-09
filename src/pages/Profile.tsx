@@ -182,21 +182,21 @@ const Profile = () => {
                 aria-label="Change avatar"
               >
                 <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center ring-4 ring-white/10 shadow-2xl overflow-hidden"
+                  className="w-28 h-28 rounded-full flex items-center justify-center ring-4 ring-white/15 shadow-2xl overflow-hidden"
                   style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(18 100% 78%))' }}
                 >
                   {isPresetAvatar(profileData.avatar_url) ? (
-                    <VideoAvatar variant={profileData.avatar_url} size={96} />
+                    <VideoAvatar variant={profileData.avatar_url} size={112} />
                   ) : resolveAvatar(profileData.avatar_url) ? (
                     <img
                       src={resolveAvatar(profileData.avatar_url)!}
                       alt="Profile avatar"
-                      width={96}
-                      height={96}
+                      width={112}
+                      height={112}
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <User className="w-12 h-12 text-white" strokeWidth={1.5} />
+                    <User className="w-14 h-14 text-white" strokeWidth={1.5} />
                   )}
                 </div>
                 {isPremium ? (

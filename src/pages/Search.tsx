@@ -449,19 +449,21 @@ const Search = () => {
                   <button
                     type="button"
                     onClick={() => navigate(`/artists?focus=${encodeURIComponent(featuredArtist.name)}`)}
-                    className="relative w-full h-36 overflow-hidden rounded-2xl text-left active:scale-[0.98] transition-transform bg-card border border-white/10"
+                    className="relative w-full aspect-[4/5] max-h-72 overflow-hidden rounded-2xl text-left active:scale-[0.98] transition-transform bg-card border border-white/10"
                   >
                     <img
                       src={featuredArtist.image_url}
                       alt={`${featuredArtist.name} artist photo`}
                       className="absolute inset-0 w-full h-full object-cover"
+                      style={{ objectPosition: '50% 22%' }}
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    {/* Bottom-only gradient — keeps faces fully visible */}
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
                     <div className="absolute left-4 right-4 bottom-4">
-                      <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/60">Real artist profile</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/70">Real artist profile</p>
                       <p className="text-2xl leading-none font-display tracking-wide text-white truncate mt-1">{featuredArtist.name}</p>
                     </div>
                   </button>
