@@ -1163,6 +1163,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           startCrossfade();
         }
       }
+      // ── Auto-advance safety net (Android WebView sometimes swallows 'ended').
+      //    If we're within 0.25s of the end and not crossfading, force the
+      //    ended pipeline so playlists keep flowing on APK.
+      if (
+        !isCrossfading.current &&
+        audio.duration > 1 &&
+        isFinite(audio.duration) &&
+        audio.currentTime > 0 &&
+        audio.duration - audio.currentTime <= 0.25
+      ) {
+        handleEnded();
+      }
     };
 
     // ── Auto-skip on stream errors (broken/expired URLs) ──
