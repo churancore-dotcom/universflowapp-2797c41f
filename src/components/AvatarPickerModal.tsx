@@ -78,8 +78,8 @@ const AvatarPickerModal = ({ isOpen, onClose, userId, currentAvatar, onSaved }: 
                   }}
                   aria-label={av.name}
                 >
-                  <div className="flex-1 w-full">
-                    <VideoAvatar variant={av.id} size={140} />
+                  <div className="flex-1 w-full flex items-center justify-center">
+                    <VideoAvatar variant={av.id} size={96} />
                   </div>
                   <div className="absolute bottom-0 inset-x-0 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
                     <p className="text-[10px] font-semibold text-white text-center truncate">{av.name}</p>
