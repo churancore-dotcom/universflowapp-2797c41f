@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Music, Heart, ListMusic, Download, CloudOff, Trash2, User, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,10 +81,12 @@ const writeLibraryCache = (userId: string, data: any) => {
 const Library = () => {
   const { user, isOffline } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { playSong, currentSong } = usePlayer();
   const { downloads, removeSong, getDownloadedUrl, totalStorageUsed, clearAllDownloads } = useDownloads();
-  const [activeTab, setActiveTab] = useState(isOffline ? 'downloads' : 'liked');
+  const requestedTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(isOffline ? 'downloads' : (requestedTab || 'liked'));
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   
 
@@ -108,6 +110,14 @@ const Library = () => {
   useEffect(() => {
     if (isOffline) setActiveTab('downloads');
   }, [isOffline]);
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    if (!nextTab) return;
+    if (['liked', 'artists', 'downloads', 'playlists'].includes(nextTab) && nextTab !== activeTab) {
+      setActiveTab(nextTab);
+    }
+  }, [searchParams, activeTab]);
 
   const likedSongs = data?.likedSongs || [];
   const playlists = data?.playlists || [];
@@ -250,7 +260,7 @@ const Library = () => {
         </header>
 
         <main className="flex-1 overflow-hidden px-3 pt-2.5 flex flex-col relative z-10">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); setSearchParams({ tab: value }); }} className="flex-1 flex flex-col overflow-hidden">
             {/* Tabs — bento surface */}
             <TabsList
               className="w-full h-12 p-1 mb-3 rounded-3xl grid grid-cols-4 flex-shrink-0 bg-card border border-white/5"
@@ -446,7 +456,7 @@ const Library = () => {
                 <h2 className="sr-only">Your Playlists</h2>
                 <div className="mb-3">
                   <motion.button
-                    className="flex items-center gap-3 p-3.5 rounded-xl"
+                    className="w-full flex items-center gap-3 p-3.5 rounded-xl"
                     style={{
                       background: 'rgba(255,255,255,0.03)',
                       border: '0.5px solid rgba(255,255,255,0.06)',
