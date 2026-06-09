@@ -56,6 +56,10 @@ const Profile = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    setStats(prev => ({ ...prev, downloads: downloads.length }));
+  }, [downloads.length]);
+
   const fetchProfile = async () => {
     if (!user) { setProfileReady(true); return; }
     try {
@@ -326,7 +330,7 @@ const Profile = () => {
             {/* === Quick Access (replaces stat counters) === */}
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => navigate('/library')}
+                onClick={() => navigate('/library?tab=liked')}
                 className="rounded-3xl p-4 text-left bg-card border border-white/5 active:scale-[0.98] transition flex flex-col gap-2"
               >
                 <div className="w-9 h-9 rounded-2xl flex items-center justify-center uf-rose-gradient">
@@ -339,7 +343,7 @@ const Profile = () => {
               </button>
 
               <button
-                onClick={() => navigate('/library')}
+                onClick={() => navigate('/library?tab=playlists')}
                 className="rounded-3xl p-4 text-left bg-card border border-white/5 active:scale-[0.98] transition flex flex-col gap-2"
               >
                 <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-white/10">
@@ -360,7 +364,7 @@ const Profile = () => {
                 </div>
                 <div>
                   <p className="text-base font-bold leading-tight">Downloads</p>
-                  <p className="text-[11px] text-muted-foreground">Offline library</p>
+                  <p className="text-[11px] text-muted-foreground">{profileSettled ? `${stats.downloads} saved` : '—'}</p>
                 </div>
               </button>
 
