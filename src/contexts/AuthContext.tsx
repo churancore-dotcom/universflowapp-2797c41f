@@ -146,12 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('user_id', data.user.id)
           .maybeSingle();
 
-        // Email-verification gate: block sign-in until they confirm via the link
-        if (profile && profile.email_verified === false) {
-          await supabase.auth.signOut();
-          return { error: new Error('EMAIL_NOT_VERIFIED') };
-        }
-
+        // Banned / suspended — always block, sign out and surface error.
         if (profile?.status === 'banned') {
           await supabase.auth.signOut();
           return { error: new Error('Your account has been banned. Contact support for help.') };
@@ -159,6 +154,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profile?.status === 'suspended') {
           await supabase.auth.signOut();
           return { error: new Error('Your account is temporarily suspended. Please try again later.') };
+        }
+
+        // Unverified: keep the session alive so the verification screen can
+        // poll + auto-advance once they tap the email link. The route gate
+        // redirects them to /check-email until profile.email_verified flips.
+        if (profile && profile.email_verified === false) {
+          localStorage.setItem('uf_pending_verify_email', email);
+          return { error: new Error('EMAIL_NOT_VERIFIED') };
         }
 
         // Auto-expire premium if past expires_at (client-side belt-and-suspenders alongside cron)
@@ -238,14 +241,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch { /* non-fatal */ }
 
-      // CRITICAL: Supabase auto-creates a session on signUp. Sign the user out
-      // immediately so they must click the verification link and sign in fresh.
-      // Clear local state synchronously first so no protected route flashes,
-      // then sign out in the background (don't block navigation on it).
-      setUser(null);
-      setSession(null);
-      setIsAdmin(false);
-      supabase.auth.signOut().catch(() => {});
+      // Keep the freshly-created Supabase session alive so that once the user
+      // clicks the verification link they land back in the app already signed
+      // in. Access to protected routes is gated by `profiles.email_verified`
+      // (see ProtectedRoute) — not by the absence of a session.
+      localStorage.setItem('uf_pending_verify_email', email);
 
       return { error: null };
     } catch (error) {
