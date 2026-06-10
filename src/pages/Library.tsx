@@ -353,7 +353,7 @@ const Library = () => {
                             }}
                           >
                             {artist.photoUrl ? (
-                              <img src={artist.photoUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <img src={artist.photoUrl} alt={`${artist.name} photo`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                               <User className="w-6 h-6 text-muted-foreground" />
                             )}
