@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { Download, Star, Share2, ShieldCheck, Music2, WifiOff, Sparkles, Headphones, ChevronRight } from "lucide-react";
+import { Download, Share2, ShieldCheck, Music2, WifiOff, Sparkles, Headphones, ChevronRight, Users } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 
 const APK_URL = "/UniversFlow.apk";
@@ -12,14 +11,6 @@ const SHOTS = [
   { src: "/pwa-512x512.png", alt: "Now playing — fullscreen player" },
   { src: "/pwa-512x512.png", alt: "Your library and downloads" },
   { src: "/pwa-512x512.png", alt: "Search across millions of songs" },
-];
-
-const RATING_BARS = [
-  { stars: 5, pct: 82 },
-  { stars: 4, pct: 12 },
-  { stars: 3, pct: 4 },
-  { stars: 2, pct: 1 },
-  { stars: 1, pct: 1 },
 ];
 
 const FEATURES = [
