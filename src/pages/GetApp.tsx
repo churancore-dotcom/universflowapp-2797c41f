@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Download, Star, Share2, ShieldCheck, Music2, WifiOff, Sparkles, Headphones, ChevronRight } from "lucide-react";
+import { Download, Share2, ShieldCheck, Music2, WifiOff, Sparkles, Headphones, ChevronRight, Users } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 
 const APK_URL = "/UniversFlow.apk";
@@ -12,14 +12,6 @@ const SHOTS = [
   { src: "/pwa-512x512.png", alt: "Now playing — fullscreen player" },
   { src: "/pwa-512x512.png", alt: "Your library and downloads" },
   { src: "/pwa-512x512.png", alt: "Search across millions of songs" },
-];
-
-const RATING_BARS = [
-  { stars: 5, pct: 82 },
-  { stars: 4, pct: 12 },
-  { stars: 3, pct: 4 },
-  { stars: 2, pct: 1 },
-  { stars: 1, pct: 1 },
 ];
 
 const FEATURES = [
@@ -51,7 +43,6 @@ const GetApp = () => {
       softwareVersion: VERSION,
       fileSize: SIZE,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "1280" },
       image: "https://universflow.in/pwa-512x512.png",
       screenshot: "https://universflow.in/pwa-512x512.png",
       description: "Free music streaming and download app for Android. Stream millions of songs, build playlists, and listen offline.",
@@ -68,7 +59,6 @@ const GetApp = () => {
       softwareVersion: VERSION,
       fileSize: SIZE,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "1280" },
       image: "https://universflow.in/pwa-512x512.png",
       screenshot: "https://universflow.in/pwa-512x512.png",
       description: "Free music streaming and download app for Android. Stream millions of songs, build playlists, and listen offline.",
@@ -122,9 +112,9 @@ const GetApp = () => {
           <div className="mt-6 grid grid-cols-3 divide-x divide-white/10 text-center">
             <div className="px-2">
               <div className="flex items-center justify-center gap-1 text-base font-bold">
-                4.8 <Star className="w-3.5 h-3.5 text-white fill-white" />
+                <Users className="w-3.5 h-3.5 text-white/70" /> 10K+
               </div>
-              <div className="text-[11px] text-white/55 mt-0.5">1.2K reviews</div>
+              <div className="text-[11px] text-white/55 mt-0.5">Installs</div>
             </div>
             <div className="px-2">
               <div className="text-base font-bold">{SIZE}</div>
@@ -225,31 +215,7 @@ const GetApp = () => {
           </div>
         </section>
 
-        {/* Ratings & reviews */}
-        <section className="px-5 pb-6">
-          <h2 className="text-base font-bold mb-3">Ratings &amp; reviews</h2>
-          <div className="flex gap-5 items-center">
-            <div className="text-center">
-              <div className="text-4xl font-extrabold">4.8</div>
-              <div className="flex items-center gap-0.5 justify-center mt-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="w-3 h-3 text-[#FF2D55] fill-[#FF2D55]" />
-                ))}
-              </div>
-              <div className="text-[10px] text-white/55 mt-1">1,280</div>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              {RATING_BARS.map((b) => (
-                <div key={b.stars} className="flex items-center gap-2">
-                  <span className="text-[10px] text-white/55 w-2">{b.stars}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full bg-[#FF2D55]" style={{ width: `${b.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* Ratings & reviews — disabled until real user reviews are collected */}
 
         {/* What's new */}
         <section className="px-5 pb-8">

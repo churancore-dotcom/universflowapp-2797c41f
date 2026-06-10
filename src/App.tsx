@@ -175,6 +175,9 @@ const AnimatedRoutes = () => {
         <Routes location={location}>
           <Route path="/" element={<RootGate />} />
           <Route path="/get" element={<GetApp />} />
+          <Route path="/download" element={<GetApp />} />
+          <Route path="/app" element={<GetApp />} />
+          <Route path="/apk" element={<GetApp />} />
           <Route path="/welcome" element={<Navigate to="/auth" replace />} />
           <Route path="/auth" element={
             user ? <Navigate to="/home" replace /> :

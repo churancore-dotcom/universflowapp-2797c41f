@@ -7,6 +7,30 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://universflow.in/get</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://universflow.in/download</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://universflow.in/app</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://universflow.in/apk</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
     <loc>https://universflow.in/home</loc>
     <lastmod>2026-06-10</lastmod>
     <changefreq>daily</changefreq>
