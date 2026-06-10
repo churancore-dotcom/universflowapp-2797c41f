@@ -63,7 +63,7 @@ export interface Song {
 }
 
 const getSongIdentity = (song: Pick<Song, 'id' | 'title' | 'artist'>) =>
-  `${song.id}::${song.artist.trim().toLowerCase()}::${song.title.trim().toLowerCase()}`;
+  `${song.id ?? ''}::${(song.artist ?? '').trim().toLowerCase()}::${(song.title ?? '').trim().toLowerCase()}`;
 
 interface PlayerContextType {
   currentSong: Song | null;
@@ -165,9 +165,15 @@ let cachedAccessToken: string | null = null;
 supabase.auth.getSession().then(({ data }) => {
   cachedAccessToken = data.session?.access_token ?? null;
 });
-supabase.auth.onAuthStateChange((_event, session) => {
+// Store the subscription so HMR / re-evaluation doesn't stack listeners.
+const __tokenAuthSub = supabase.auth.onAuthStateChange((_event, session) => {
   cachedAccessToken = session?.access_token ?? null;
 });
+if (typeof window !== 'undefined') {
+  const w = window as unknown as { __universflowTokenAuthSub?: { unsubscribe: () => void } };
+  w.__universflowTokenAuthSub?.unsubscribe?.();
+  w.__universflowTokenAuthSub = __tokenAuthSub.data.subscription;
+}
 
 /**
  * Edge-function proxy is ONLY used when EQ effects are active (so the
@@ -468,7 +474,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearInterval(crossfadeIntervalRef.current);
       }
       if (animationFrameRef.current) {
-        window.clearInterval(animationFrameRef.current);
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, []);
@@ -691,7 +697,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // from a different entry point (so they get fresh recommendations).
   useEffect(() => {
     autoMixSeenRef.current = new Set(queue.map((s) => s.id));
-  }, [queue.length === 0]);
+  }, [queue]);
 
   // Proactive YouTube-style auto-queue refill: when the user is within 2 tracks
   // of the end and repeat is off, fetch more in the background BEFORE the
@@ -1000,7 +1006,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     let audioUrl = resolvedSong.audio_url;
     if (!isPlayableUrl(audioUrl)) {
       try {
-        const resolved = await resolveAudioUrl(song);
+        const resolved = await resolveAudioUrl(resolvedSong);
         if (mySeq !== playRequestSeqRef.current || activeSongIdentityRef.current !== intendedIdentity) return; // superseded by newer tap
         if (resolved) {
           audioUrl = resolved;
@@ -1308,31 +1314,27 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     nextAudioRef.current.volume = 0;
     nextAudioRef.current.currentTime = 0;
     
-    nextAudioRef.current.play().catch(() => {
-      isCrossfading.current = false;
-      return;
-    });
+    nextAudioRef.current.play().then(() => {
+      const steps = 30;
+      const stepDuration = (crossfadeDuration * 1000) / steps;
+      let currentStep = 0;
 
-    const steps = 30;
-    const stepDuration = (crossfadeDuration * 1000) / steps;
-    let currentStep = 0;
+      crossfadeIntervalRef.current = window.setInterval(() => {
+        currentStep++;
+        const fadeProgress = currentStep / steps;
 
-    crossfadeIntervalRef.current = window.setInterval(() => {
-      currentStep++;
-      const fadeProgress = currentStep / steps;
-
-      if (audioRef.current) {
-        audioRef.current.volume = Math.max(0, volume * (1 - fadeProgress));
-      }
-      if (nextAudioRef.current) {
-        nextAudioRef.current.volume = Math.min(volume, volume * fadeProgress);
-      }
-
-      if (currentStep >= steps) {
-        if (crossfadeIntervalRef.current) {
-          clearInterval(crossfadeIntervalRef.current);
-          crossfadeIntervalRef.current = null;
+        if (audioRef.current) {
+          audioRef.current.volume = Math.max(0, volume * (1 - fadeProgress));
         }
+        if (nextAudioRef.current) {
+          nextAudioRef.current.volume = Math.min(volume, volume * fadeProgress);
+        }
+
+        if (currentStep >= steps) {
+          if (crossfadeIntervalRef.current) {
+            clearInterval(crossfadeIntervalRef.current);
+            crossfadeIntervalRef.current = null;
+          }
 
         // Stop old audio
         if (audioRef.current) {

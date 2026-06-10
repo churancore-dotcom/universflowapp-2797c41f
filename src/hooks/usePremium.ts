@@ -157,9 +157,10 @@ export const usePremium = (): UsePremiumReturn => {
   useEffect(() => {
     if (!user) return;
 
+    // Realtime channel handles live updates; polling is a long-interval safety net.
     const poll = window.setInterval(() => {
       fetchSubscription();
-    }, verifiedPremium ? 30000 : 4000);
+    }, verifiedPremium ? 60000 : 60000);
 
     return () => window.clearInterval(poll);
   }, [user, verifiedPremium, fetchSubscription]);
