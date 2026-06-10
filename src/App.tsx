@@ -50,6 +50,7 @@ const AllArtists = lazy(() => import("./pages/AllArtists"));
 const ManageSubscription = lazy(() => import("./pages/ManageSubscription"));
 const Premium = lazy(() => import("./pages/Premium"));
 const Downloads = lazy(() => import("./pages/Downloads"));
+const BlogFreeMusicDownloadAppsIndia = lazy(() => import("./pages/BlogFreeMusicDownloadAppsIndia"));
 
 
 const DownloadQueuePanel = lazy(() => import("./components/DownloadQueuePanel"));
@@ -178,6 +179,7 @@ const AnimatedRoutes = () => {
           <Route path="/download" element={<GetApp />} />
           <Route path="/app" element={<GetApp />} />
           <Route path="/apk" element={<GetApp />} />
+          <Route path="/blog/free-music-download-apps-india" element={<BlogFreeMusicDownloadAppsIndia />} />
           <Route path="/welcome" element={<Navigate to="/auth" replace />} />
           <Route path="/auth" element={
             user ? <Navigate to="/home" replace /> :
