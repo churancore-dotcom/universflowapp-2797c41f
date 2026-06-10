@@ -209,6 +209,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
               <button 
                 className="w-10 h-10 flex items-center justify-center -ml-2 active:scale-90 transition-transform" 
                 onClick={() => { triggerHaptic('impactLight'); setExpanded(false); }}
+                aria-label="Close fullscreen player"
               >
                 <ChevronDown className="w-6 h-6 text-white/80" />
               </button>
@@ -360,6 +361,8 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors ${shuffle ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
                   onClick={() => { triggerHaptic('impactLight'); toggleShuffle(); }}
                   whileTap={{ scale: 0.85 }}
+                  aria-label={shuffle ? 'Disable shuffle' : 'Enable shuffle'}
+                  aria-pressed={shuffle}
                 >
                   <Shuffle className="w-[18px] h-[18px]" />
                 </motion.button>
@@ -368,6 +371,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className="w-14 h-14 flex items-center justify-center" 
                   onClick={handlePrev}
                   whileTap={{ scale: 0.8, x: -4 }}
+                  aria-label="Previous track"
                 >
                   <SkipBack className="w-9 h-9 text-white" fill="white" />
                 </motion.button>
@@ -376,6 +380,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className="w-[74px] h-[74px] rounded-full bg-white flex items-center justify-center shadow-xl"
                   onClick={() => { triggerHaptic('impactHeavy'); togglePlay(); }}
                   whileTap={{ scale: 0.9 }}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
                 >
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.div
@@ -398,6 +403,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className="w-14 h-14 flex items-center justify-center" 
                   onClick={handleNext}
                   whileTap={{ scale: 0.8, x: 4 }}
+                  aria-label="Next track"
                 >
                   <SkipForward className="w-9 h-9 text-white" fill="white" />
                 </motion.button>
@@ -406,6 +412,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                   className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors ${repeat !== 'off' ? 'text-rose-400 bg-rose-500/15' : 'text-white/50'}`} 
                   onClick={() => { triggerHaptic('impactLight'); toggleRepeat(); }}
                   whileTap={{ scale: 0.85 }}
+                  aria-label={`Repeat mode: ${repeat}`}
                 >
                   {repeat === 'one' ? <Repeat1 className="w-[18px] h-[18px]" /> : <Repeat className="w-[18px] h-[18px]" />}
                 </motion.button>

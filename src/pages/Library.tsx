@@ -176,7 +176,7 @@ const Library = () => {
             }}
           >
             {song.cover_url ? (
-              <img src={song.cover_url} alt="" className="w-full h-full object-cover" />
+              <img src={song.cover_url} alt={`${song.title} cover art`} className="w-full h-full object-cover" />
             ) : (
               <Music className="w-4 h-4 text-muted-foreground" />
             )}
@@ -353,7 +353,7 @@ const Library = () => {
                             }}
                           >
                             {artist.photoUrl ? (
-                              <img src={artist.photoUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <img src={artist.photoUrl} alt={`${artist.name} photo`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                               <User className="w-6 h-6 text-muted-foreground" />
                             )}
@@ -432,7 +432,7 @@ const Library = () => {
                             <div className="relative w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden"
                               style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.06)' }}
                             >
-                              {song.cover_url ? <img src={song.cover_url} alt="" className="w-full h-full object-cover" /> : <Music className="w-4 h-4 text-muted-foreground" />}
+                              {song.cover_url ? <img src={song.cover_url} alt={`${song.title} cover art`} className="w-full h-full object-cover" /> : <Music className="w-4 h-4 text-muted-foreground" />}
                               <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center">
                                 <CloudOff className="w-2 h-2 text-primary-foreground" />
                               </div>
