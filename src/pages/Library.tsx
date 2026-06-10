@@ -176,7 +176,7 @@ const Library = () => {
             }}
           >
             {song.cover_url ? (
-              <img src={song.cover_url} alt="" className="w-full h-full object-cover" />
+              <img src={song.cover_url} alt={`${song.title} cover art`} className="w-full h-full object-cover" />
             ) : (
               <Music className="w-4 h-4 text-muted-foreground" />
             )}
