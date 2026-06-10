@@ -119,16 +119,19 @@ const Auth = () => {
                 style={{ background: 'radial-gradient(circle, hsl(340 100% 55% / 0.28), transparent 70%)', filter: 'blur(10px)' }}
               />
               <div
-                className="relative w-[68px] h-[68px] rounded-[22px] overflow-hidden bg-black"
-                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
+                className="relative w-[72px] h-[72px] rounded-[22px] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, #1a1a1c 0%, #0a0a0b 100%)',
+                  boxShadow: 'inset 0 0 0 0.5px rgba(255,255,255,0.08), 0 12px 32px rgba(255,45,85,0.18)',
+                }}
               >
                 <img
                   src={appLogo}
                   alt="Universflow"
-                  width={68}
-                  height={68}
+                  width={72}
+                  height={72}
                   decoding="async"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover scale-[1.18]"
                 />
               </div>
             </motion.div>
