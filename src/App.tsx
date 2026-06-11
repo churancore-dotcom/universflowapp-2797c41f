@@ -300,13 +300,7 @@ const PostAuthGate = () => {
 };
 
 const AppContent = () => {
-  const [showSplash, setShowSplash] = useState(() => {
-    try {
-      return new URLSearchParams(window.location.search).has('splash');
-    } catch {
-      return true;
-    }
-  });
+  const [showSplash, setShowSplash] = useState(true);
   const { user } = useAuth();
   usePushRegistration();
   usePlaybackSync();
