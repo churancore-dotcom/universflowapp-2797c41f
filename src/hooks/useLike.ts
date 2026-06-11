@@ -80,19 +80,23 @@ export const useLike = (songId: string, song?: Song | null) => {
   useEffect(() => {
     if (!songId) { setIsLiked(false); return; }
 
-    if (!user) {
-      const streamLikes = getStreamLikes();
-      setIsLiked(streamLikes.has(songId));
-      return;
-    }
-
-    const check = async () => {
-      await loadLikeCache(user.id);
-      if (mountedRef.current) {
+    const sync = () => {
+      if (!mountedRef.current) return;
+      if (!user) {
+        setIsLiked(getStreamLikes().has(songId));
+      } else {
         setIsLiked(likeCache.has(songId));
       }
     };
-    check();
+
+    if (!user) {
+      sync();
+    } else {
+      loadLikeCache(user.id).then(sync);
+    }
+
+    likeSubscribers.add(sync);
+    return () => { likeSubscribers.delete(sync); };
   }, [user?.id, songId]);
 
   const toggleLike = useCallback(async () => {
