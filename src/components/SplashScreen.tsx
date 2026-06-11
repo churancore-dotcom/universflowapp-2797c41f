@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import appLogo from '@/assets/app-logo.png';
 import splashVideo from '@/assets/splash.mp4.asset.json';
+import { cdnAssetUrl } from '@/lib/assetUrl';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -64,7 +65,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       {!videoFailed && (
         <video
           ref={videoRef}
-          src={splashVideo.url}
+          src={cdnAssetUrl(splashVideo.url)}
           autoPlay
           muted
           playsInline
@@ -94,7 +95,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
               width={112}
               height={112}
               decoding="sync"
-              fetchPriority="high"
+              {...({ fetchpriority: 'high' } as any)}
               className="w-full h-full object-cover scale-[1.18]"
             />
           </div>
