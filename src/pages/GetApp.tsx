@@ -2,16 +2,18 @@ import { Link } from "react-router-dom";
 import { Download, Share2, ShieldCheck, Music2, WifiOff, Sparkles, Headphones, ChevronRight, Users } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 
-const APK_URL = "/UniversFlow.apk";
+const APK_URL = "https://kzaeahjeqlihmxrfhjqd.supabase.co/storage/v1/object/public/music/releases/UniversFlow.apk";
 const VERSION = "1.0.0";
-const SIZE = "24 MB";
+const SIZE = "11 MB";
+const INSTALLS = "50+";
 
-// Reuse existing in-app screens as "store screenshots"
+// Real in-app screenshots
 const SHOTS = [
-  { src: "/pwa-512x512.png", alt: "Universflow home screen" },
-  { src: "/pwa-512x512.png", alt: "Now playing — fullscreen player" },
-  { src: "/pwa-512x512.png", alt: "Your library and downloads" },
-  { src: "/pwa-512x512.png", alt: "Search across millions of songs" },
+  { src: "/screenshots/home.png", alt: "Universflow home — Listen Now with personalized recommendations" },
+  { src: "/screenshots/player.png", alt: "Now Playing — fullscreen Apple Music-style player" },
+  { src: "/screenshots/library.png", alt: "Your Library — liked songs, playlists and downloads" },
+  { src: "/screenshots/search.png", alt: "Discover — search songs, artists and albums worldwide" },
+  { src: "/screenshots/profile.png", alt: "Profile — listening stats and quick access" },
 ];
 
 const FEATURES = [
