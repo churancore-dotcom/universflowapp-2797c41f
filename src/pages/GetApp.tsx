@@ -128,7 +128,7 @@ const GetApp = () => {
           <div className="mt-6 grid grid-cols-3 divide-x divide-white/10 text-center">
             <div className="px-2">
               <div className="flex items-center justify-center gap-1 text-base font-bold">
-                <Users className="w-3.5 h-3.5 text-white/70" /> 10K+
+                <Users className="w-3.5 h-3.5 text-white/70" /> {INSTALLS}
               </div>
               <div className="text-[11px] text-white/55 mt-0.5">Installs</div>
             </div>
