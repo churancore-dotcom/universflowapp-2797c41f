@@ -99,6 +99,8 @@ const GetApp = () => {
               alt="Universflow app icon"
               width={88}
               height={88}
+              decoding="async"
+              {...({ fetchpriority: "high" } as any)}
               className="rounded-3xl shadow-xl shadow-[#FF2D55]/30 shrink-0"
             />
             <div className="min-w-0 flex-1">
@@ -220,7 +222,7 @@ const GetApp = () => {
         {/* What's new */}
         <section className="px-5 pb-8">
           <h2 className="text-base font-bold mb-2">What&apos;s new</h2>
-          <p className="text-xs text-white/50 mb-2">Version {VERSION}</p>
+          <p className="text-xs text-white/70 mb-2">Version {VERSION}</p>
           <ul className="text-sm text-white/75 space-y-1.5 list-disc list-inside">
             <li>Faster splash & instant avatar loading</li>
             <li>New Apple Music-style fullscreen player</li>
@@ -249,7 +251,7 @@ const GetApp = () => {
           </a>
         </section>
 
-        <footer className="px-5 py-6 text-center text-[11px] text-white/40 border-t border-white/5">
+        <footer className="px-5 py-6 text-center text-[11px] text-white/70 border-t border-white/5">
           <div className="space-x-3">
             <Link to="/premium" className="hover:text-white/70">Premium</Link>
             <Link to="/support" className="hover:text-white/70">Support</Link>
