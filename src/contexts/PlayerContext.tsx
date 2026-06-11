@@ -141,29 +141,6 @@ const DIRECT_PLAYABLE_HOST_SNIPPETS = [
   'saavncdn.com',
 ];
 
-const EQ_PROXYABLE_HOST_SUFFIXES = [
-  'googlevideo.com',
-  'youtube.com',
-  'youtu.be',
-  'piped.video',
-  'piped.privacydev.net',
-  'piped.kavin.rocks',
-  'kavin.rocks',
-  'piped.tokhmi.xyz',
-  'piped.adminforge.de',
-  'projectsegfau.lt',
-  'invidious.io',
-  'invidious.privacydev.net',
-  'invidious.fdn.fr',
-  'invidious.projectsegfau.lt',
-  'invidious.protokolla.fi',
-  'protokolla.fi',
-  'invidious.f5.si',
-  'f5.si',
-  'thepixora.com',
-  'yewtu.be',
-];
-
 const shouldProxyStreamUrl = (sourceUrl: string) => {
   if (!sourceUrl.startsWith('http')) return false;
 
@@ -174,9 +151,10 @@ const shouldProxyStreamUrl = (sourceUrl: string) => {
 
     if (DIRECT_PLAYABLE_HOST_SNIPPETS.some((host) => parsed.hostname.endsWith(host))) return false;
 
-    // Proxy only hosts our backend audio proxy explicitly allows. Unknown hosts
-    // stay raw, so playback never breaks just because EQ was toggled on.
-    return isEqProcessingEnabled() && EQ_PROXYABLE_HOST_SUFFIXES.some((host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`));
+    // When EQ/effects are active, proxy every external HTTP stream through the
+    // backend audio endpoint. WebAudio needs a CORS-clean response; leaving an
+    // unknown host raw makes the controls move while the audio stays unchanged.
+    return isEqProcessingEnabled();
   } catch {
     return false;
   }

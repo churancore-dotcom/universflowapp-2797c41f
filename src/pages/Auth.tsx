@@ -115,21 +115,21 @@ const Auth = () => {
               transition={{ type: 'spring', stiffness: 220, damping: 22 }}
             >
               <div
-                className="absolute -inset-4 rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, hsl(340 100% 55% / 0.28), transparent 70%)', filter: 'blur(10px)' }}
+                className="absolute -inset-8 rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.28), transparent 70%)', filter: 'blur(14px)' }}
               />
               <div
-                className="relative w-[72px] h-[72px] rounded-[22px] overflow-hidden"
+                className="relative w-[124px] h-[124px] rounded-[36px] overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #1a1a1c 0%, #0a0a0b 100%)',
-                  boxShadow: 'inset 0 0 0 0.5px rgba(255,255,255,0.08), 0 12px 32px rgba(255,45,85,0.18)',
+                  background: 'linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)',
+                  boxShadow: 'inset 0 0 0 0.5px hsl(var(--foreground) / 0.08), 0 18px 56px hsl(var(--primary) / 0.24)',
                 }}
               >
                 <img
                   src={appLogo}
                   alt="Universflow"
-                  width={72}
-                  height={72}
+                  width={124}
+                  height={124}
                   decoding="async"
                   className="w-full h-full object-cover scale-[1.18]"
                 />
@@ -137,7 +137,7 @@ const Auth = () => {
             </motion.div>
 
             <motion.h1
-              className="mt-5 text-[26px] leading-none font-display tracking-tight text-foreground"
+              className="mt-6 text-[38px] leading-none font-display tracking-wide text-foreground"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18, duration: 0.4 }}
