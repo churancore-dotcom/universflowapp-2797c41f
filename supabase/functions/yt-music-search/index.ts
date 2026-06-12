@@ -392,7 +392,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
     console.error('yt-music-search error:', message);
-    return new Response(JSON.stringify({ success: false, error: message }), {
+    return new Response(JSON.stringify({ success: false, error: 'Search is temporarily unavailable' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

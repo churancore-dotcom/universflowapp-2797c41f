@@ -258,9 +258,8 @@ If a field is genuinely unknowable, use null. JSON only, no markdown.`;
 
   } catch (error: unknown) {
     console.error('AI metadata error:', error);
-    const err = error as Error;
     return new Response(
-      JSON.stringify({ success: false, error: err.message || 'Unexpected error' }),
+      JSON.stringify({ success: false, error: 'Metadata extraction is temporarily unavailable' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
