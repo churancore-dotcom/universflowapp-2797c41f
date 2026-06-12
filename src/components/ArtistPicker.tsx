@@ -150,21 +150,33 @@ const ArtistPicker = ({ onComplete }: Props) => {
   }, [artists, activeCat, search, searchResults]);
 
 
-  const toggle = (name: string) => {
+  const toggle = (option: ArtistOption) => {
     triggerHaptic('impactLight');
+    // If the picked artist came from remote search, fold it into the local list
+    // so handleSave can find its image/source later.
+    setArtists(prev => {
+      if (prev.some(a => a.name.toLowerCase() === option.name.toLowerCase())) return prev;
+      return [...prev, option];
+    });
     setPicks(prev => {
       const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
+      if (next.has(option.name)) {
+        next.delete(option.name);
       } else {
         if (next.size >= MAX) {
           toast.error(`You can pick up to ${MAX} artists`);
           return prev;
         }
-        next.add(name);
+        next.add(option.name);
       }
       return next;
     });
+  };
+
+  const handleSkip = () => {
+    triggerHaptic('impactLight');
+    if (user) localStorage.setItem(`uf_artists_picked_${user.id}`, '1');
+    onComplete();
   };
 
   const handleSave = async () => {
