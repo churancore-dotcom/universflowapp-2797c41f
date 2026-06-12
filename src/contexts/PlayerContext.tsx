@@ -149,12 +149,17 @@ const shouldProxyStreamUrl = (sourceUrl: string) => {
     if (parsed.origin === window.location.origin) return false;
     if (sourceUrl.includes('/functions/v1/music-indexer?audio=')) return false;
 
+    // When EQ/effects are active, proxy EVERY external HTTP stream through the
+    // backend audio endpoint — including the "direct playable" hosts. WebAudio
+    // needs a guaranteed CORS-clean response; several CDNs advertise CORS
+    // inconsistently on media ranges, which leaves the element "tainted" so
+    // createMediaElementSource silently outputs nothing and the EQ sliders
+    // move while the sound stays unchanged.
+    if (isEqProcessingEnabled()) return true;
+
     if (DIRECT_PLAYABLE_HOST_SNIPPETS.some((host) => parsed.hostname.endsWith(host))) return false;
 
-    // When EQ/effects are active, proxy every external HTTP stream through the
-    // backend audio endpoint. WebAudio needs a CORS-clean response; leaving an
-    // unknown host raw makes the controls move while the audio stays unchanged.
-    return isEqProcessingEnabled();
+    return false;
   } catch {
     return false;
   }
