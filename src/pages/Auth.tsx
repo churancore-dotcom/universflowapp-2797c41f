@@ -126,7 +126,7 @@ const Auth = () => {
                 }}
               >
                 <video
-                  src="/logo-anim.mp4"
+                  src="/auth-splash.mp4"
                   poster={appLogo}
                   autoPlay
                   muted
