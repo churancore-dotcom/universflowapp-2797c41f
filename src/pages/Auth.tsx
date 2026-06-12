@@ -125,18 +125,9 @@ const Auth = () => {
                   boxShadow: 'inset 0 0 0 0.5px hsl(var(--foreground) / 0.08), 0 18px 56px hsl(var(--primary) / 0.24)',
                 }}
               >
-                <video
-                  src="/auth-splash.mp4"
-                  poster={appLogo}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
-                  disableRemotePlayback
-                  // @ts-ignore - webkit attribute for instant inline playback in older Android webviews
-                  webkit-playsinline="true"
-                  aria-label="Universflow"
+                <img
+                  src={appLogo}
+                  alt="Universflow"
                   className="w-full h-full object-cover scale-[1.18]"
                 />
               </div>
