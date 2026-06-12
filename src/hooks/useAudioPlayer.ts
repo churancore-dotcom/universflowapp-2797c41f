@@ -40,6 +40,10 @@ export function useAudioPlayer(tracks: Track[]) {
     try {
       const buffer = await preloadBuffer(track.url, audioEngine);
       await audioEngine.play(buffer);
+      ensureNativeBridge(
+        () => audioEngine.pause(),
+        () => audioEngine.resume()
+      );
       setIsPlaying(true);
       setDuration(buffer.duration);
       setMediaSessionState('playing');
