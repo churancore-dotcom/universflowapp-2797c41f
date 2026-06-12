@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Disc3, Search as SearchIcon, Loader2 } from 'lucide-react';
+import { Check, Disc3, Search as SearchIcon, Loader2, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/hooks/useHaptics';
 import { toast } from 'sonner';
 import { CURATED_ARTISTS } from '@/lib/curatedArtists';
-import { enrichArtistImages, getTopArtistsByTag } from '@/lib/musicIndexer';
+import { enrichArtistImages, getTopArtistsByTag, searchArtistDirectory } from '@/lib/musicIndexer';
+
 
 interface ArtistOption {
   name: string;
@@ -36,8 +37,12 @@ const ArtistPicker = ({ onComplete }: Props) => {
   const [search, setSearch] = useState('');
   const [activeCat, setActiveCat] = useState<string>('All');
   const [saving, setSaving] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<ArtistOption[]>([]);
+  const searchSeq = useRef(0);
 
-  // Merge catalog artists in (with their photos) + hydrate Deezer images for the rest
+  // Merge catalog artists in (with their photos) + hydrate Deezer images for the rest.
+  // Images load progressively in small batches so the grid is interactive instantly.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -73,18 +78,58 @@ const ArtistPicker = ({ onComplete }: Props) => {
       const merged = Array.from(map.values());
       setArtists(merged);
 
+      // Smaller batches = first photos appear in well under a second
       const missing = merged.filter(a => !a.image).map(a => a.name);
-      const BATCH = 30;
-      for (let i = 0; i < missing.length; i += BATCH) {
+      const BATCH = 12;
+      const batches: string[][] = [];
+      for (let i = 0; i < missing.length; i += BATCH) batches.push(missing.slice(i, i + BATCH));
+      // Fire batches concurrently in pairs to speed things up without overwhelming the edge fn
+      const CONCURRENCY = 3;
+      for (let i = 0; i < batches.length; i += CONCURRENCY) {
         if (cancelled) return;
-        const images = await enrichArtistImages(missing.slice(i, i + BATCH));
-        if (cancelled || !Object.keys(images).length) continue;
-        setArtists(prev => prev.map(a => !a.image && images[a.name] ? { ...a, image: images[a.name] } : a));
+        const slice = batches.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(slice.map(b => enrichArtistImages(b).catch(() => ({}))));
+        if (cancelled) return;
+        const merged: Record<string, string> = {};
+        for (const r of results) Object.assign(merged, r);
+        if (Object.keys(merged).length) {
+          setArtists(prev => prev.map(a => !a.image && merged[a.name] ? { ...a, image: merged[a.name] } : a));
+        }
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
+  // Live universal artist search — finds ANY real artist via the indexer
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    const seq = ++searchSeq.current;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const remote = await searchArtistDirectory(q, 18);
+        if (seq !== searchSeq.current) return;
+        const knownLower = new Set(artists.map(a => a.name.toLowerCase()));
+        const mapped: ArtistOption[] = remote
+          .filter(r => r.name && !knownLower.has(r.name.toLowerCase()))
+          .map(r => ({
+            name: r.name,
+            image: r.image_url,
+            source: 'lastfm',
+            category: 'Search',
+          }));
+        setSearchResults(mapped);
+      } finally {
+        if (seq === searchSeq.current) setSearching(false);
+      }
+    }, 220);
+    return () => clearTimeout(t);
+  }, [search, artists]);
 
   const categories = useMemo(() => {
     const set = new Set<string>(['All']);
@@ -94,28 +139,44 @@ const ArtistPicker = ({ onComplete }: Props) => {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return artists.filter(a => {
+    const local = artists.filter(a => {
       if (activeCat !== 'All' && a.category !== activeCat) return false;
       if (q && !a.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [artists, activeCat, search]);
+    if (!q) return local;
+    // When searching, push remote results to the end so locals still show first
+    return [...local, ...searchResults];
+  }, [artists, activeCat, search, searchResults]);
 
-  const toggle = (name: string) => {
+
+  const toggle = (option: ArtistOption) => {
     triggerHaptic('impactLight');
+    // If the picked artist came from remote search, fold it into the local list
+    // so handleSave can find its image/source later.
+    setArtists(prev => {
+      if (prev.some(a => a.name.toLowerCase() === option.name.toLowerCase())) return prev;
+      return [...prev, option];
+    });
     setPicks(prev => {
       const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
+      if (next.has(option.name)) {
+        next.delete(option.name);
       } else {
         if (next.size >= MAX) {
           toast.error(`You can pick up to ${MAX} artists`);
           return prev;
         }
-        next.add(name);
+        next.add(option.name);
       }
       return next;
     });
+  };
+
+  const handleSkip = () => {
+    triggerHaptic('impactLight');
+    if (user) localStorage.setItem(`uf_artists_picked_${user.id}`, '1');
+    onComplete();
   };
 
   const handleSave = async () => {
@@ -160,6 +221,14 @@ const ArtistPicker = ({ onComplete }: Props) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
+      {/* Skip — top-right, always available */}
+      <button
+        onClick={handleSkip}
+        className="absolute top-4 right-4 z-10 h-9 px-3.5 rounded-full text-xs font-semibold bg-card/70 border border-border/50 text-muted-foreground active:scale-95 transition-transform"
+      >
+        Skip
+      </button>
+
       {/* Hero */}
       <div className="px-5 pt-12 pb-4 text-center">
         <motion.div
@@ -178,7 +247,7 @@ const ArtistPicker = ({ onComplete }: Props) => {
         </p>
       </div>
 
-      {/* Search */}
+      {/* Search — finds any real artist worldwide */}
       <div className="px-5 pb-3">
         <div className="relative">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -187,10 +256,21 @@ const ArtistPicker = ({ onComplete }: Props) => {
             placeholder="Search any artist…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-9 pr-4 rounded-xl bg-card/70 border border-border/50 text-sm focus:outline-none focus:border-primary/60"
+            className="w-full h-11 pl-9 pr-10 rounded-xl bg-card/70 border border-border/50 text-sm focus:outline-none focus:border-primary/60"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/5"
+            >
+              {searching
+                ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                : <X className="w-4 h-4 text-muted-foreground" />}
+            </button>
+          )}
         </div>
       </div>
+
 
       {/* Categories */}
       <div className="flex gap-2 px-5 overflow-x-auto hide-scrollbar pb-3">
@@ -219,7 +299,7 @@ const ArtistPicker = ({ onComplete }: Props) => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 whileTap={{ scale: 0.92 }}
-                onClick={() => toggle(a.name)}
+                onClick={() => toggle(a)}
                 className="relative aspect-square rounded-2xl overflow-hidden bg-card/70 border border-border/40"
               >
                 {a.image ? (

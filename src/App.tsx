@@ -112,7 +112,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading, emailVerified } = useAuth();
   if (isLoading) return <LazyFallback />;
   if (!user) return <Navigate to="/auth" replace />;
-  // Strict gate: only block when we explicitly know the email is unverified.
+  // Wait for the profile check to finish before rendering anything. Without
+  // this, the user sees Home flash for a second on login and then gets bounced
+  // to the verification screen because emailVerified is briefly null.
+  if (emailVerified === null) return <LazyFallback />;
   if (emailVerified === false) return <Navigate to="/check-email" replace />;
   return <>{children}</>;
 };
@@ -159,6 +162,7 @@ const RootGate = () => {
   const { user, isLoading, emailVerified } = useAuth();
   if (isLoading) return <LazyFallback />;
   if (user) {
+    if (emailVerified === null) return <LazyFallback />;
     if (emailVerified === false) return <Navigate to="/check-email" replace />;
     return <Home />;
   }
@@ -258,13 +262,16 @@ const PrerollAdWrapper = () => {
 };
 
 const PostAuthGate = () => {
-  const { user } = useAuth();
+  const { user, emailVerified } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
-  // Open artist picker ONLY immediately after signup (not on every login)
+  // Open artist picker ONLY immediately after signup (not on every login),
+  // and ONLY once the user's email is verified — otherwise unverified accounts
+  // were getting the picker over the /check-email screen.
   useEffect(() => {
     if (!user) return;
+    if (emailVerified !== true) return;
     const justSignedUp = localStorage.getItem('uf_just_signed_up');
     if (!justSignedUp) return;
 
@@ -284,7 +291,7 @@ const PostAuthGate = () => {
           setTimeout(() => setShowPicker(true), 600);
         }
       });
-  }, [user]);
+  }, [user, emailVerified]);
 
   const handlePickerComplete = () => {
     localStorage.removeItem('uf_just_signed_up');
