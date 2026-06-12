@@ -1,3 +1,5 @@
+import { initNativeBridge } from './NativeBridge';
+
 export class AudioEngine {
   private context: AudioContext | null = null;
   private gainNode: GainNode | null = null;
