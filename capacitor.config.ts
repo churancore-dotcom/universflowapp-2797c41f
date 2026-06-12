@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  // Must match google-services.json package_name for FCM to deliver pushes
-  appId: 'app.lovable.id5acaae55bbc847a7bd32f3924d8ef986',
+  // Native Android package — must match android/app/src/main/java/com/universeflow/app
+  appId: 'com.universeflow.app',
   appName: 'Univers Flow',
   webDir: 'dist',
   server: {

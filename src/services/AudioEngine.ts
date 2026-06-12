@@ -1,3 +1,5 @@
+import { initNativeBridge } from './NativeBridge';
+
 export class AudioEngine {
   private context: AudioContext | null = null;
   private gainNode: GainNode | null = null;
@@ -94,3 +96,16 @@ export class AudioEngine {
 }
 
 export const audioEngine = new AudioEngine();
+
+// Call this once after first play, not inside unlock()
+let bridgeInitialized = false;
+
+export function ensureNativeBridge(
+  onPause: () => void,
+  onResume: () => void
+): void {
+  if (bridgeInitialized) return;
+  bridgeInitialized = true;
+  initNativeBridge(onPause, onResume);
+}
+

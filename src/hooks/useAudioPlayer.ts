@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { audioEngine } from '../services/AudioEngine';
+import { audioEngine, ensureNativeBridge } from '../services/AudioEngine';
 import { preloadBuffer } from '../services/AudioBufferLoader';
 import { setupMediaSession, setMediaSessionState } from '../services/MediaSessionManager';
 
@@ -40,6 +40,10 @@ export function useAudioPlayer(tracks: Track[]) {
     try {
       const buffer = await preloadBuffer(track.url, audioEngine);
       await audioEngine.play(buffer);
+      ensureNativeBridge(
+        () => audioEngine.pause(),
+        () => audioEngine.resume()
+      );
       setIsPlaying(true);
       setDuration(buffer.duration);
       setMediaSessionState('playing');
