@@ -59,6 +59,7 @@ const navItems = [
   { icon: BarChart3, label: 'Backup', path: '/admin/backup' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
   { icon: MessageCircle, label: 'Support Inbox', path: '/admin/support' },
+  { icon: Smartphone, label: 'App Updates', path: '/admin/app-updates' },
 ];
 
 interface SidebarContentProps {
