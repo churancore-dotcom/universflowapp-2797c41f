@@ -343,7 +343,6 @@ const AppContent = () => {
       <Suspense fallback={null}>
         <DownloadQueuePanel />
         <PWAInstallBanner />
-        <UpdateBanner />
       </Suspense>
     </MobileShell>
   );
