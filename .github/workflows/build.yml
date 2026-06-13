@@ -1,0 +1,108 @@
+name: Build Universe Flow APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+
+      - name: Remove incomplete android folder
+        run: rm -rf android
+
+      - name: Add Android platform fresh
+        run: npx cap add android
+
+      - name: Copy native files into android
+        run: |
+          PKG_PATH="android/app/src/main/java/com/universeflow/app"
+          mkdir -p $PKG_PATH
+
+          # Copy MusicService if exists in repo
+          if [ -f "android-native/MusicService.kt" ]; then
+            cp android-native/MusicService.kt $PKG_PATH/
+          fi
+
+          # Copy AudioFocusPlugin if exists
+          if [ -f "android-native/AudioFocusPlugin.kt" ]; then
+            cp android-native/AudioFocusPlugin.kt $PKG_PATH/
+          fi
+
+          # Copy MainActivity if exists
+          if [ -f "android-native/MainActivity.kt" ]; then
+            cp android-native/MainActivity.kt $PKG_PATH/
+          fi
+
+      - name: Inject permissions into AndroidManifest
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          # Add permissions if not present
+          grep -q "FOREGROUND_SERVICE_MEDIA_PLAYBACK" $MANIFEST || \
+          sed -i 's|<application|<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\
+          <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>\
+          <uses-permission android:name="android.permission.WAKE_LOCK"/>\
+          <uses-permission android:name="android.permission.INTERNET"/>\
+          <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\
+          <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>\
+          <application|' $MANIFEST
+
+          # Add service declaration if not present
+          grep -q "MusicService" $MANIFEST || \
+          sed -i 's|</application>|<service android:name=".MusicService" android:foregroundServiceType="mediaPlayback" android:exported="false" android:stopWithTask="false"/>\
+          </application>|' $MANIFEST
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > keystore.jks
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/keystore.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASS }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASS }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: universe-flow-release
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
