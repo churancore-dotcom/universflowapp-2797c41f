@@ -30,18 +30,35 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-black">
-      <video
-        ref={videoRef}
-        src={splashVideo.url}
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        onEnded={finish}
-        onError={finish}
-        className="h-auto w-[55vw] max-w-[260px] object-contain"
-      />
+    <div className="fixed inset-0 z-50 flex h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-black">
+      {/* Crop bottom strip to hide Gemini watermark while keeping the logo centered */}
+      <div
+        className="relative overflow-hidden"
+        style={{ width: 'min(55vw, 260px)', height: 'min(49.5vw, 234px)' }}
+      >
+        <video
+          ref={videoRef}
+          src={splashVideo.url}
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          onEnded={finish}
+          onError={finish}
+          className="absolute left-0 top-0 w-full"
+          style={{ height: 'calc(100% / 0.9)' }}
+        />
+      </div>
+      <div
+        className="mt-6 text-white"
+        style={{
+          fontSize: 22,
+          letterSpacing: '0.32em',
+          fontWeight: 600,
+        }}
+      >
+        UNIVERS FLOW
+      </div>
     </div>
   );
 };
