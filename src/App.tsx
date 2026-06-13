@@ -155,11 +155,13 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Root entry:
-// - Inside the native APK (Median webview): straight to Home/Auth (never show the landing).
-// - Signed-in web users: straight to Home.
-// - Everyone else (logged-out web): show the APK download landing page so Google ranks
-//   universflow.in as "the Android app", not a generic web player.
+// Hostnames where the public APK landing page (/get) is allowed to render.
+// EVERYWHERE else — APK webview, Capacitor (localhost), lovable previews,
+// dev — we go straight to the app. APK must NEVER show /get.
+const WEB_LANDING_HOSTS = new Set(['universflow.in', 'www.universflow.in']);
+const isWebLanding = typeof window !== 'undefined'
+  && WEB_LANDING_HOSTS.has(window.location.hostname.toLowerCase());
+
 const RootGate = () => {
   const { user, isLoading, emailVerified } = useAuth();
   if (isLoading) return <LazyFallback />;
@@ -168,10 +170,17 @@ const RootGate = () => {
     if (emailVerified === false) return <Navigate to="/check-email" replace />;
     return <Home />;
   }
-  if (isMedianApp) return <Navigate to="/auth" replace />;
+  if (isMedianApp || !isWebLanding) return <Navigate to="/auth" replace />;
   return <GetApp />;
 };
 
+const GetAppGate = () => {
+  const { user } = useAuth();
+  if (isMedianApp || !isWebLanding) {
+    return <Navigate to={user ? "/home" : "/auth"} replace />;
+  }
+  return <GetApp />;
+};
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -183,10 +192,10 @@ const AnimatedRoutes = () => {
     <Suspense fallback={<LazyFallback />}>
         <Routes location={location}>
           <Route path="/" element={<RootGate />} />
-          <Route path="/get" element={isMedianApp ? <Navigate to={user ? "/home" : "/auth"} replace /> : <GetApp />} />
-          <Route path="/download" element={isMedianApp ? <Navigate to={user ? "/home" : "/auth"} replace /> : <GetApp />} />
-          <Route path="/app" element={isMedianApp ? <Navigate to={user ? "/home" : "/auth"} replace /> : <GetApp />} />
-          <Route path="/apk" element={isMedianApp ? <Navigate to={user ? "/home" : "/auth"} replace /> : <GetApp />} />
+          <Route path="/get" element={<GetAppGate />} />
+          <Route path="/download" element={<GetAppGate />} />
+          <Route path="/app" element={<GetAppGate />} />
+          <Route path="/apk" element={<GetAppGate />} />
           <Route path="/blog/free-music-download-apps-india" element={<BlogFreeMusicDownloadAppsIndia />} />
           <Route path="/blog/universflow-vs-jiosaavn-vs-gaana" element={<BlogUniversflowVsJiosaavnVsGaana />} />
           <Route path="/welcome" element={<Navigate to="/auth" replace />} />
