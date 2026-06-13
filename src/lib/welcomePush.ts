@@ -1,0 +1,69 @@
+// One-shot welcome push fired on the FIRST successful FCM registration after
+// install. We pick a random greeting so users who reinstall / re-register on
+// a new device don't see the same line twice. Delivery uses the existing
+// `send-system-push` edge function with a per-user system token — same path
+// admin announcements take, so it lands on the lockscreen like a real push.
+
+import { supabase } from '@/integrations/supabase/client';
+
+const FLAG_KEY = 'uf_welcome_push_sent_v1';
+
+const TITLES = [
+  '🎶 Welcome to Universflow',
+  '✨ You made it in',
+  '🚀 Welcome aboard',
+  '💜 Glad you’re here',
+  '🎧 Tune in, you’re home',
+  '🌌 Welcome to your universe',
+  '🔥 Let the music begin',
+  '🌙 Welcome, dreamer',
+];
+
+const BODIES = [
+  'Your personal music universe just got unlocked. Tap to start vibing — best regards from the Universflow crew.',
+  'Millions of songs, zero noise. Dive in and find your sound. Best regards, Universflow.',
+  'Fresh beats, smart playlists, and your own offline library — all yours now. Best regards, Universflow.',
+  'Press play. Lose track of time. Repeat. Best regards from everyone at Universflow.',
+  'Made for headphones, built for moods. Glad you’re here — Universflow team.',
+  'Your daily soundtrack starts now. Enjoy the ride. Best regards, Universflow.',
+  'Search a song, save a vibe, share a moment. Welcome home — Universflow.',
+  'Good music. Good company. Welcome to Universflow.',
+  'The world’s music, your way. Best regards from the Universflow family.',
+  'We built this for moments like yours. Have fun in there — Universflow team.',
+];
+
+const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+/**
+ * Fires the welcome push at most once per device (tracked in localStorage).
+ * Safe to call repeatedly — no-op after the first successful send.
+ */
+export async function maybeSendWelcomePush(userId: string): Promise<void> {
+  try {
+    if (!userId) return;
+    if (localStorage.getItem(FLAG_KEY) === '1') return;
+    // Mark optimistically so a flaky retry doesn't double-fire.
+    localStorage.setItem(FLAG_KEY, '1');
+
+    const title = pick(TITLES);
+    const body = pick(BODIES);
+
+    const { error } = await supabase.functions.invoke('send-system-push', {
+      body: {
+        user_ids: [userId],
+        title,
+        body,
+        deep_link: '/home',
+      },
+    });
+
+    if (error) {
+      // Roll back the flag so the next cold start can retry.
+      localStorage.removeItem(FLAG_KEY);
+      console.warn('[WelcomePush] invoke failed', error);
+    }
+  } catch (e) {
+    localStorage.removeItem(FLAG_KEY);
+    console.warn('[WelcomePush] unexpected error', e);
+  }
+}
