@@ -41,7 +41,9 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#000000',
     allowMixedContent: true,
-    captureInput: true,
+    // captureInput must be FALSE — true breaks IME composition (emoji
+    // keyboard, swipe typing, autocomplete/autosuggest) inside the WebView.
+    captureInput: false,
     webContentsDebuggingEnabled: false,
   },
   // Disable JS hijacking the hardware back button while media plays.
