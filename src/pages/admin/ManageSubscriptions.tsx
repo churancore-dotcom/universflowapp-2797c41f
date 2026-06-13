@@ -15,7 +15,8 @@ import {
   Ban,
   Gift,
   Smartphone,
-  Trash2
+  Trash2,
+  Timer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -177,6 +178,59 @@ const ManageSubscriptions = () => {
       toast.error('Failed to grant premium');
     }
   };
+
+  // Admin-driven custom expiry (minute precision). Resets warning flags so the
+  // expiry-notification cron fires fresh 3d/1d warnings + downgrade + push.
+  const setCustomExpiry = async (sub: Subscription) => {
+    const raw = window.prompt(
+      `Set custom expiry for ${sub.user_email || sub.username || sub.user_id}.\n\n` +
+      `Options:\n` +
+      `  • Minutes from now: "5m", "30m"\n` +
+      `  • Hours from now:   "2h", "12h"\n` +
+      `  • Days from now:    "7d", "30d"\n` +
+      `  • Absolute ISO:     "2026-12-31T23:59"`,
+      '7d'
+    );
+    if (!raw) return;
+
+    let expiresAt: Date | null = null;
+    const m = raw.trim().match(/^(\d+)\s*([mhd])$/i);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      const unit = m[2].toLowerCase();
+      const ms = unit === 'm' ? n * 60_000 : unit === 'h' ? n * 3_600_000 : n * 86_400_000;
+      expiresAt = new Date(Date.now() + ms);
+    } else {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) expiresAt = d;
+    }
+
+    if (!expiresAt) {
+      toast.error('Invalid format. Use 5m / 2h / 7d, or an ISO date.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          expires_at: expiresAt.toISOString(),
+          status: 'active',
+          // Reset notification trackers so warnings fire for the new window
+          notif_warn_3d_at: null,
+          notif_warn_1d_at: null,
+          notif_expired_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sub.id);
+      if (error) throw error;
+      toast.success(`Expiry set: ${expiresAt.toLocaleString()}`);
+      fetchSubscriptions();
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to set expiry');
+    }
+  };
+
 
   const deleteSubscription = async (sub: Subscription) => {
     const label = sub.user_email || sub.username || sub.user_id;
