@@ -34,7 +34,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       {/* Crop bottom strip to hide Gemini watermark while keeping the logo centered */}
       <div
         className="relative overflow-hidden"
-        style={{ width: 'min(55vw, 260px)', height: 'min(49.5vw, 234px)' }}
+        style={{ width: 'min(78vw, 380px)', height: 'min(70.2vw, 342px)' }}
       >
         <video
           ref={videoRef}
@@ -50,11 +50,11 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         />
       </div>
       <div
-        className="mt-6 text-white"
+        className="mt-8 text-white"
         style={{
-          fontSize: 22,
-          letterSpacing: '0.32em',
-          fontWeight: 600,
+          fontSize: 30,
+          letterSpacing: '0.34em',
+          fontWeight: 700,
         }}
       >
         UNIVERS FLOW
