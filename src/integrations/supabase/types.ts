@@ -232,6 +232,45 @@ export type Database = {
         }
         Relationships: []
       }
+      app_versions: {
+        Row: {
+          apk_url: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_mandatory: boolean
+          min_supported_version_code: number
+          release_notes: string | null
+          updated_at: string
+          version_code: number
+          version_name: string
+        }
+        Insert: {
+          apk_url: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          min_supported_version_code?: number
+          release_notes?: string | null
+          updated_at?: string
+          version_code: number
+          version_name: string
+        }
+        Update: {
+          apk_url?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          min_supported_version_code?: number
+          release_notes?: string | null
+          updated_at?: string
+          version_code?: number
+          version_name?: string
+        }
+        Relationships: []
+      }
       artists: {
         Row: {
           bio: string | null
