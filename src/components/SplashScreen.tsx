@@ -30,7 +30,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 h-[100dvh] w-full overflow-hidden bg-black">
+    <div className="fixed inset-0 z-50 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-black">
       <video
         ref={videoRef}
         src={splashVideo.url}
@@ -40,7 +40,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         preload="auto"
         onEnded={finish}
         onError={finish}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="h-auto w-[55vw] max-w-[260px] object-contain"
       />
     </div>
   );
