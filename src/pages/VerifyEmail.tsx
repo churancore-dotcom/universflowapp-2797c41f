@@ -64,6 +64,12 @@ const VerifyEmail = () => {
   };
 
   return (
+    <>
+    <SEOHead
+      title="Verify Your Email — Univers Flow"
+      description="Confirm your email address to activate your Univers Flow account and start streaming music."
+      path="/verify"
+    />
     <div className="h-[100dvh] bg-background flex flex-col items-center justify-center p-5 relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
