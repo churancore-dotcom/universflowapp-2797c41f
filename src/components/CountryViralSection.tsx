@@ -1,5 +1,6 @@
-import { memo, useCallback, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { Flame, Loader2, Music } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +53,8 @@ async function getDeezerChart(limit = 30): Promise<IndexedTrack[]> {
 const CountryViralSection = memo(function CountryViralSection() {
   const { user } = useAuth();
   const { currentSong, isPlaying, playSong, togglePlay } = usePlayer();
+  const queryClient = useQueryClient();
+
 
   // Country resolution is cached forever per user — it never changes mid-session.
   const { data: country } = useQuery({
@@ -68,13 +71,17 @@ const CountryViralSection = memo(function CountryViralSection() {
     gcTime: Infinity,
   });
 
-  // Viral tracks: cached 10 min, no refetch on remount → no more re-loading when
-  // user navigates back to Home.
-  const { data: tracks = [], isLoading: loading } = useQuery({
+  // Viral tracks: refreshed every 2 minutes for true real-time freshness,
+  // also refetches on window focus and network reconnect.
+  const { data: tracks = [], isLoading: loading, dataUpdatedAt } = useQuery({
+
     queryKey: ['viral-tracks', country ?? ''],
     enabled: !!country,
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 90 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 120 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     queryFn: async () => {
       const TARGET = 24;
       const { data: picks } = await supabase
@@ -122,10 +129,35 @@ const CountryViralSection = memo(function CountryViralSection() {
         filler = merged;
       }
 
-      // Only show tracks with real cover art — drop placeholder-icon entries.
       return [...pinned, ...filler].filter((t) => !!t.cover_url);
     },
   });
+
+
+  // Realtime: refetch instantly when admin updates viral_picks
+  useEffect(() => {
+    const ch = supabase
+      .channel('viral-picks-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'viral_picks' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['viral-tracks'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [queryClient]);
+
+  // Tick "updated Xs ago" label every 15s
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  const updatedLabel = useMemo(() => {
+    if (!dataUpdatedAt) return 'Live';
+    const sec = Math.max(0, Math.floor((Date.now() - dataUpdatedAt) / 1000));
+    if (sec < 60) return 'Just now';
+    const m = Math.floor(sec / 60);
+    return `${m}m ago`;
+  }, [dataUpdatedAt]);
 
   // Pre-resolve top 6 streams so taps feel instant
   useEffect(() => {
@@ -162,8 +194,12 @@ const CountryViralSection = memo(function CountryViralSection() {
               <Flame className="w-4 h-4" style={{ color: '#FF6B2D' }} />
               <h2 className="text-sm font-bold text-foreground">Viral Right Now</h2>
             </div>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Live</span>
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              {updatedLabel}
+            </span>
           </div>
+
 
           {loading ? (
             <div className="flex items-center justify-center py-6">
