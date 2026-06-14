@@ -68,13 +68,17 @@ const CountryViralSection = memo(function CountryViralSection() {
     gcTime: Infinity,
   });
 
-  // Viral tracks: cached 10 min, no refetch on remount → no more re-loading when
-  // user navigates back to Home.
-  const { data: tracks = [], isLoading: loading } = useQuery({
+  // Viral tracks: refreshed every 2 minutes for true real-time freshness,
+  // also refetches on window focus and network reconnect.
+  const queryClient = (await import('@tanstack/react-query'), null); // placeholder removed below
+  const { data: tracks = [], isLoading: loading, dataUpdatedAt } = useQuery({
     queryKey: ['viral-tracks', country ?? ''],
     enabled: !!country,
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 90 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 120 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     queryFn: async () => {
       const TARGET = 24;
       const { data: picks } = await supabase
@@ -122,10 +126,10 @@ const CountryViralSection = memo(function CountryViralSection() {
         filler = merged;
       }
 
-      // Only show tracks with real cover art — drop placeholder-icon entries.
       return [...pinned, ...filler].filter((t) => !!t.cover_url);
     },
   });
+
 
   // Pre-resolve top 6 streams so taps feel instant
   useEffect(() => {
