@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import SEOHead from '@/components/SEOHead';
 
 const CheckEmail = () => {
   const navigate = useNavigate();
@@ -119,6 +120,12 @@ const CheckEmail = () => {
   };
 
   return (
+    <>
+    <SEOHead
+      title="Check Your Inbox — Univers Flow"
+      description="We sent you a confirmation link. Verify your email to start streaming music on Univers Flow."
+      path="/check-email"
+    />
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
@@ -181,6 +188,7 @@ const CheckEmail = () => {
 
               <h1 className="text-[26px] leading-none font-display tracking-tight mb-2">
                 Check your inbox
+                <span className="sr-only"> — Verify your Universflow email</span>
               </h1>
               <p className="text-[13px] text-muted-foreground px-4 leading-relaxed">
                 We sent a confirmation link to
