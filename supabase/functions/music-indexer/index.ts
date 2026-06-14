@@ -1440,6 +1440,50 @@ serve(async (req) => {
       }
     }
 
+    if (action === 'resolve-video') {
+      const videoId = typeof body.videoId === 'string' ? body.videoId.trim() : '';
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        return new Response(JSON.stringify({ success: false, error: 'Valid videoId is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const authHeader = req.headers.get('authorization') || '';
+      const admin = getAdminClient();
+      let userId: string | null = null;
+      if (authHeader.startsWith('Bearer ') && admin) {
+        const jwt = authHeader.slice(7);
+        const { data: u } = await admin.auth.getUser(jwt);
+        userId = u?.user?.id ?? null;
+      }
+      if (!userId) {
+        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (admin) {
+        const { data: allowed } = await admin.rpc('check_and_increment_rate_limit', {
+          _user_id: userId,
+          _endpoint: 'music-indexer:resolve-video',
+          _max_per_minute: 30,
+        });
+        if (allowed === false) {
+          return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded' }), {
+            status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      const resolved = await resolveVideoId(videoId);
+      return new Response(JSON.stringify(resolved
+        ? { success: true, streamUrl: resolved.streamUrl, duration: resolved.duration, videoId }
+        : { success: true, streamUrl: `yt-video:${videoId}`, videoId, fallback: true }
+      ), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'resolve') {
       const artist = typeof body.artist === 'string' ? body.artist.trim() : '';
       const title = typeof body.title === 'string' ? body.title.trim() : '';
