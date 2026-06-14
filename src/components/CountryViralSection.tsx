@@ -134,6 +134,31 @@ const CountryViralSection = memo(function CountryViralSection() {
   });
 
 
+  // Realtime: refetch instantly when admin updates viral_picks
+  useEffect(() => {
+    const ch = supabase
+      .channel('viral-picks-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'viral_picks' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['viral-tracks'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [queryClient]);
+
+  // Tick "updated Xs ago" label every 15s
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  const updatedLabel = useMemo(() => {
+    if (!dataUpdatedAt) return 'Live';
+    const sec = Math.max(0, Math.floor((Date.now() - dataUpdatedAt) / 1000));
+    if (sec < 60) return 'Just now';
+    const m = Math.floor(sec / 60);
+    return `${m}m ago`;
+  }, [dataUpdatedAt]);
+
   // Pre-resolve top 6 streams so taps feel instant
   useEffect(() => {
     tracks.slice(0, 6).forEach((t) => prefetchIndexedTrack(t.artist, t.title));
@@ -169,8 +194,12 @@ const CountryViralSection = memo(function CountryViralSection() {
               <Flame className="w-4 h-4" style={{ color: '#FF6B2D' }} />
               <h2 className="text-sm font-bold text-foreground">Viral Right Now</h2>
             </div>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Live</span>
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              {updatedLabel}
+            </span>
           </div>
+
 
           {loading ? (
             <div className="flex items-center justify-center py-6">
