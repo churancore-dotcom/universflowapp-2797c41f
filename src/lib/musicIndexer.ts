@@ -365,6 +365,17 @@ export async function resolveIndexedTrack(
   return pending;
 }
 
+export async function resolveYouTubeVideoStream(videoId: string): Promise<ResolveTrackResponse> {
+  const id = videoId.trim();
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+    return { success: false, error: 'Invalid video id' };
+  }
+  return requestIndexer<ResolveTrackResponse>({
+    action: 'resolve-video',
+    videoId: id,
+  });
+}
+
 async function resolveViaEdgeFunction(artist: string, title: string, cacheKey: string, forceRefresh = false): Promise<ResolveTrackResponse> {
   const result = await requestIndexer<ResolveTrackResponse>({
     action: 'resolve',
