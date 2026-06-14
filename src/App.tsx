@@ -53,6 +53,7 @@ const Premium = lazy(() => import("./pages/Premium"));
 const Downloads = lazy(() => import("./pages/Downloads"));
 const BlogFreeMusicDownloadAppsIndia = lazy(() => import("./pages/BlogFreeMusicDownloadAppsIndia"));
 const BlogUniversflowVsJiosaavnVsGaana = lazy(() => import("./pages/BlogUniversflowVsJiosaavnVsGaana"));
+const BlogTrendingPunjabiSongs2026 = lazy(() => import("./pages/BlogTrendingPunjabiSongs2026"));
 
 
 const DownloadQueuePanel = lazy(() => import("./components/DownloadQueuePanel"));
