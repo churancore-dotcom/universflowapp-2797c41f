@@ -1148,6 +1148,18 @@ serve(async (req) => {
       if (!isAllowedAudioProxyUrl(audioTarget)) {
         return new Response('Invalid audio source', { status: 400, headers: corsHeaders });
       }
+      // Per-IP rate limit to prevent unauthenticated bandwidth abuse.
+      // <audio> tags can't send Authorization headers, so we throttle by IP instead.
+      const clientIp = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim()
+        || req.headers.get('cf-connecting-ip')
+        || req.headers.get('x-real-ip')
+        || 'unknown';
+      if (!checkAudioProxyRateLimit(clientIp)) {
+        return new Response('Too many requests', {
+          status: 429,
+          headers: { ...corsHeaders, 'retry-after': '60' },
+        });
+      }
 
       const range = req.headers.get('range');
       const upstream = await fetch(audioTarget, {
