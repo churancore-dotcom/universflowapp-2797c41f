@@ -18,6 +18,7 @@ import VideoAvatar from '@/components/VideoAvatar';
 import { resolveAvatar, isPresetAvatar } from '@/lib/avatars';
 import { useDownloads } from '@/contexts/DownloadContext';
 import { Camera } from 'lucide-react';
+import SEOHead from '@/components/SEOHead';
 
 interface ProfileData {
   username: string | null;
@@ -191,6 +192,11 @@ const Profile = () => {
 
   return (
     <TabTransition>
+      <SEOHead
+        title="Your Profile — Univers Flow"
+        description="Manage your Univers Flow profile: avatar, username, listening stats, liked songs, playlists and downloads."
+        path="/profile"
+      />
       <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto pb-32 safe-area-pt" style={{ WebkitOverflowScrolling: 'touch' }}>
 
