@@ -1,11 +1,12 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { memo, useCallback, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { Flame, Loader2, Music } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Song, usePlayer } from '@/contexts/PlayerContext';
-import { getGeoTopTracks, prefetchIndexedTrack, type IndexedTrack } from '@/lib/musicIndexer';
+import { getGeoTopTracks, prefetchIndexedTrack, searchYouTubeMusicTracks, type IndexedTrack } from '@/lib/musicIndexer';
+import { searchSongsAsTracks } from '@/lib/jiosaavn';
 import { triggerHaptic } from '@/hooks/useHaptics';
 
 // ISO-3166 alpha-2 → English country name (limited to common Last.fm-supported names)
@@ -53,7 +54,6 @@ async function getDeezerChart(limit = 30): Promise<IndexedTrack[]> {
 const CountryViralSection = memo(function CountryViralSection() {
   const { user } = useAuth();
   const { currentSong, isPlaying, playSong, togglePlay } = usePlayer();
-  const queryClient = useQueryClient();
 
 
   // Country resolution is cached forever per user — it never changes mid-session.
@@ -71,93 +71,56 @@ const CountryViralSection = memo(function CountryViralSection() {
     gcTime: Infinity,
   });
 
-  // Viral tracks: refreshed every 2 minutes for true real-time freshness,
-  // also refetches on window focus and network reconnect.
-  const { data: tracks = [], isLoading: loading, dataUpdatedAt } = useQuery({
+  // Real trending tracks only: live chart metadata + YouTube Music search + JioSaavn search.
+  // No manual/admin pinned rows, no mocked fallback list.
+  const { data: tracks = [], isLoading: loading } = useQuery({
 
-    queryKey: ['viral-tracks', country ?? ''],
+    queryKey: ['trending-tracks-real', country ?? ''],
     enabled: !!country,
-    staleTime: 90 * 1000,
+    staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 120 * 1000,
+    refetchInterval: 3 * 60 * 1000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     queryFn: async () => {
       const TARGET = 24;
-      const { data: picks } = await supabase
-        .from('viral_picks')
-        .select('track_id, title, artist, cover_url, audio_url, source, position')
-        .eq('is_active', true)
-        .order('position', { ascending: true })
-        .limit(TARGET);
+      const name = COUNTRY_NAMES[country!] || COUNTRY_NAMES.IN;
+      const regionalQuery = country === 'IN'
+        ? 'latest hindi punjabi trending songs'
+        : `latest ${name} trending songs`;
 
-      const pinned: IndexedTrack[] = (picks || []).map((p) => ({
-        id: p.track_id,
-        title: p.title,
-        artist: p.artist,
-        cover_url: p.cover_url || undefined,
-        audio_url: p.audio_url || undefined,
-      }));
+      const [geoRes, youtubeRes, saavnRes, deezerRes] = await Promise.allSettled([
+        getGeoTopTracks(name, TARGET),
+        searchYouTubeMusicTracks(`new: ${regionalQuery}`, TARGET),
+        searchSongsAsTracks(regionalQuery, TARGET),
+        getDeezerChart(TARGET),
+      ]);
 
-      const seen = new Set(pinned.map((t) => t.id));
-      const need = Math.max(0, TARGET - pinned.length);
-
-      let filler: IndexedTrack[] = [];
-      if (need > 0 && country) {
-        const name = COUNTRY_NAMES[country] || COUNTRY_NAMES.IN;
-        const [lastfmRes, deezerRes] = await Promise.allSettled([
-          getGeoTopTracks(name, need + pinned.length),
-          getDeezerChart(need + pinned.length),
-        ]);
-        const lastfm = lastfmRes.status === 'fulfilled' ? lastfmRes.value : [];
-        const deezer = deezerRes.status === 'fulfilled' ? deezerRes.value : [];
-
-        const merged: IndexedTrack[] = [];
-        const seenKeys = new Set<string>();
-        const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 60);
-        const max = Math.max(lastfm.length, deezer.length);
-        for (let i = 0; i < max && merged.length < need; i++) {
-          for (const t of [lastfm[i], deezer[i]]) {
-            if (!t) continue;
-            const k = norm(t.artist) + '|' + norm(t.title);
-            if (seen.has(t.id) || seenKeys.has(k)) continue;
-            seenKeys.add(k);
-            merged.push(t);
-            if (merged.length >= need) break;
-          }
-        }
-        filler = merged;
+      const geo = geoRes.status === 'fulfilled' ? geoRes.value : [];
+      const youtube = youtubeRes.status === 'fulfilled' ? youtubeRes.value : [];
+      const saavn = saavnRes.status === 'fulfilled' ? saavnRes.value : [];
+      const deezer = deezerRes.status === 'fulfilled' ? deezerRes.value : [];
+      const merged: IndexedTrack[] = [];
+      const seenKeys = new Set<string>();
+      const norm = (s = '') => s.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 70);
+      const add = (track?: IndexedTrack) => {
+        if (!track?.title || !track.artist || !track.cover_url) return;
+        const key = `${norm(track.artist)}|${norm(track.title)}`;
+        if (seenKeys.has(key)) return;
+        seenKeys.add(key);
+        merged.push(track);
+      };
+      const max = Math.max(saavn.length, geo.length, youtube.length, deezer.length);
+      for (let i = 0; i < max && merged.length < TARGET; i++) {
+        add(saavn[i]);
+        add(geo[i]);
+        add(youtube[i]);
+        add(deezer[i]);
       }
 
-      return [...pinned, ...filler].filter((t) => !!t.cover_url);
+      return merged.slice(0, TARGET);
     },
   });
-
-
-  // Realtime: refetch instantly when admin updates viral_picks
-  useEffect(() => {
-    const ch = supabase
-      .channel('viral-picks-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'viral_picks' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['viral-tracks'] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [queryClient]);
-
-  // Tick "updated Xs ago" label every 15s
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 15_000);
-    return () => clearInterval(id);
-  }, []);
-  const updatedLabel = useMemo(() => {
-    if (!dataUpdatedAt) return 'Live';
-    const sec = Math.max(0, Math.floor((Date.now() - dataUpdatedAt) / 1000));
-    if (sec < 60) return 'Just now';
-    const m = Math.floor(sec / 60);
-    return `${m}m ago`;
-  }, [dataUpdatedAt]);
 
   // Pre-resolve top 6 streams so taps feel instant
   useEffect(() => {
@@ -170,7 +133,7 @@ const CountryViralSection = memo(function CountryViralSection() {
     artist: t.artist,
     album: t.album,
     cover_url: t.cover_url,
-    audio_url: 'resolving',
+    audio_url: t.audio_url || 'resolving',
     duration: t.duration,
     source: 'indexed' as const,
   })), [tracks]);
@@ -192,12 +155,8 @@ const CountryViralSection = memo(function CountryViralSection() {
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <Flame className="w-4 h-4" style={{ color: '#FF6B2D' }} />
-              <h2 className="text-sm font-bold text-foreground">Viral Right Now</h2>
+              <h2 className="text-sm font-bold text-foreground">Trending Now</h2>
             </div>
-            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-              {updatedLabel}
-            </span>
           </div>
 
 
