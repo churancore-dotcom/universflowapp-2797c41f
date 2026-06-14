@@ -206,6 +206,7 @@ async function registerAndWaitForSavedToken(
 export function usePushRegistration() {
   useEffect(() => {
     if (!isNative()) return;
+    if (localStorage.getItem('uf_notifications') === 'false') return;
 
     // Re-upsert the cached token whenever the user signs in so the device
     // is properly attached to their account even if the FCM token arrived
