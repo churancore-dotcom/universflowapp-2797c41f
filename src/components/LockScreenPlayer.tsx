@@ -273,23 +273,35 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                     </AnimatePresence>
                   </div>
 
-                  {/* Live indicator */}
-                  {isPlaying && (
-                    <motion.div
-                      className="flex items-end gap-[2px] h-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                  {/* Lyrics toggle + live indicator */}
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      onClick={toggleLyrics}
+                      whileTap={{ scale: 0.85 }}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                        showLyrics ? 'bg-black text-white' : 'bg-black/10 text-black/60'
+                      }`}
+                      aria-label={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
                     >
-                      {[0, 1, 2].map(i => (
-                        <motion.div
-                          key={i}
-                          className="w-[3px] rounded-full bg-black/70"
-                          animate={{ height: ['6px', '14px', '6px'] }}
-                          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-                        />
-                      ))}
-                    </motion.div>
-                  )}
+                      <Mic2 className="w-[14px] h-[14px]" />
+                    </motion.button>
+                    {isPlaying && (
+                      <motion.div
+                        className="flex items-end gap-[2px] h-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        {[0, 1, 2].map(i => (
+                          <motion.div
+                            key={i}
+                            className="w-[3px] rounded-full bg-black/70"
+                            animate={{ height: ['6px', '14px', '6px'] }}
+                            transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Progress bar */}
