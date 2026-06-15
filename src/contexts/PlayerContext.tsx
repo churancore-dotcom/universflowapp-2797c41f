@@ -280,6 +280,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [showPrerollAd, setShowPrerollAd] = useState(false);
   const [adType, setAdType] = useState<'start' | 'end'>('start');
   const [pendingSong, setPendingSong] = useState<{ song: Song; offlineUrl?: string | null; songsQueue?: Song[] } | null>(null);
+
+  useEffect(() => {
+    playerProgressStore.setPlaying(isPlaying);
+  }, [isPlaying]);
   
   // Single audio element - simpler approach
   const audioRef = useRef<HTMLAudioElement | null>(null);
