@@ -5,16 +5,11 @@ import { usePlayerProgress } from '@/lib/playerProgressStore';
 import { Slider } from '@/components/ui/slider';
 import { setLockscreenOpen } from '@/lib/lockscreenState';
 import LockScreenBackground from '@/components/LockScreenBackground';
-import LockScreenArtwork from '@/components/LockScreenArtwork';
-import SyncedLyricsView from '@/components/SyncedLyricsView';
-import { getEQPresetLabel, useEQSettings } from '@/lib/eqSettings';
+import AnimatedLyricsStage from '@/components/AnimatedLyricsStage';
 import {
-  Play, Pause, SkipBack, SkipForward, Music, Volume2, VolumeX,
-  Shuffle, Repeat, Repeat1, Lock, Mic2
+  Play, Pause, SkipBack, SkipForward, Music,
+  Shuffle, Repeat, Repeat1, Lock, ChevronDown
 } from 'lucide-react';
-
-const LYRICS_PREF_KEY = 'uf_lockscreen_lyrics';
-
 
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -37,27 +32,20 @@ const useWakeLock = (enabled: boolean) => {
       wakeLockRef.current = null;
       return;
     }
-
     const requestWakeLock = async () => {
       try {
         if ('wakeLock' in navigator) {
           wakeLockRef.current = await navigator.wakeLock.request('screen');
         }
       } catch (e) {
-        console.warn('Wake Lock not supported or failed:', e);
+        console.warn('Wake Lock not supported:', e);
       }
     };
-
     requestWakeLock();
-
-    // Re-acquire on visibility change (e.g. tab switch back)
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && enabled) {
-        requestWakeLock();
-      }
+      if (document.visibilityState === 'visible' && enabled) requestWakeLock();
     };
     document.addEventListener('visibilitychange', handleVisibility);
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       wakeLockRef.current?.release().catch(() => {});
@@ -68,39 +56,23 @@ const useWakeLock = (enabled: boolean) => {
 
 const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
   const {
-    currentSong, isPlaying, volume,
+    currentSong, isPlaying,
     shuffle, repeat, togglePlay, nextSong, prevSong,
-    setVolume, toggleShuffle, toggleRepeat, seek,
+    toggleShuffle, toggleRepeat, seek,
   } = usePlayer();
   const { progress, duration } = usePlayerProgress();
-  const eqSettings = useEQSettings();
-  const eqLabel = getEQPresetLabel(eqSettings);
 
   const [time, setTime] = useState(new Date());
-  const [showLyrics, setShowLyrics] = useState<boolean>(() => {
-    try { return localStorage.getItem(LYRICS_PREF_KEY) !== 'false'; } catch { return true; }
-  });
   const dragY = useMotionValue(0);
   const dragOpacity = useTransform(dragY, [-200, 0], [0, 1]);
 
-  const toggleLyrics = () => {
-    setShowLyrics((v) => {
-      const next = !v;
-      try { localStorage.setItem(LYRICS_PREF_KEY, String(next)); } catch { /* ignore */ }
-      return next;
-    });
-  };
-
-  // Keep screen awake
   useWakeLock(isOpen);
 
-  // Hide MiniPlayer / mini overlays while lockscreen is visible
   useEffect(() => {
     setLockscreenOpen(isOpen);
     return () => setLockscreenOpen(false);
   }, [isOpen]);
 
-  // Live clock
   useEffect(() => {
     if (!isOpen) return;
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -109,9 +81,7 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
 
   if (!currentSong) return null;
 
-  const progressPercent = duration > 0 ? (progress / duration) * 100 : 0;
-
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y < -120) onClose();
   };
 
@@ -125,13 +95,10 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
         >
-          {/* Background: single real iOS-style animated lock screen */}
-          <LockScreenBackground
-            coverUrl={currentSong.cover_url}
-            isPlaying={isPlaying}
-          />
+          {/* Background: animated blurred cover */}
+          <LockScreenBackground coverUrl={currentSong.cover_url} isPlaying={isPlaying} />
 
-          {/* Main content - swipe up to dismiss */}
+          {/* Foreground */}
           <motion.div
             className="relative z-10 flex flex-col h-full w-full max-w-[430px] mx-auto"
             style={{ opacity: dragOpacity }}
@@ -140,97 +107,74 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
             dragElastic={0.3}
             onDragEnd={handleDragEnd}
           >
-            {/* Status bar area */}
+            {/* Status bar */}
             <div className="flex items-center justify-between px-6 pt-[env(safe-area-inset-top,12px)] pb-1">
               <Lock className="w-3.5 h-3.5 text-white/40" />
-              <div className="w-3.5 h-3.5" aria-hidden />
+              <button
+                onClick={onClose}
+                className="w-7 h-7 -m-1.5 rounded-full flex items-center justify-center active:bg-white/10"
+                aria-label="Close lock screen"
+              >
+                <ChevronDown className="w-4 h-4 text-white/55" />
+              </button>
             </div>
 
-
-            {/* Clock - iOS style */}
+            {/* Compact clock + track header */}
             <motion.div
-              className="text-center mt-4 mb-2"
-              initial={{ opacity: 0, y: -30 }}
+              className="text-center mt-1 mb-1 px-6"
+              initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ delay: 0.1, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
             >
-              <div className="text-[72px] leading-none font-thin text-white tracking-tight tabular-nums">
+              <div className="text-[44px] leading-none font-extralight text-white tracking-tight tabular-nums">
                 {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
               </div>
-              <div className="text-[17px] text-white/60 font-light mt-1">
-                {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/45 font-semibold mt-1.5">
+                Now Playing · Lyrics
               </div>
             </motion.div>
 
-            {/* Center area: synced lyrics view OR original spacer + artwork */}
-            <div className="flex-1 min-h-0 mt-3 mx-4 mb-2 relative">
+            {/* ── Lyrics stage takes the whole middle ── */}
+            <div className="flex-1 min-h-0 relative mt-2 mb-2">
               <AnimatePresence mode="wait" initial={false}>
-                {showLyrics ? (
-                  <motion.div
-                    key={`lyrics-${currentSong.id}`}
-                    className="absolute inset-0"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-                  >
-                    <SyncedLyricsView
-                      artist={currentSong.artist}
-                      title={currentSong.title}
-                      duration={duration}
-                      bare
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="artwork"
-                    className="absolute inset-0 flex flex-col items-center justify-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <LockScreenArtwork
-                      coverUrl={currentSong.cover_url}
-                      title={currentSong.title}
-                      songId={currentSong.id}
-                      isPlaying={isPlaying}
-                    />
-                  </motion.div>
-                )}
+                <motion.div
+                  key={`stage-${currentSong.id}`}
+                  className="absolute inset-0"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+                >
+                  <AnimatedLyricsStage
+                    artist={currentSong.artist}
+                    title={currentSong.title}
+                    duration={duration}
+                  />
+                </motion.div>
               </AnimatePresence>
             </div>
 
-            {/* Now Playing Widget - solid translucent (no backdrop-blur over animated themes) */}
+            {/* ── Bottom controls bar: glass, minimal ── */}
             <motion.div
-              className="mx-4 mb-3 rounded-3xl overflow-hidden relative"
+              className="mx-3 mb-[env(safe-area-inset-bottom,16px)] mb-4 rounded-[28px] overflow-hidden"
               style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(18 100% 82%) 100%)',
-                boxShadow: '0 12px 40px -10px hsl(var(--primary) / 0.45)',
-                border: '0.5px solid hsl(0 0% 100% / 0.16)',
+                background: 'rgba(18,18,24,0.62)',
+                backdropFilter: 'blur(28px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(28px) saturate(140%)',
+                border: '0.5px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 18px 48px -16px rgba(0,0,0,0.55)',
               }}
-              initial={{ opacity: 0, y: 50, scale: 0.85 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-
-              exit={{ opacity: 0, y: 50, scale: 0.85 }}
-              transition={{ delay: 0.2, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ delay: 0.18, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
             >
-              {currentSong.cover_url && (
-                <img
-                  src={currentSong.cover_url}
-                  alt=""
-                  aria-hidden
-                  className="absolute inset-y-0 right-0 h-full w-2/3 object-cover pointer-events-none"
-                  style={{ filter: 'blur(18px) saturate(140%)', opacity: 0.42, WebkitMaskImage: 'linear-gradient(to left, #000 30%, transparent 100%)', maskImage: 'linear-gradient(to left, #000 30%, transparent 100%)' }}
-                />
-              )}
-              <div className="relative z-10 p-4 pb-3">
-                {/* Album art + info row */}
-                <div className="flex items-center gap-3 mb-4">
-                  {/* Album art */}
+              <div className="px-4 pt-3.5 pb-3">
+                {/* Track row */}
+                <div className="flex items-center gap-3 mb-3">
                   <motion.div
-                    className="relative w-[52px] h-[52px] rounded-[12px] overflow-hidden shadow-lg flex-shrink-0"
-                    animate={isPlaying ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                    className="relative w-11 h-11 rounded-[10px] overflow-hidden flex-shrink-0 shadow-lg"
+                    animate={isPlaying ? { scale: [1, 1.025, 1] } : { scale: 1 }}
                     transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   >
                     <AnimatePresence mode="popLayout">
@@ -240,94 +184,80 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                         initial={{ opacity: 0, scale: 1.1 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.35 }}
+                        transition={{ duration: 0.3 }}
                       >
                         {currentSong.cover_url ? (
-                          <img src={currentSong.cover_url} alt={currentSong.title} className="w-full h-full object-cover" />
+                          <img src={currentSong.cover_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                            <Music className="w-6 h-6 text-white/60" />
+                            <Music className="w-5 h-5 text-white/60" />
                           </div>
                         )}
                       </motion.div>
                     </AnimatePresence>
                   </motion.div>
 
-                  {/* Song info */}
                   <div className="flex-1 min-w-0">
                     <AnimatePresence mode="popLayout">
                       <motion.div
                         key={currentSong.id}
-                        initial={{ opacity: 0, x: 15 }}
+                        initial={{ opacity: 0, x: 12 }}
                         animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -15 }}
-                        transition={{ duration: 0.3 }}
+                        exit={{ opacity: 0, x: -12 }}
+                        transition={{ duration: 0.28 }}
                       >
-                         <h3 className="text-[15px] font-bold text-black truncate leading-tight">
+                        <h3 className="text-[14px] font-bold text-white truncate leading-tight">
                           {currentSong.title}
                         </h3>
-                        <p className="text-[13px] text-black/55 truncate leading-tight mt-0.5">
-                          {currentSong.artist} · EQ {eqLabel.toUpperCase()}
+                        <p className="text-[12px] text-white/55 truncate leading-tight mt-0.5">
+                          {currentSong.artist}
                         </p>
                       </motion.div>
                     </AnimatePresence>
                   </div>
 
-                  {/* Lyrics toggle + live indicator */}
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      onClick={toggleLyrics}
-                      whileTap={{ scale: 0.85 }}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                        showLyrics ? 'bg-black text-white' : 'bg-black/10 text-black/60'
-                      }`}
-                      aria-label={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
+                  {isPlaying && (
+                    <motion.div
+                      className="flex items-end gap-[2px] h-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                     >
-                      <Mic2 className="w-[14px] h-[14px]" />
-                    </motion.button>
-                    {isPlaying && (
-                      <motion.div
-                        className="flex items-end gap-[2px] h-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                      >
-                        {[0, 1, 2].map(i => (
-                          <motion.div
-                            key={i}
-                            className="w-[3px] rounded-full bg-black/70"
-                            animate={{ height: ['6px', '14px', '6px'] }}
-                            transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-                          />
-                        ))}
-                      </motion.div>
-                    )}
-                  </div>
+                      {[0, 1, 2].map(i => (
+                        <motion.div
+                          key={i}
+                          className="w-[3px] rounded-full bg-primary"
+                          animate={{ height: ['6px', '14px', '6px'] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
                 </div>
 
-                {/* Progress bar */}
-                <div className="mb-3">
+                {/* Progress */}
+                <div className="mb-2">
                   <Slider
                     value={[progress]}
                     max={duration || 100}
                     step={0.1}
-                    onValueChange={([value]) => seek(value)}
-                    className="[&_[role=slider]]:w-[14px] [&_[role=slider]]:h-[14px] [&_[role=slider]]:bg-black [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-md [&_[data-radix-slider-track]]:h-[3px] [&_[data-radix-slider-track]]:bg-black/15 [&_[data-radix-slider-range]]:bg-black/90"
+                    onValueChange={([v]) => seek(v)}
+                    className="[&_[role=slider]]:w-[12px] [&_[role=slider]]:h-[12px] [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-md [&_[data-radix-slider-track]]:h-[2.5px] [&_[data-radix-slider-track]]:bg-white/15 [&_[data-radix-slider-range]]:bg-white/90"
                   />
-                  <div className="flex justify-between mt-1.5 text-[11px] text-black/45 font-medium tabular-nums px-0.5">
+                  <div className="flex justify-between mt-1 text-[10px] text-white/45 font-medium tabular-nums px-0.5">
                     <span>{formatTime(progress)}</span>
                     <span>-{formatTime(Math.max(0, duration - progress))}</span>
                   </div>
                 </div>
 
-                {/* Playback controls */}
+                {/* Controls */}
                 <div className="flex items-center justify-between px-1">
                   <motion.button
                     onClick={toggleShuffle}
                     className="w-9 h-9 flex items-center justify-center rounded-full"
-                    whileTap={{ scale: 0.8 }}
+                    whileTap={{ scale: 0.82 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
-                    <Shuffle className={`w-[16px] h-[16px] ${shuffle ? 'text-black' : 'text-black/35'}`} />
+                    <Shuffle className={`w-[15px] h-[15px] ${shuffle ? 'text-primary' : 'text-white/40'}`} />
                   </motion.button>
 
                   <motion.button
@@ -336,12 +266,12 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                     whileTap={{ scale: 0.82 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
-                    <SkipBack className="w-[22px] h-[22px] text-black" fill="black" />
+                    <SkipBack className="w-[22px] h-[22px] text-white" fill="white" />
                   </motion.button>
 
                   <motion.button
                     onClick={togglePlay}
-                    className="w-[56px] h-[56px] rounded-full bg-black flex items-center justify-center shadow-lg"
+                    className="w-[58px] h-[58px] rounded-full bg-white flex items-center justify-center shadow-xl"
                     whileTap={{ scale: 0.88 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
@@ -354,7 +284,7 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                           exit={{ scale: 0.5, opacity: 0 }}
                           transition={{ duration: 0.15 }}
                         >
-                          <Pause className="w-[26px] h-[26px] text-white" fill="white" />
+                          <Pause className="w-[26px] h-[26px] text-black" fill="black" />
                         </motion.div>
                       ) : (
                         <motion.div
@@ -364,7 +294,7 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                           exit={{ scale: 0.5, opacity: 0 }}
                           transition={{ duration: 0.15 }}
                         >
-                          <Play className="w-[26px] h-[26px] text-white ml-0.5" fill="white" />
+                          <Play className="w-[26px] h-[26px] text-black ml-0.5" fill="black" />
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -376,53 +306,28 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                     whileTap={{ scale: 0.82 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
-                    <SkipForward className="w-[22px] h-[22px] text-black" fill="black" />
+                    <SkipForward className="w-[22px] h-[22px] text-white" fill="white" />
                   </motion.button>
 
                   <motion.button
                     onClick={toggleRepeat}
                     className="w-9 h-9 flex items-center justify-center rounded-full"
-                    whileTap={{ scale: 0.8 }}
+                    whileTap={{ scale: 0.82 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
                     {repeat === 'one' ? (
-                      <Repeat1 className="w-[16px] h-[16px] text-black" />
+                      <Repeat1 className="w-[15px] h-[15px] text-primary" />
                     ) : (
-                      <Repeat className={`w-[16px] h-[16px] ${repeat !== 'off' ? 'text-black' : 'text-black/35'}`} />
+                      <Repeat className={`w-[15px] h-[15px] ${repeat !== 'off' ? 'text-primary' : 'text-white/40'}`} />
                     )}
                   </motion.button>
                 </div>
               </div>
             </motion.div>
 
-            {/* Volume slider */}
+            {/* Swipe-up hint */}
             <motion.div
-              className="mx-4 mb-4 rounded-[16px] px-4 py-3"
-              style={{
-                background: 'rgba(20,20,28,0.65)',
-                border: '0.5px solid rgba(255,255,255,0.06)',
-              }}
-
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-            >
-              <div className="flex items-center gap-3">
-                <VolumeX className="w-[14px] h-[14px] text-white/35 flex-shrink-0" />
-                <Slider
-                  value={[volume * 100]}
-                  onValueChange={([v]) => setVolume(v / 100)}
-                  max={100}
-                  step={1}
-                  className="flex-1 [&_[role=slider]]:w-[14px] [&_[role=slider]]:h-[14px] [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&_[data-radix-slider-track]]:h-[3px] [&_[data-radix-slider-track]]:bg-white/15 [&_[data-radix-slider-range]]:bg-white/90"
-                />
-                <Volume2 className="w-[14px] h-[14px] text-white/35 flex-shrink-0" />
-              </div>
-            </motion.div>
-
-            {/* Swipe up hint */}
-            <motion.div
-              className="flex justify-center pb-[env(safe-area-inset-bottom,16px)] pb-4"
+              className="flex justify-center pb-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -432,13 +337,11 @@ const LockScreenPlayer = ({ isOpen, onClose }: LockScreenPlayerProps) => {
                 animate={{ opacity: [0.25, 0.5, 0.25] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
               />
+            </motion.div>
           </motion.div>
-
-        </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
-
   );
 };
 
