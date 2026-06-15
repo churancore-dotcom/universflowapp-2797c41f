@@ -19,7 +19,7 @@ const EMPTY: LyricsResult = {
 };
 
 // localStorage cache (7 days)
-const LS_KEY = 'uf_lyrics_cache_v1';
+const LS_KEY = 'uf_lyrics_cache_v2';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 80;
 
@@ -39,8 +39,9 @@ function writeCache(c: CacheShape) {
   } catch { /* quota — ignore */ }
 }
 
-function makeKey(artist: string, title: string) {
-  return `${artist.toLowerCase().trim()}::${title.toLowerCase().trim()}`;
+function makeKey(artist: string, title: string, duration?: number) {
+  const durationKey = duration && Number.isFinite(duration) && duration > 0 ? Math.round(duration) : 'unknown';
+  return `${artist.toLowerCase().trim()}::${title.toLowerCase().trim()}::${durationKey}`;
 }
 
 /** Parse LRC text into time-ordered lines. Handles [mm:ss.xx] and [mm:ss]. */
@@ -81,11 +82,26 @@ export function findActiveLine(lines: LyricLine[], currentTime: number): number 
   return ans;
 }
 
+function buildTimedPlainLyrics(plain: string | null, duration?: number): LyricLine[] {
+  if (!plain || !duration || !Number.isFinite(duration) || duration < 30) return [];
+  const lines = plain
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const intro = Math.min(8, Math.max(2.2, duration * 0.025));
+  const outro = Math.min(6, Math.max(2, duration * 0.018));
+  const usable = Math.max(lines.length * 1.35, duration - intro - outro);
+  const step = usable / lines.length;
+  return lines.map((text, index) => ({ time: intro + index * step, text }));
+}
+
 const inFlight = new Map<string, Promise<LyricsResult>>();
 
 export async function fetchLyrics(artist: string, title: string, duration?: number): Promise<LyricsResult> {
   if (!artist || !title) return EMPTY;
-  const key = makeKey(artist, title);
+  const key = makeKey(artist, title, duration);
   const cache = readCache();
   const hit = cache[key];
   if (hit && hit.expiresAt > Date.now()) return hit.data;
@@ -100,13 +116,15 @@ export async function fetchLyrics(artist: string, title: string, duration?: numb
       });
       if (error || !data?.success) return EMPTY;
       const synced = data.synced ? parseLrc(data.synced) : [];
+      const plain = data.plain || null;
+      const timedPlain = synced.length > 0 ? [] : buildTimedPlainLyrics(plain, duration);
       const result: LyricsResult = {
-        synced,
-        plain: data.plain || null,
+        synced: synced.length > 0 ? synced : timedPlain,
+        plain,
         source: data.source || null,
         geniusUrl: data.geniusUrl || null,
-        hasLyrics: synced.length > 0 || !!data.plain,
-        isSynced: synced.length > 0,
+        hasLyrics: synced.length > 0 || timedPlain.length > 0 || !!plain,
+        isSynced: synced.length > 0 || timedPlain.length > 0,
       };
       const c = readCache();
       c[key] = { data: result, expiresAt: Date.now() + TTL_MS };
