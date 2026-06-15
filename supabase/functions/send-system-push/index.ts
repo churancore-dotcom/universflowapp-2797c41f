@@ -14,8 +14,6 @@ interface SystemPushBody {
   title: string;
   body: string;
   deep_link?: string;
-  // Client may send this only for its own signed-in user. Used for welcome push.
-  self_only?: boolean;
   // Shared secret to prevent unauthorized invocation from public clients.
   system_token?: string;
 }
@@ -114,8 +112,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Auth: either service-role bearer, matching DB system token, or a signed-in
-    // user sending exactly one welcome push to their own APK device.
+    // Auth: either service-role bearer or matching DB system token.
     const auth = req.headers.get("Authorization") ?? "";
     const bearer = auth.replace(/^Bearer\s+/i, "");
     let isAuthorized = bearer === SERVICE_ROLE;
@@ -123,15 +120,6 @@ Deno.serve(async (req) => {
       const { data: secret } = await admin
         .from("internal_secrets").select("value").eq("key", "system_push_token").maybeSingle();
       if (secret?.value && body.system_token === secret.value) isAuthorized = true;
-    }
-    if (!isAuthorized && body.self_only === true && body.user_ids?.length === 1) {
-      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: auth } },
-      });
-      const { data: userData } = await userClient.auth.getUser();
-      if (userData?.user?.id && userData.user.id === body.user_ids[0]) {
-        isAuthorized = true;
-      }
     }
     if (!isAuthorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }),

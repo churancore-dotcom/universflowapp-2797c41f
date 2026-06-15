@@ -14,7 +14,6 @@
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { maybeSendWelcomePush } from '@/lib/welcomePush';
 
 const isNative = () =>
   Capacitor.isNativePlatform?.() === true;
@@ -36,8 +35,6 @@ async function upsertToken(token: string, meta: Record<string, unknown>) {
     _device_info: { ...meta, last_seen_at: new Date().toISOString() },
   });
   if (error) throw error;
-  // Fire one-shot welcome push (no-op after first successful send per device).
-  maybeSendWelcomePush(uid).catch(() => { /* best-effort */ });
 }
 
 async function collectDeviceMeta() {
@@ -88,8 +85,8 @@ async function setupPushListeners(
 
   await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
     // Android does not show remote notifications while the APK is foregrounded.
-    // Mirror the real FCM payload into a native local notification so welcome,
-    // premium-expiry, and admin pushes are visible even during first launch.
+    // Mirror the real FCM payload into a native local notification so premium
+    // expiry and admin pushes are visible even while the app is open.
     try {
       const title = notification.title ?? 'Universflow';
       const body = notification.body ?? '';
@@ -253,8 +250,7 @@ export function usePushRegistration() {
         const deviceMeta = await collectDeviceMeta();
         await setupPushListeners(PushNotifications, deviceMeta);
 
-        // 3) Trigger the actual FCM registration and wait until the token is
-        // saved, otherwise first-launch welcome pushes can race and disappear.
+        // 3) Trigger the actual FCM registration and wait until the token is saved.
         return await registerAndWaitForSavedToken(PushNotifications, deviceMeta);
       } catch (e) {
         console.warn('[Push] setup skipped:', e);
