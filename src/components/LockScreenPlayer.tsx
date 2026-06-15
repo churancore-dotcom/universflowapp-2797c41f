@@ -16,7 +16,7 @@ const useWakeLock = (enabled: boolean) => {
   useEffect(() => {
     if (!enabled) { ref.current?.release().catch(() => {}); ref.current = null; return; }
     const req = async () => {
-      try { if ('wakeLock' in navigator) ref.current = await navigator.wakeLock.request('screen'); } catch {}
+      try { if ('wakeLock' in navigator) ref.current = await navigator.wakeLock.request('screen'); } catch { /* ignore unsupported wake lock */ }
     };
     req();
     const onVis = () => { if (document.visibilityState === 'visible' && enabled) req(); };
