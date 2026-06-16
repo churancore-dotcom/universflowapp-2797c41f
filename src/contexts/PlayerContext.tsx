@@ -1306,7 +1306,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('error', handleAudioError);
     };
-  }, [currentIndex, queue, shuffle, repeat, crossfade, crossfadeDuration, getNextIndex, playSongAtIndex, resolveAudioUrl, playYouTubeFallback, extendQueueWithMix, currentSong]);
+  }, [currentIndex, queue, shuffle, repeat, crossfade, crossfadeDuration, gaplessPro, getNextIndex, playSongAtIndex, resolveAudioUrl, playYouTubeFallback, extendQueueWithMix, currentSong]);
 
   // Crossfade implementation
   const startCrossfade = useCallback(() => {
