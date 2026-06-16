@@ -349,10 +349,10 @@ const Home = () => {
               {/* Viral Now Rail — live country chart, real data */}
               {!isOffline && <CountryViralSection />}
 
-              {/* Restored below Trending Now: followed artists, new, trending catalog */}
-              {!isOffline && <FollowedArtistSongsSection songs={allSongs} />}
               {!isOffline && <FreshReleasesSection songs={allSongs} />}
               {!isOffline && <TrendingNowSection songs={allSongs} />}
+              {/* Followed artists rail — sits below Trending Now */}
+              {!isOffline && <FollowedArtistSongsSection songs={allSongs} />}
 
               {/* Saved songs only when offline — uploaded catalog is hidden from online Home */}
               {isOffline && allSongs.length > 0 && (
