@@ -1,73 +1,87 @@
 
-## Problem
+# Make the EQ Actually Work (and an honest note on "competing with Spotify")
 
-When people Google "Univers Flow" and land on `universflow.in`, they hit the web player (or auth screen) — there's nothing telling them this is a real Android app or where to get the APK. So it reads as "just a website."
+## Part 1 — The honest reality check (read this first)
 
-## Decision (defaults I'm picking since you skipped)
+You picked **"Compete with Spotify/JioSaavn"** as the strategy. I have to be straight with you, because pretending otherwise wastes your time and money:
 
-- **Behavior**: Big "Download APK" landing hero. Logged-in users skip it (go straight to /home). Inside the native Android shell (Capacitor / Median webview), skip it too — they already have the app.
-- **APK source**: Serve as `/UniversFlow.apk` from the site (`public/UniversFlow.apk`). You drop the latest build into `public/` and it ships with the next publish. If you'd rather link a GitHub Release URL instead, say the word and I'll swap the constant.
+**We cannot beat Spotify or JioSaavn on their own game.** Here's why, plainly:
 
-## What I'll build
+- They pay **licensing fees** to labels (T-Series, Sony, Universal, Saregama). That's the moat. Without licenses, every "real" Bollywood/Punjabi song we play is technically borrowed from JioSaavn's CDN, YouTube, or Invidious — and any of those can cut us off tomorrow.
+- They have **hundreds of engineers** on playback, search, and recommendation. We have you and me.
+- They have **caches and CDNs in every Indian city**. We hotlink third-party URLs from a single edge region.
+- A user comparing us side-by-side on the same song will always notice: their app starts in 0.3s, ours in 3s.
 
-### 1. New public landing page — `src/pages/GetApp.tsx`, mounted at `/get`
+**What we *can* actually win at:** reliability of what we already serve, EQ that genuinely works, a cleaner search that doesn't return fake songs, and a niche the big players ignore (indie / underground Punjabi / regional creators). That's a real moat. "Be a smaller Spotify" is not.
 
-Mobile-first, Apple-Music-grade, matches the rose `#FF2D55` aesthetic:
+I'm going to build the EQ fix you asked for. But after it ships, I strongly recommend we revisit the strategy question — because the *technical* problems (delays, fakes, slow) are solvable, and the *strategic* problem (why pay us vs Spotify) is not solvable by adding more features.
 
-- App icon + "Universflow" wordmark
-- One-line pitch: "Free music streaming. Built for Android."
-- **Primary CTA**: huge "Download APK" button (`<a href="/UniversFlow.apk" download>`)
-- **Secondary CTA**: "Open web app" → `/auth` (or `/home` if logged in)
-- Trust strip: "Free • No ads on Premium • Offline downloads • 4.8★"
-- 3 phone-mockup feature cards (Stream / Download / Premium) — purely static, no new deps
-- Tiny footer: links to `/premium`, `/support`, version + size of APK
-- Detects iOS user-agent → swaps Android-only copy to "iPhone: install as a home-screen app" with instructions
+---
 
-### 2. Smart entry routing in `src/App.tsx`
+## Part 2 — The EQ fix (this is what we'll build now)
+
+### The actual problem
+
+`useGlobalAudioEngine` only connects the WebAudio graph (EQ + compressor) when the audio source is CORS-friendly. JioSaavn, Invidious, and most YouTube-derived streams send no `Access-Control-Allow-Origin` header, so the browser refuses to let WebAudio read the samples. EQ silently bypasses itself. Result: paying users move sliders and hear nothing change.
+
+### The fix: a stream-proxy edge function
+
+Add one edge function — `stream-proxy` — that fetches the upstream audio server-side and re-streams it to the browser with proper CORS + Range headers. Every audio source then becomes CORS-clean, WebAudio can decode it, EQ + compressor + future effects all work.
 
 ```text
-GET /  →
-  if running inside Capacitor/Median webview → render Home (current behavior)
-  else if user is logged in                  → render Home
-  else                                       → <Navigate to="/get" />
+Browser <audio src="/functions/v1/stream-proxy?u=...">
+   │
+   ▼
+stream-proxy (Deno edge fn)
+   │  - validates the URL is in an allowlist (JioSaavn worker, Invidious, Audius)
+   │  - forwards Range header (seek + resume work)
+   │  - streams body through (no buffering, no extra latency past TTFB)
+   │  - adds Access-Control-Allow-Origin, Accept-Ranges, Content-Type
+   ▼
+Upstream (saavn worker / invidious / audius)
 ```
 
-`/get` itself is fully public (no `ProtectedRoute`). All existing routes (`/home`, `/auth`, `/search`, `/premium`, etc.) keep working exactly as today.
+### What changes in the app
 
-### 3. SEO upgrades in `index.html`
+1. **New edge function** `supabase/functions/stream-proxy/index.ts`
+   - Allowlist of upstream hosts (no open proxy — would be abused).
+   - Forwards `Range`, returns `206 Partial Content` so seeking works.
+   - `verify_jwt = false` (audio elements can't send auth headers).
+   - Sets `Cache-Control: public, max-age=3600` so repeat plays are cheap.
 
-- Update `<title>` to **"Universflow — Free Music App for Android (APK Download)"**
-- Update meta description to lead with "Download the Universflow Android app…"
-- Extend the existing `MobileApplication` JSON-LD with `installUrl: "https://universflow.in/UniversFlow.apk"`, `downloadUrl`, `operatingSystem: "ANDROID"`, `fileSize`, `softwareVersion`
-- Add a `SoftwareApplication` schema variant so Google's "App" rich result can trigger
-- `<noscript>` block: make the first H1 lead with "Download Universflow APK"
-- Add `<link rel="alternate">` for Android app intent
+2. **`src/lib/streamProxy.ts`** (new, ~20 lines)
+   - `wrapStreamUrl(url)` — returns proxied URL for hosts that need it, raw URL otherwise.
+   - Used by `streamSongs.ts`, `jiosaavn.ts`, the YT stream resolver, and `useAudioPlayer`.
 
-### 4. APK hosting
+3. **`src/hooks/useGlobalAudioEngine.ts`**
+   - Remove the "skip WebAudio for non-CORS" guard. Every source is now CORS-clean.
+   - Always connect through the EQ chain.
 
-- Add `public/UniversFlow.apk` placeholder note in the plan — you'll upload the real artifact from your GitHub Actions build (`Univers Flow.apk` from the workflow) and rename it to `UniversFlow.apk` (no space → cleaner URL).
-- Add `public/.well-known/assetlinks.json` stub so future Play Store / app-link verification works (empty array for now, ready to populate).
+4. **`src/services/AudioEngine.ts` / `useAudioPlayer.ts`**
+   - Set `crossOrigin = "anonymous"` unconditionally (was conditional).
 
-### 5. Sitemap
+### Trade-offs (so you know what we're paying)
 
-Add `/get` to `public/sitemap.xml` so Google indexes the landing page separately from the web app.
+- **Bandwidth cost:** every byte of audio passes through the edge function. Edge egress on Lovable Cloud is bundled but high traffic will eat into it. We mitigate with `Cache-Control` so repeat plays hit the edge cache.
+- **+50–150ms TTFB** on first play of a song (proxy adds one hop). Subsequent plays from edge cache are *faster* than direct.
+- **Upstream allowlist must be maintained.** If we add a new source (e.g. a new Invidious mirror), it needs to be added to the allowlist or audio fails.
 
-## What I will NOT touch
+### Out of scope for this plan
 
-- Player, EQ, Premium page, auth flow, admin — none of the recent work changes.
-- No new dependencies.
-- No service worker / PWA changes (per project memory).
-- Native app behavior unchanged (the webview-detection guard prevents `/get` from ever showing inside the APK).
+- Fake-song detection, search dedup, faster startup — these are the *other* three pains you listed. Each is a separate plan; trying to do all four at once is how we end up with half-broken everything. We do EQ first because it's the most contained fix and the most visible to paying users.
 
-## Files changed
+### Files touched
 
-- `src/pages/GetApp.tsx` — new
-- `src/App.tsx` — add `/get` route + root redirect logic
-- `index.html` — title, description, JSON-LD, noscript H1
-- `public/sitemap.xml` — add `/get`
-- `public/.well-known/assetlinks.json` — stub
-- `public/UniversFlow.apk` — placeholder; you upload the real APK after build
+- **New:** `supabase/functions/stream-proxy/index.ts`, `src/lib/streamProxy.ts`
+- **Edited:** `src/hooks/useGlobalAudioEngine.ts`, `src/lib/streamSongs.ts`, `src/lib/jiosaavn.ts`, `src/services/AudioEngine.ts`, `src/hooks/useAudioPlayer.ts`, `supabase/config.toml` (verify_jwt=false for the new function)
 
-## After you approve
+### How we verify it works
 
-Once you switch me to build mode, I'll implement all of the above in one pass. You'll then need to drop the built `Univers Flow.apk` into `public/UniversFlow.apk` and click Publish.
+1. Deploy the function, open a JioSaavn song in the app.
+2. Open `/settings` → Equalizer → drag the bass slider.
+3. You should hear bass change in real time. Today you don't.
+4. Same test on an Invidious YT stream and an Audius track.
+
+---
+
+## Approve to build, or push back on anything above.
