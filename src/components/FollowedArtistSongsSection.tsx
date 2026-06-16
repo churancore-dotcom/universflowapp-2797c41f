@@ -88,13 +88,14 @@ const fetchFollowedArtistSongs = async (userId: string, seedSongs: Song[] = []) 
 
 const FollowedArtistSongsSection = memo(function FollowedArtistSongsSection({ songs }: Props) {
   const { user } = useAuth();
+  const userId = user?.id;
   const { currentSong, isPlaying, playSong, togglePlay } = usePlayer();
   const { getDownloadedUrl } = useDownloads();
   const queryClient = useQueryClient();
-  const queryKey = ['followed-artist-songs', user?.id] as const;
+  const queryKey = ['followed-artist-songs', userId] as const;
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     const refresh = () => queryClient.invalidateQueries({ queryKey });
     const onVisibility = () => {
       if (document.visibilityState === 'visible') refresh();
@@ -105,12 +106,12 @@ const FollowedArtistSongsSection = memo(function FollowedArtistSongsSection({ so
       window.removeEventListener('uf:artist-prefs-changed', refresh);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [user, queryClient, queryKey]);
+  }, [userId, queryClient]);
 
   const { data: followedSongs = [] } = useQuery({
     queryKey,
-    queryFn: () => fetchFollowedArtistSongs(user!.id, songs),
-    enabled: !!user,
+    queryFn: () => fetchFollowedArtistSongs(userId!, songs),
+    enabled: !!userId,
     staleTime: 15 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnMount: 'always',
