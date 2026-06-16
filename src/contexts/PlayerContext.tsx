@@ -1183,6 +1183,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (timeLeft <= crossfadeDuration && timeLeft > 0) {
           startCrossfade();
         }
+      } else if (gaplessPro && !crossfade && queue.length > 1 && audio.duration && !isCrossfading.current) {
+        // Gapless Pro — fire a ~0.45s overlap right before end so the swap is
+        // truly seamless even when the next track needs a beat to decode.
+        const timeLeft = audio.duration - audio.currentTime;
+        if (timeLeft <= 0.45 && timeLeft > 0) {
+          startCrossfade();
+        }
       }
       // ── Auto-advance safety net (Android WebView sometimes swallows 'ended').
       //    If we're within 0.25s of the end and not crossfading, force the
