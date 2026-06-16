@@ -21,3 +21,6 @@ verify_jwt = false
 [functions.send-welcome-email]
 verify_jwt = true
 
+
+[functions.stream-proxy]
+verify_jwt = false

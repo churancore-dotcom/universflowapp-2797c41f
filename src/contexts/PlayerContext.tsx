@@ -6,6 +6,7 @@ import { resolveIndexedTrack, resolveYouTubeVideoStream, prefetchIndexedTrack } 
 import { playerProgressStore, usePlayerProgress } from '@/lib/playerProgressStore';
 import { resume as resumeAudioEngine } from '@/lib/audioEngine';
 import { EQ_SETTINGS_KEY, getEQSettings, isEqActive } from '@/lib/eqSettings';
+import { wrapStreamUrl, isStreamProxyUrl } from '@/lib/streamProxy';
 import { toast } from 'sonner';
 
 interface YouTubePlayer {
@@ -187,15 +188,18 @@ if (typeof window !== 'undefined') {
  * the default for almost every user — we play the raw URL directly so
  * Android can stream natively without going through our edge function.
  * That removes ~2-4s of buffering on lock-screen and background.
+ *
+ * Uses the dedicated `stream-proxy` edge function (clean Range/206 semantics,
+ * tight Cache-Control so repeat plays hit the edge cache).
  */
 const buildStreamProxyUrl = (sourceUrl: string) => {
-  const projectUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (!projectUrl || !shouldProxyStreamUrl(sourceUrl)) return sourceUrl;
+  if (!shouldProxyStreamUrl(sourceUrl)) return sourceUrl;
   if (!isEqProcessingEnabled()) return sourceUrl;
-  return `${projectUrl}/functions/v1/music-indexer?audio=${encodeURIComponent(sourceUrl)}`;
+  return wrapStreamUrl(sourceUrl);
 };
 
-const isAudioProxyUrl = (url?: string | null) => Boolean(url?.includes('/functions/v1/music-indexer?audio='));
+const isAudioProxyUrl = (url?: string | null) =>
+  isStreamProxyUrl(url) || Boolean(url?.includes('/functions/v1/music-indexer?audio='));
 
 const isEqProcessingEnabled = () => {
   try { return isEqActive(getEQSettings()); } catch { return false; }
