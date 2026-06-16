@@ -76,6 +76,8 @@ interface PlayerContextType {
   isExpanded: boolean;
   crossfade: boolean;
   crossfadeDuration: number;
+  crossfadeCurve: 'linear' | 'equal-power' | 'smooth' | 'exponential';
+  gaplessPro: boolean;
   audioElement: HTMLAudioElement | null;
   showPrerollAd: boolean;
   adType: 'start' | 'end';
@@ -95,6 +97,8 @@ interface PlayerContextType {
   setExpanded: (expanded: boolean) => void;
   toggleCrossfade: () => void;
   setCrossfadeDuration: (seconds: number) => void;
+  setCrossfadeCurve: (curve: 'linear' | 'equal-power' | 'smooth' | 'exponential') => void;
+  toggleGaplessPro: () => void;
   onPrerollAdComplete: () => void;
 }
 
@@ -278,8 +282,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off');
   const [isExpanded, setExpanded] = useState(false);
-  const [crossfade, setCrossfade] = useState(false);
-  const [crossfadeDuration, setCrossfadeDurationState] = useState(3);
+  const [crossfade, setCrossfade] = useState(() => localStorage.getItem('uf_crossfade') === 'true');
+  const [crossfadeDuration, setCrossfadeDurationState] = useState(() => {
+    const v = Number(localStorage.getItem('uf_crossfade_duration'));
+    return Number.isFinite(v) && v >= 1 && v <= 12 ? v : 3;
+  });
+  const [crossfadeCurve, setCrossfadeCurveState] = useState<'linear' | 'equal-power' | 'smooth' | 'exponential'>(() => {
+    const v = localStorage.getItem('uf_crossfade_curve');
+    return (v === 'linear' || v === 'equal-power' || v === 'smooth' || v === 'exponential') ? v : 'equal-power';
+  });
+  const [gaplessPro, setGaplessPro] = useState(() => localStorage.getItem('uf_gapless_pro') === 'true');
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [showPrerollAd, setShowPrerollAd] = useState(false);
   const [adType, setAdType] = useState<'start' | 'end'>('start');
@@ -1171,6 +1183,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (timeLeft <= crossfadeDuration && timeLeft > 0) {
           startCrossfade();
         }
+      } else if (gaplessPro && !crossfade && queue.length > 1 && audio.duration && !isCrossfading.current) {
+        // Gapless Pro — fire a ~0.45s overlap right before end so the swap is
+        // truly seamless even when the next track needs a beat to decode.
+        const timeLeft = audio.duration - audio.currentTime;
+        if (timeLeft <= 0.45 && timeLeft > 0) {
+          startCrossfade();
+        }
       }
       // ── Auto-advance safety net (Android WebView sometimes swallows 'ended').
       //    If we're within 0.25s of the end and not crossfading, force the
@@ -1287,7 +1306,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('error', handleAudioError);
     };
-  }, [currentIndex, queue, shuffle, repeat, crossfade, crossfadeDuration, getNextIndex, playSongAtIndex, resolveAudioUrl, playYouTubeFallback, extendQueueWithMix, currentSong]);
+  }, [currentIndex, queue, shuffle, repeat, crossfade, crossfadeDuration, gaplessPro, getNextIndex, playSongAtIndex, resolveAudioUrl, playYouTubeFallback, extendQueueWithMix, currentSong]);
 
   // Crossfade implementation
   const startCrossfade = useCallback(() => {
@@ -1319,13 +1338,37 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       crossfadeIntervalRef.current = window.setInterval(() => {
         currentStep++;
-        const fadeProgress = currentStep / steps;
+        const p = currentStep / steps;
+
+        // Equal-power = DJ standard (constant perceived loudness),
+        // smooth = S-curve, exponential = power curve, linear = legacy.
+        let fadeOut: number;
+        let fadeIn: number;
+        switch (crossfadeCurve) {
+          case 'equal-power':
+            fadeOut = Math.cos(p * Math.PI * 0.5);
+            fadeIn = Math.sin(p * Math.PI * 0.5);
+            break;
+          case 'smooth': {
+            const s = p * p * (3 - 2 * p);
+            fadeOut = 1 - s;
+            fadeIn = s;
+            break;
+          }
+          case 'exponential':
+            fadeOut = (1 - p) * (1 - p);
+            fadeIn = p * p;
+            break;
+          default:
+            fadeOut = 1 - p;
+            fadeIn = p;
+        }
 
         if (audioRef.current) {
-          audioRef.current.volume = Math.max(0, volume * (1 - fadeProgress));
+          audioRef.current.volume = Math.max(0, Math.min(volume, volume * fadeOut));
         }
         if (nextAudioRef.current) {
-          nextAudioRef.current.volume = Math.min(volume, volume * fadeProgress);
+          nextAudioRef.current.volume = Math.max(0, Math.min(volume, volume * fadeIn));
         }
 
         if (currentStep >= steps) {
@@ -1358,7 +1401,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }).catch(() => {
       isCrossfading.current = false;
     });
-  }, [queue, currentIndex, shuffle, repeat, crossfadeDuration, volume, getNextIndex]);
+  }, [queue, currentIndex, shuffle, repeat, crossfadeDuration, crossfadeCurve, volume, getNextIndex]);
 
   const playActualSong = useCallback(async (song: Song, offlineUrl?: string | null, songsQueue?: Song[]) => {
     if (!audioRef.current) return;
@@ -1718,11 +1761,30 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const toggleCrossfade = useCallback(() => {
-    setCrossfade(prev => !prev);
+    setCrossfade(prev => {
+      const next = !prev;
+      try { localStorage.setItem('uf_crossfade', String(next)); } catch { /* noop */ }
+      return next;
+    });
   }, []);
 
   const setCrossfadeDurationFn = useCallback((seconds: number) => {
-    setCrossfadeDurationState(Math.max(1, Math.min(12, seconds)));
+    const clamped = Math.max(1, Math.min(12, seconds));
+    setCrossfadeDurationState(clamped);
+    try { localStorage.setItem('uf_crossfade_duration', String(clamped)); } catch { /* noop */ }
+  }, []);
+
+  const setCrossfadeCurveFn = useCallback((curve: 'linear' | 'equal-power' | 'smooth' | 'exponential') => {
+    setCrossfadeCurveState(curve);
+    try { localStorage.setItem('uf_crossfade_curve', curve); } catch { /* noop */ }
+  }, []);
+
+  const toggleGaplessPro = useCallback(() => {
+    setGaplessPro(prev => {
+      const next = !prev;
+      try { localStorage.setItem('uf_gapless_pro', String(next)); } catch { /* noop */ }
+      return next;
+    });
   }, []);
 
   // Media Session API for lock screen / notification controls
@@ -1883,6 +1945,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isExpanded,
       crossfade,
       crossfadeDuration,
+      crossfadeCurve,
+      gaplessPro,
       audioElement,
       showPrerollAd,
       adType,
@@ -1902,6 +1966,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setExpanded,
       toggleCrossfade,
       setCrossfadeDuration: setCrossfadeDurationFn,
+      setCrossfadeCurve: setCrossfadeCurveFn,
+      toggleGaplessPro,
       onPrerollAdComplete,
     }}>
       {children}
