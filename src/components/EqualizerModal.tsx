@@ -130,6 +130,7 @@ const EqualizerModal = ({ isOpen, onClose }: EqualizerModalProps) => {
       spatialAudio: false,
       studioSpace: 'off',
       lateNight: false,
+      headphoneSurround: false,
       activePreset: 'flat',
     });
     toast.success('Equalizer reset');
