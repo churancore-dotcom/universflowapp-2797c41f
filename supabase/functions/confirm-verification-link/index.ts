@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const token = String(body?.token ?? '').trim();
     if (!token || token.length !== 64 || !/^[a-f0-9]+$/i.test(token)) {
       return new Response(JSON.stringify({ error: 'Invalid link' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -37,12 +37,12 @@ Deno.serve(async (req) => {
     const row = rows?.[0];
     if (!row) {
       return new Response(JSON.stringify({ error: 'This link is invalid or has already been used' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     if (new Date(row.expires_at).getTime() < Date.now()) {
       return new Response(JSON.stringify({ error: 'This link has expired. Request a new one.' }), {
-        status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
