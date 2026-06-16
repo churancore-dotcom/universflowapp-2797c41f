@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { connectAudioElement, getState, setBands, setReverb, setSpatial, setLateNight, setStudioSpace as engineSetStudioSpace, resume, subscribe } from '@/lib/audioEngine';
+import { connectAudioElement, getState, setBands, setReverb, setSpatial, setLateNight, setHeadphoneSurround, setStudioSpace as engineSetStudioSpace, resume, subscribe } from '@/lib/audioEngine';
 import { getEQSettings, isEqActive } from '@/lib/eqSettings';
 
 /**
@@ -55,6 +55,7 @@ export function useGlobalAudioEngine(audioElement: HTMLAudioElement | null) {
         engineSetStudioSpace(s.studioSpace);
         setSpatial(s.spatialAudio);
         setLateNight(s.lateNight);
+        setHeadphoneSurround(s.headphoneSurround);
       }
     };
 
