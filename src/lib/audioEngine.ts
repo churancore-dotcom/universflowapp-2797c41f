@@ -344,13 +344,16 @@ function applyLateNightToLimiter() {
   const now = ctx.currentTime;
   const c = engine.limiter;
   if (engine.lateNightEnabled) {
-    c.threshold.setTargetAtTime(-28, now, SMOOTH);
-    c.knee.setTargetAtTime(18, now, SMOOTH);
-    c.ratio.setTargetAtTime(8, now, SMOOTH);
-    c.attack.setTargetAtTime(0.012, now, SMOOTH);
-    c.release.setTargetAtTime(0.18, now, SMOOTH);
-    // Makeup gain — quiet content now sits ~6dB louder
-    engine.preGain.gain.setTargetAtTime(1.6, now, SMOOTH);
+    // Aggressive night compressor — squashes peaks hard, lifts whispers loud.
+    // Threshold -38 dB + ratio 14:1 means almost everything above a whisper
+    // gets pulled into a tight band, then makeup gain (×2.4 ≈ +7.6 dB) brings
+    // the quiet stuff up to comfortable nighttime listening level.
+    c.threshold.setTargetAtTime(-38, now, SMOOTH);
+    c.knee.setTargetAtTime(24, now, SMOOTH);
+    c.ratio.setTargetAtTime(14, now, SMOOTH);
+    c.attack.setTargetAtTime(0.006, now, SMOOTH);
+    c.release.setTargetAtTime(0.22, now, SMOOTH);
+    engine.preGain.gain.setTargetAtTime(2.4, now, SMOOTH);
   } else {
     c.threshold.setTargetAtTime(-6, now, SMOOTH);
     c.knee.setTargetAtTime(12, now, SMOOTH);
