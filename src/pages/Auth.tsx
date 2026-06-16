@@ -127,7 +127,7 @@ const Auth = () => {
               >
                 <img
                   src={appLogo}
-                  alt="Universflow"
+                  alt="Universflow app logo"
                   className="w-full h-full object-cover scale-[1.18]"
                 />
               </div>
