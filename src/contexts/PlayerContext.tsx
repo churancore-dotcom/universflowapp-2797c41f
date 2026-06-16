@@ -76,6 +76,8 @@ interface PlayerContextType {
   isExpanded: boolean;
   crossfade: boolean;
   crossfadeDuration: number;
+  crossfadeCurve: 'linear' | 'equal-power' | 'smooth' | 'exponential';
+  gaplessPro: boolean;
   audioElement: HTMLAudioElement | null;
   showPrerollAd: boolean;
   adType: 'start' | 'end';
