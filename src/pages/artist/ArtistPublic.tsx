@@ -64,10 +64,16 @@ export default function ArtistPublic() {
         supabase.from('artist_followers').select('id', { count: 'exact', head: true }).eq('artist_user_id', (p as Profile).user_id),
         user ? supabase.from('artist_followers').select('id').eq('artist_user_id', (p as Profile).user_id).eq('follower_user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
       ]);
-      setSongs((s ?? []) as Song[]);
+      const list = (s ?? []) as Song[];
+      setSongs(list);
       setFollowers(count ?? 0);
       setIsFollowing(!!follow);
       setLoading(false);
+
+      // Real-time Views: bump each song's view counter once per page visit
+      list.forEach((song) => {
+        supabase.rpc('increment_artist_song_view' as any, { _song_id: song.id });
+      });
     })();
   }, [slug, user?.id]);
 
@@ -111,8 +117,8 @@ export default function ArtistPublic() {
     if (!player || !profile) return;
     const queue = songs.map(toPlayerSong);
     player.playSong(toPlayerSong(s), null, queue);
-    // Increment play_count (best-effort)
-    supabase.from('artist_songs').update({ play_count: (s.play_count || 0) + 1 }).eq('id', s.id);
+    // Use SECURITY DEFINER RPC — a direct UPDATE is silently reverted by safety trigger
+    supabase.rpc('increment_artist_song_play' as any, { _song_id: s.id });
   };
 
   if (loading) return <div className="min-h-[100dvh] bg-background" />;

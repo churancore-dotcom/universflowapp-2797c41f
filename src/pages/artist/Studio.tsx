@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Music2, Heart, Download, Users, Plus, Trash2, Loader2,
-  CheckCircle2, ExternalLink, Pencil, Image as ImageIcon, X,
+  CheckCircle2, ExternalLink, Pencil, Image as ImageIcon, X, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import SEOHead from '@/components/SEOHead';
@@ -42,6 +42,7 @@ type Song = {
   play_count: number;
   like_count: number;
   download_count: number;
+  view_count: number;
   status: 'live' | 'taken_down';
   created_at: string;
 };
@@ -105,9 +106,10 @@ export default function ArtistStudio() {
 
   const stats = useMemo(() => {
     const plays = songs.reduce((acc, s) => acc + (s.play_count || 0), 0);
+    const views = songs.reduce((acc, s) => acc + (s.view_count || 0), 0);
     const likes = songs.reduce((acc, s) => acc + (s.like_count || 0), 0);
     const downloads = songs.reduce((acc, s) => acc + (s.download_count || 0), 0);
-    return { plays, likes, downloads };
+    return { plays, views, likes, downloads };
   }, [songs]);
 
   if (isLoading || boot || !profile) {
@@ -170,9 +172,10 @@ export default function ArtistStudio() {
             </div>
           </motion.section>
 
-          {/* Stats */}
+          {/* Stats — real-time via postgres_changes subscription above */}
           <section className="grid grid-cols-2 gap-3 mt-4">
             <StatCard icon={<Music2 className="w-4 h-4" />} label="Total plays" value={fmt(stats.plays)} accent />
+            <StatCard icon={<Eye className="w-4 h-4" />} label="Profile views" value={fmt(stats.views)} />
             <StatCard icon={<Heart className="w-4 h-4" />} label="Likes" value={fmt(stats.likes)} />
             <StatCard icon={<Download className="w-4 h-4" />} label="Downloads" value={fmt(stats.downloads)} />
             <StatCard icon={<Users className="w-4 h-4" />} label="Followers" value={fmt(followers)} />
@@ -267,7 +270,7 @@ function SongRow({ song, onDelete }: { song: Song; onDelete: () => void }) {
       <div className="flex-1 min-w-0">
         <p className="text-[13.5px] font-medium truncate">{song.title}</p>
         <p className="text-[11.5px] text-muted-foreground tabular-nums mt-0.5">
-          {fmt(song.play_count)} plays · {fmt(song.like_count)} likes · {fmt(song.download_count)} downloads
+          {fmt(song.play_count)} plays · {fmt(song.view_count || 0)} views · {fmt(song.like_count)} likes · {fmt(song.download_count)} downloads
         </p>
         {song.status === 'taken_down' && (
           <p className="text-[11px] text-rose-400 mt-0.5">Taken down by admin</p>
