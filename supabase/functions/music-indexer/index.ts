@@ -158,6 +158,35 @@ function checkAudioProxyRateLimit(ip: string): boolean {
   return true;
 }
 
+// Per-IP sliding-window rate limit for unauthenticated discovery JSON actions
+// (search/top/geo-top/tag-top/artist-top/resolve/etc). Caps Last.fm + YouTube
+// API quota abuse from anonymous callers. 60 reqs/min/IP is generous for a
+// human user browsing /home and searching.
+const ACTION_RATE_LIMIT_MAX = 60;
+const ACTION_RATE_LIMIT_WINDOW_MS = 60_000;
+const actionHits = new Map<string, number[]>();
+function checkMusicIndexerActionRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const cutoff = now - ACTION_RATE_LIMIT_WINDOW_MS;
+  const arr = (actionHits.get(ip) || []).filter((t) => t > cutoff);
+  if (arr.length >= ACTION_RATE_LIMIT_MAX) {
+    actionHits.set(ip, arr);
+    return false;
+  }
+  arr.push(now);
+  actionHits.set(ip, arr);
+  if (actionHits.size > 5000) {
+    for (const [k, v] of actionHits) {
+      const kept = v.filter((t) => t > cutoff);
+      if (kept.length === 0) actionHits.delete(k);
+      else actionHits.set(k, kept);
+    }
+  }
+  return true;
+}
+
+
+
 
 const LASTFM_API_KEY = Deno.env.get('LASTFM_API_KEY') || '';
 const YOUTUBE_API_KEY = Deno.env.get('YOUTUBE_API_KEY') || '';
@@ -1221,8 +1250,23 @@ serve(async (req) => {
         headers,
       });
     }
+    // Per-IP throttle for discovery actions to protect Last.fm / YouTube API quotas.
+    {
+      const clientIp = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim()
+        || req.headers.get('cf-connecting-ip')
+        || req.headers.get('x-real-ip')
+        || 'unknown';
+      if (!checkMusicIndexerActionRateLimit(clientIp)) {
+        return new Response(JSON.stringify({ success: false, error: 'Too many requests' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'retry-after': '60' },
+        });
+      }
+    }
+
     const body = await req.json().catch(() => ({}));
     const action = typeof body.action === 'string' ? body.action : '';
+
 
     if (!LASTFM_API_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Last.fm is not configured' }), {

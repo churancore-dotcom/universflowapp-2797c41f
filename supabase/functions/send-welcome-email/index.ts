@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 function escape(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -16,6 +18,19 @@ function escape(s: string): string {
 
 function isEmail(s: string): boolean {
   return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 254;
+}
+
+async function sha256(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function idToUuid(id: string): Promise<string> {
+  const h = await sha256(`ip:${id}`);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+function clientIp(req: Request): string {
+  const xf = req.headers.get('x-forwarded-for') ?? '';
+  return (xf.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
 }
 
 Deno.serve(async (req) => {
@@ -32,6 +47,27 @@ Deno.serve(async (req) => {
     const email = String(body?.email ?? '').trim().toLowerCase();
     const username = String(body?.username ?? '').trim().slice(0, 40) || 'there';
 
+    const UNIFORM_OK = new Response(
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+    // Per-IP throttle: max 10 attempts / minute / IP. Silently swallow excess.
+    try {
+      const ipUuid = await idToUuid(clientIp(req));
+      const rl = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_and_increment_rate_limit`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_ROLE,
+          Authorization: `Bearer ${SERVICE_ROLE}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ _user_id: ipUuid, _endpoint: 'send_welcome_email', _max_per_minute: 10 }),
+      });
+      const allowed = await rl.json().catch(() => true);
+      if (allowed === false) return UNIFORM_OK;
+    } catch (_) { /* fail-open on rate-limiter outage */ }
+
     if (!isEmail(email)) {
       return new Response(JSON.stringify({ error: 'Invalid email' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -39,8 +75,6 @@ Deno.serve(async (req) => {
     }
 
     // Anti-abuse: only send if a matching auth user exists and was created in the last 10 minutes.
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lookup = await fetch(
       `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
       { headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` } }
