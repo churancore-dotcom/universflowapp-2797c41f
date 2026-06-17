@@ -99,6 +99,7 @@ const ArtistApplications = lazy(() => import("./pages/admin/ArtistApplications")
 
 // Artist program
 const ArtistApply = lazy(() => import("./pages/artist/Apply"));
+const ArtistAuth = lazy(() => import("./pages/artist/ArtistAuth"));
 const ArtistStatus = lazy(() => import("./pages/artist/Status"));
 const ArtistStudio = lazy(() => import("./pages/artist/Studio"));
 const ArtistPublic = lazy(() => import("./pages/artist/ArtistPublic"));
