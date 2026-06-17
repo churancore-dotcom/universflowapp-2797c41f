@@ -271,6 +271,192 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_applications: {
+        Row: {
+          admin_note: string | null
+          artist_photo_path: string | null
+          country_code: string
+          created_at: string
+          id: string
+          id_doc_back_path: string | null
+          id_doc_front_path: string | null
+          id_doc_type: Database["public"]["Enums"]["id_doc_type"]
+          phone: string
+          real_name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_path: string | null
+          social_links: Json
+          stage_name: string
+          status: Database["public"]["Enums"]["artist_app_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          artist_photo_path?: string | null
+          country_code: string
+          created_at?: string
+          id?: string
+          id_doc_back_path?: string | null
+          id_doc_front_path?: string | null
+          id_doc_type: Database["public"]["Enums"]["id_doc_type"]
+          phone: string
+          real_name: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_path?: string | null
+          social_links?: Json
+          stage_name: string
+          status?: Database["public"]["Enums"]["artist_app_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          artist_photo_path?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          id_doc_back_path?: string | null
+          id_doc_front_path?: string | null
+          id_doc_type?: Database["public"]["Enums"]["id_doc_type"]
+          phone?: string
+          real_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_path?: string | null
+          social_links?: Json
+          stage_name?: string
+          status?: Database["public"]["Enums"]["artist_app_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      artist_followers: {
+        Row: {
+          artist_user_id: string
+          created_at: string
+          follower_user_id: string
+          id: string
+        }
+        Insert: {
+          artist_user_id: string
+          created_at?: string
+          follower_user_id: string
+          id?: string
+        }
+        Update: {
+          artist_user_id?: string
+          created_at?: string
+          follower_user_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      artist_profiles: {
+        Row: {
+          avatar_url: string | null
+          banner_url: string | null
+          bio: string | null
+          country_code: string | null
+          created_at: string
+          id: string
+          is_verified: boolean
+          slug: string
+          social_links: Json
+          stage_name: string
+          total_followers: number
+          total_likes: number
+          total_plays: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          banner_url?: string | null
+          bio?: string | null
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          slug: string
+          social_links?: Json
+          stage_name: string
+          total_followers?: number
+          total_likes?: number
+          total_plays?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          banner_url?: string | null
+          bio?: string | null
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          slug?: string
+          social_links?: Json
+          stage_name?: string
+          total_followers?: number
+          total_likes?: number
+          total_plays?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      artist_songs: {
+        Row: {
+          artist_user_id: string
+          cover_url: string | null
+          created_at: string
+          download_count: number
+          duration: number | null
+          id: string
+          like_count: number
+          play_count: number
+          status: Database["public"]["Enums"]["artist_song_status"]
+          stream_url: string
+          takedown_reason: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist_user_id: string
+          cover_url?: string | null
+          created_at?: string
+          download_count?: number
+          duration?: number | null
+          id?: string
+          like_count?: number
+          play_count?: number
+          status?: Database["public"]["Enums"]["artist_song_status"]
+          stream_url: string
+          takedown_reason?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist_user_id?: string
+          cover_url?: string | null
+          created_at?: string
+          download_count?: number
+          duration?: number | null
+          id?: string
+          like_count?: number
+          play_count?: number
+          status?: Database["public"]["Enums"]["artist_song_status"]
+          stream_url?: string
+          takedown_reason?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       artists: {
         Row: {
           bio: string | null
@@ -1695,7 +1881,15 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "artist"
+      artist_app_status: "pending" | "approved" | "rejected"
+      artist_song_status: "live" | "taken_down"
+      id_doc_type:
+        | "voter_id"
+        | "pan"
+        | "passport"
+        | "drivers_license"
+        | "national_id"
       subscription_platform: "android" | "ios" | "web" | "donation"
       subscription_status: "active" | "expired" | "cancelled" | "pending"
       subscription_type: "free" | "premium_monthly" | "premium_yearly"
@@ -1826,7 +2020,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "artist"],
+      artist_app_status: ["pending", "approved", "rejected"],
+      artist_song_status: ["live", "taken_down"],
+      id_doc_type: [
+        "voter_id",
+        "pan",
+        "passport",
+        "drivers_license",
+        "national_id",
+      ],
       subscription_platform: ["android", "ios", "web", "donation"],
       subscription_status: ["active", "expired", "cancelled", "pending"],
       subscription_type: ["free", "premium_monthly", "premium_yearly"],

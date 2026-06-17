@@ -95,6 +95,19 @@ const SecurityCenter = lazy(() => import("./pages/admin/SecurityCenter"));
 
 const SupportInbox = lazy(() => import("./pages/admin/SupportInbox"));
 const AppUpdates = lazy(() => import("./pages/admin/AppUpdates"));
+const ArtistApplications = lazy(() => import("./pages/admin/ArtistApplications"));
+
+// Artist program
+const ArtistApply = lazy(() => import("./pages/artist/Apply"));
+const ArtistStatus = lazy(() => import("./pages/artist/Status"));
+const ArtistStudio = lazy(() => import("./pages/artist/Studio"));
+const ArtistPublic = lazy(() => import("./pages/artist/ArtistPublic"));
+
+// Legal
+const LegalTerms = lazy(() => import("./pages/legal/Terms"));
+const LegalPrivacy = lazy(() => import("./pages/legal/Privacy"));
+const LegalArtistTerms = lazy(() => import("./pages/legal/ArtistTerms"));
+const LegalArtistPrivacy = lazy(() => import("./pages/legal/ArtistPrivacy"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -221,6 +234,18 @@ const AnimatedRoutes = () => {
           <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
           <Route path="/premium" element={<Premium />} />
           <Route path="/downloads" element={<ProtectedRoute><Downloads /></ProtectedRoute>} />
+
+          {/* Artist program */}
+          <Route path="/artist/apply" element={<ProtectedRoute><ArtistApply /></ProtectedRoute>} />
+          <Route path="/artist/status" element={<ProtectedRoute><ArtistStatus /></ProtectedRoute>} />
+          <Route path="/artist/studio" element={<ProtectedRoute><ArtistStudio /></ProtectedRoute>} />
+          <Route path="/a/:slug" element={<ArtistPublic />} />
+
+          {/* Legal */}
+          <Route path="/legal/terms" element={<LegalTerms />} />
+          <Route path="/legal/privacy" element={<LegalPrivacy />} />
+          <Route path="/legal/artist-terms" element={<LegalArtistTerms />} />
+          <Route path="/legal/artist-privacy" element={<LegalArtistPrivacy />} />
           
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
@@ -253,6 +278,7 @@ const AnimatedRoutes = () => {
             <Route path="security" element={<SecurityCenter />} />
             <Route path="support" element={<SupportInbox />} />
             <Route path="app-updates" element={<AppUpdates />} />
+            <Route path="artists-applications" element={<ArtistApplications />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
