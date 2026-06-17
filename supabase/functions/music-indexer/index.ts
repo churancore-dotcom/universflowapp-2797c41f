@@ -1221,8 +1221,23 @@ serve(async (req) => {
         headers,
       });
     }
+    // Per-IP throttle for discovery actions to protect Last.fm / YouTube API quotas.
+    {
+      const clientIp = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim()
+        || req.headers.get('cf-connecting-ip')
+        || req.headers.get('x-real-ip')
+        || 'unknown';
+      if (!checkMusicIndexerActionRateLimit(clientIp)) {
+        return new Response(JSON.stringify({ success: false, error: 'Too many requests' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'retry-after': '60' },
+        });
+      }
+    }
+
     const body = await req.json().catch(() => ({}));
     const action = typeof body.action === 'string' ? body.action : '';
+
 
     if (!LASTFM_API_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Last.fm is not configured' }), {
