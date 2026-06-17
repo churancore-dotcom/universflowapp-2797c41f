@@ -309,11 +309,9 @@ const Auth = () => {
 
           <p className="text-center text-[11.5px] text-muted-foreground/70 mt-5">
             Are you an artist?{' '}
-            {user ? (
-              <a href="/artist/apply" className="text-primary font-semibold">Apply for verification →</a>
-            ) : (
-              <span className="text-primary/80 font-semibold">Sign up first, then apply for verification</span>
-            )}
+            <a href={user ? '/artist/apply' : '/artist/auth'} className="text-primary font-semibold">
+              Apply for verification →
+            </a>
           </p>
         </motion.div>
 
