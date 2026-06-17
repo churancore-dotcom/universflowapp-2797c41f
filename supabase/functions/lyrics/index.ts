@@ -10,11 +10,60 @@ const GENIUS_TOKEN = Deno.env.get('GENIUS_ACCESS_TOKEN') || '';
 
 interface LyricsResponse {
   success: boolean;
-  synced?: string | null;       // raw LRC text with [mm:ss.xx] tags
-  plain?: string | null;        // plain text fallback
+  synced?: string | null;
+  plain?: string | null;
   source?: 'lrclib' | 'genius' | null;
-  geniusUrl?: string | null;    // link out to genius.com (legal reading)
+  geniusUrl?: string | null;
   error?: string;
+}
+
+// ───────── Per-IP sliding-window rate limit (in-memory, per edge instance) ─────────
+const RATE_LIMIT_MAX = 60;            // requests
+const RATE_LIMIT_WINDOW_MS = 60_000;  // per minute
+const ipHits = new Map<string, number[]>();
+
+function getClientIp(req: Request): string {
+  const fwd = req.headers.get('x-forwarded-for') || '';
+  return (fwd.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
+}
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const arr = (ipHits.get(ip) || []).filter((t) => t > cutoff);
+  if (arr.length >= RATE_LIMIT_MAX) {
+    ipHits.set(ip, arr);
+    return true;
+  }
+  arr.push(now);
+  ipHits.set(ip, arr);
+  // Opportunistic cleanup to bound memory
+  if (ipHits.size > 5000) {
+    for (const [k, v] of ipHits) {
+      const filtered = v.filter((t) => t > cutoff);
+      if (filtered.length === 0) ipHits.delete(k);
+      else ipHits.set(k, filtered);
+    }
+  }
+  return false;
+}
+
+// ───────── Tiny in-memory response cache (per edge instance) ─────────
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const cache = new Map<string, { at: number; payload: LyricsResponse }>();
+function cacheGet(key: string): LyricsResponse | null {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > CACHE_TTL_MS) { cache.delete(key); return null; }
+  return hit.payload;
+}
+function cacheSet(key: string, payload: LyricsResponse) {
+  if (cache.size > 1000) {
+    // drop oldest 200 entries
+    const keys = [...cache.keys()].slice(0, 200);
+    for (const k of keys) cache.delete(k);
+  }
+  cache.set(key, { at: Date.now(), payload });
 }
 
 function clean(s: string): string {
@@ -28,7 +77,6 @@ function clean(s: string): string {
 
 async function fetchLrclib(artist: string, title: string, durationSec?: number): Promise<{ synced?: string; plain?: string } | null> {
   try {
-    // Try the high-precision /get endpoint first (artist + track + duration)
     if (durationSec && durationSec > 0) {
       const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(clean(artist))}&track_name=${encodeURIComponent(clean(title))}&duration=${Math.round(durationSec)}`;
       const r = await fetch(url, { headers: { 'User-Agent': 'Universflow/1.0 (https://universflow.in)' } });
@@ -39,13 +87,11 @@ async function fetchLrclib(artist: string, title: string, durationSec?: number):
         }
       }
     }
-    // Fallback: search by artist + title
     const sUrl = `https://lrclib.net/api/search?artist_name=${encodeURIComponent(clean(artist))}&track_name=${encodeURIComponent(clean(title))}`;
     const sr = await fetch(sUrl, { headers: { 'User-Agent': 'Universflow/1.0 (https://universflow.in)' } });
     if (!sr.ok) return null;
     const arr = await sr.json();
     if (!Array.isArray(arr) || arr.length === 0) return null;
-    // Prefer a result with synced lyrics
     const synced = arr.find((x: any) => x?.syncedLyrics);
     const pick = synced || arr.find((x: any) => x?.plainLyrics) || arr[0];
     if (!pick) return null;
@@ -75,6 +121,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    const ip = getClientIp(req);
+    if (rateLimited(ip)) {
+      return new Response(JSON.stringify({ success: false, error: 'Too many requests' } satisfies LyricsResponse), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+      });
+    }
+
     const body = await req.json().catch(() => ({}));
     const artist = String(body?.artist || '').trim();
     const title = String(body?.title || '').trim();
@@ -86,18 +140,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    const [lrc, geniusUrl] = await Promise.all([
-      fetchLrclib(artist, title, duration),
-      fetchGeniusUrl(artist, title),
-    ]);
+    const cacheKey = `${clean(artist).toLowerCase()}|${clean(title).toLowerCase()}|${duration || 0}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      return new Response(JSON.stringify(cached), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400', 'X-Cache': 'HIT' },
+      });
+    }
+
+    // Lazy Genius fallback: only call Genius if LRCLIB has nothing.
+    const lrc = await fetchLrclib(artist, title, duration);
+    const haveLyrics = !!(lrc?.synced || lrc?.plain);
+    const geniusUrl = haveLyrics ? null : await fetchGeniusUrl(artist, title);
 
     const payload: LyricsResponse = {
       success: true,
       synced: lrc?.synced || null,
       plain: lrc?.plain || null,
-      source: lrc?.synced || lrc?.plain ? 'lrclib' : (geniusUrl ? 'genius' : null),
+      source: haveLyrics ? 'lrclib' : (geniusUrl ? 'genius' : null),
       geniusUrl: geniusUrl || null,
     };
+
+    cacheSet(cacheKey, payload);
 
     return new Response(JSON.stringify(payload), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
