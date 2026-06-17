@@ -158,14 +158,19 @@ Deno.serve(async (req) => {
       payment_rejected: 'Payment Rejected',
     };
 
+    // Escape user-controlled fields before embedding in Telegram HTML to
+    // prevent admins seeing spoofed amounts/statuses crafted via UTR/note/etc.
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     const lines = [
-      `${emoji[body.event] ?? 'ℹ️'} <b>${title[body.event] ?? body.event}</b>`,
-      body.email ? `👤 ${body.email}` : null,
-      body.plan ? `📦 Plan: <b>${body.plan}</b>` : null,
+      `${emoji[body.event] ?? 'ℹ️'} <b>${esc(title[body.event] ?? body.event)}</b>`,
+      body.email ? `👤 ${esc(body.email)}` : null,
+      body.plan ? `📦 Plan: <b>${esc(body.plan)}</b>` : null,
       typeof body.amount_inr === 'number' ? `💰 ₹${body.amount_inr}` : null,
-      body.utr ? `🧾 UTR: <code>${body.utr}</code>` : null,
-      body.note ? `📝 ${body.note}` : null,
-      body.user_id ? `🆔 <code>${body.user_id}</code>` : null,
+      body.utr ? `🧾 UTR: <code>${esc(body.utr)}</code>` : null,
+      body.note ? `📝 ${esc(body.note)}` : null,
+      body.user_id ? `🆔 <code>${esc(body.user_id)}</code>` : null,
       `🕐 ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
     ].filter(Boolean);
 
