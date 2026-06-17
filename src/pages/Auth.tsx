@@ -34,7 +34,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
   const isLogin = mode === 'login';
@@ -309,7 +309,11 @@ const Auth = () => {
 
           <p className="text-center text-[11.5px] text-muted-foreground/70 mt-5">
             Are you an artist?{' '}
-            <a href="/artist/apply" className="text-primary font-semibold">Apply for verification →</a>
+            {user ? (
+              <a href="/artist/apply" className="text-primary font-semibold">Apply for verification →</a>
+            ) : (
+              <span className="text-primary/80 font-semibold">Sign up first, then apply for verification</span>
+            )}
           </p>
         </motion.div>
 
