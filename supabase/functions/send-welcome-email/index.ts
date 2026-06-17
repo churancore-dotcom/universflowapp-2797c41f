@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 function escape(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -16,6 +18,19 @@ function escape(s: string): string {
 
 function isEmail(s: string): boolean {
   return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 254;
+}
+
+async function sha256(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function idToUuid(id: string): Promise<string> {
+  const h = await sha256(`ip:${id}`);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+function clientIp(req: Request): string {
+  const xf = req.headers.get('x-forwarded-for') ?? '';
+  return (xf.split(',')[0] || req.headers.get('cf-connecting-ip') || 'unknown').trim();
 }
 
 Deno.serve(async (req) => {
