@@ -299,11 +299,18 @@ const Auth = () => {
 
               {!isLogin && (
                 <p className="text-center text-[10.5px] leading-relaxed text-muted-foreground/70 px-3 pt-1">
-                  By creating an account, you agree to Universflow's Terms and Privacy Policy.
+                  By creating an account, you agree to Universflow's{' '}
+                  <a href="/legal/terms" className="underline">Terms</a> and{' '}
+                  <a href="/legal/privacy" className="underline">Privacy Policy</a>.
                 </p>
               )}
             </motion.form>
           </AnimatePresence>
+
+          <p className="text-center text-[11.5px] text-muted-foreground/70 mt-5">
+            Are you an artist?{' '}
+            <a href="/artist/apply" className="text-primary font-semibold">Apply for verification →</a>
+          </p>
         </motion.div>
 
         <p className="relative z-10 text-[10px] tracking-[0.22em] uppercase text-muted-foreground/50 mt-8">
