@@ -145,7 +145,9 @@ export default function ArtistApply() {
     if (!options.includes(docType)) setDocType(options[0]);
   }, [country, docType]);
 
-  const needsBack = docType === 'drivers_license';
+  // PAN cards & passports have all the info on the front — back is optional.
+  // Everything else (Voter ID, Driver's Licence, National ID) needs both sides.
+  const needsBack = docType !== 'pan' && docType !== 'passport';
   const allowedDocs = docsForCountry(country);
 
   const canNext = () => {
