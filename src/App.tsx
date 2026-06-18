@@ -245,7 +245,14 @@ const AnimatedRoutes = () => {
           <Route path="/artist/auth" element={user ? <Navigate to="/artist/apply" replace /> : <ArtistAuth />} />
           <Route path="/artist/apply" element={<ProtectedRoute><ArtistApply /></ProtectedRoute>} />
           <Route path="/artist/status" element={<ProtectedRoute><ArtistStatus /></ProtectedRoute>} />
-          <Route path="/artist/studio" element={<ProtectedRoute><ArtistStudio /></ProtectedRoute>} />
+          <Route path="/artist/studio" element={<ProtectedRoute><ArtistLayout /></ProtectedRoute>}>
+            <Route index element={<ArtistOverview />} />
+            <Route path="upload" element={<ArtistUploadPage />} />
+            <Route path="songs" element={<ArtistSongsPage />} />
+            <Route path="analytics" element={<ArtistAnalyticsPage />} />
+            <Route path="followers" element={<ArtistFollowersPage />} />
+            <Route path="profile" element={<ArtistEditProfile />} />
+          </Route>
           <Route path="/artist/:artistId" element={<ProtectedRoute><ArtistDetail /></ProtectedRoute>} />
           <Route path="/a/:slug" element={<ArtistPublic />} />
 
