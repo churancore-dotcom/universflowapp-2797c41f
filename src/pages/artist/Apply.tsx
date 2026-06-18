@@ -252,13 +252,13 @@ export default function ArtistApply() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-[15px] font-semibold tracking-tight">Apply as Artist</h1>
-            <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">Step {step}/5</span>
+            <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">Step {step}/{TOTAL_STEPS}</span>
           </div>
           <div className="h-0.5 bg-white/5">
             <motion.div
               className="h-full bg-primary"
               initial={false}
-              animate={{ width: `${(step / 5) * 100}%` }}
+              animate={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
               transition={{ type: 'spring', stiffness: 200, damping: 30 }}
             />
           </div>
