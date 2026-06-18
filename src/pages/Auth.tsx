@@ -45,6 +45,14 @@ const Auth = () => {
 
   const isLogin = mode === 'login';
 
+  // Navigate to the dedicated artist auth page when the Artist tab is selected.
+  useEffect(() => {
+    if (mode === 'artist') {
+      const t = setTimeout(() => navigate('/artist/auth', { replace: true }), 180);
+      return () => clearTimeout(t);
+    }
+  }, [mode, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!navigator.onLine) {
