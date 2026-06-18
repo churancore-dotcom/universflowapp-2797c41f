@@ -19,9 +19,13 @@ function detectCountryCode(): string | undefined {
   } catch { return undefined; }
 }
 
-type Mode = 'login' | 'signup';
+type Mode = 'login' | 'signup' | 'artist';
 
-const panelVariants = {
+const labels: Record<Mode, string> = {
+  login: 'Sign in',
+  signup: 'Sign up',
+  artist: 'Artist',
+};
   initial: (isLogin: boolean) => ({ opacity: 0, y: 18, x: isLogin ? -10 : 10, filter: 'blur(8px)' }),
   animate: { opacity: 1, y: 0, x: 0, filter: 'blur(0px)' },
   exit: (isLogin: boolean) => ({ opacity: 0, y: -10, x: isLogin ? 10 : -10, filter: 'blur(8px)' }),
