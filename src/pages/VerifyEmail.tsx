@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getArtistDestination } from '@/lib/artistRouting';
 import appLogo from '@/assets/app-logo.png';
 import SEOHead from '@/components/SEOHead';
 
@@ -59,8 +60,13 @@ const VerifyEmail = () => {
     return () => { cancelled = true; };
   }, [params]);
 
-  const handleContinue = () => {
-    navigate(user ? '/home' : '/auth');
+  const handleContinue = async () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    const artistDestination = await getArtistDestination(user);
+    navigate(artistDestination || '/home');
   };
 
   return (
