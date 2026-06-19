@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Song, usePlayer } from '@/contexts/PlayerContext';
 import { getGeoTopTracks, prefetchIndexedTrack, type IndexedTrack } from '@/lib/musicIndexer';
 import { triggerHaptic } from '@/hooks/useHaptics';
+import { detectCountrySilently } from '@/lib/geoCountry';
 
 // ISO-3166 alpha-2 → English country name (limited to common Last.fm-supported names)
 const COUNTRY_NAMES: Record<string, string> = {
@@ -56,6 +57,7 @@ const CountryViralSection = memo(function CountryViralSection() {
 
 
   // Country resolution is cached forever per user — it never changes mid-session.
+  // Priority: explicit profile country → silent edge-IP detection → locale fallback.
   const { data: country } = useQuery({
     queryKey: ['viral-country', user?.id ?? 'anon'],
     queryFn: async () => {
@@ -64,7 +66,8 @@ const CountryViralSection = memo(function CountryViralSection() {
         const { data } = await supabase.from('profiles').select('country_code').eq('user_id', user.id).maybeSingle();
         cc = (data?.country_code || '').toUpperCase() || null;
       }
-      return cc || detectFallbackCountry();
+      if (cc) return cc;
+      return await detectCountrySilently();
     },
     staleTime: Infinity,
     gcTime: Infinity,
