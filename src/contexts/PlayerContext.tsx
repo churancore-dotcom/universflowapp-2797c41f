@@ -507,7 +507,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       if (waitingTimer != null) clearTimeout(waitingTimer);
       audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('waiting', handleWaitingPerf);
       audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('loadstart', handleLoadStartPerf);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
       if (appResumeRemove) appResumeRemove();
@@ -1254,6 +1256,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!audio.src || audio.src === window.location.href || /empty src/i.test(errorMessage)) return;
 
       console.warn('[player] audio error, auto-skipping:', errorCode, errorMessage);
+      recordPerfEvent({
+        event_type: 'playback_error',
+        severity: 'error',
+        message: `code=${errorCode} ${errorMessage}`.slice(0, 240),
+        details: { code: errorCode, src_host: (() => { try { return new URL(audio.src).host; } catch { return null; } })() },
+      });
 
       // ── First-chance recovery: stream URL likely went stale. Re-resolve
       //    once with a forced cache-bust, then retry the same song. Only skip
