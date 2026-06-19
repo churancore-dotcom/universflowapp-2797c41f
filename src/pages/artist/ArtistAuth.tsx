@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getArtistDestination } from '@/lib/artistRouting';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -125,7 +126,8 @@ const ArtistAuth = () => {
           toast.error(error.message);
           return;
         }
-        navigate('/artist/apply', { replace: true });
+        const destination = await getArtistDestination((await supabase.auth.getUser()).data.user);
+        navigate(destination || '/artist/apply', { replace: true });
       } else {
         const fullPhone = `${dial[1]} ${phone.trim()}`;
         const { error } = await signUp(email, password, username, dial[0]);
