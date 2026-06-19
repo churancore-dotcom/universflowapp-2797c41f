@@ -4,6 +4,7 @@ import { useGlobalAudioEngine } from '@/hooks/useGlobalAudioEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveIndexedTrack, resolveYouTubeVideoStream, prefetchIndexedTrack } from '@/lib/musicIndexer';
 import { playerProgressStore, usePlayerProgress } from '@/lib/playerProgressStore';
+import { recordPerfEvent } from '@/lib/perfMonitor';
 import { resume as resumeAudioEngine } from '@/lib/audioEngine';
 import { EQ_SETTINGS_KEY, getEQSettings, isEqActive } from '@/lib/eqSettings';
 import { wrapStreamUrl, isStreamProxyUrl } from '@/lib/streamProxy';
@@ -441,13 +442,38 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }, 4000);
     };
+    const handleWaitingPerf = () => {
+      recordPerfEvent({
+        event_type: 'playback_stall',
+        severity: 'warn',
+        track_id: currentSongRef.current?.id ?? null,
+        source: currentSongRef.current?.source ?? null,
+        message: 'Buffering / stalled',
+      });
+    };
     const handlePlaying = () => {
       if (waitingTimer != null) { clearTimeout(waitingTimer); waitingTimer = null; }
+      const startedAt = (audio as any).__ufStartedAt as number | undefined;
+      if (startedAt) {
+        recordPerfEvent({
+          event_type: 'playback_start',
+          severity: 'info',
+          track_id: currentSongRef.current?.id ?? null,
+          source: currentSongRef.current?.source ?? null,
+          latency_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+        });
+        (audio as any).__ufStartedAt = undefined;
+      }
+    };
+    const handleLoadStartPerf = () => {
+      (audio as any).__ufStartedAt = performance.now();
     };
 
 
     audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('waiting', handleWaitingPerf);
     audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('loadstart', handleLoadStartPerf);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
 
