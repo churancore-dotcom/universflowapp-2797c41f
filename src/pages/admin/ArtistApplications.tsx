@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ID_DOC_LABELS, IdDocType } from '@/lib/artist';
+import { useNavigate, useParams } from 'react-router-dom';
 
 type Status = 'pending' | 'approved' | 'rejected';
 
@@ -61,6 +62,8 @@ export default function ArtistApplications() {
   const [apps, setApps] = useState<App[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Status | 'all'>('pending');
+  const navigate = useNavigate();
+  const { status: routeStatus } = useParams<{ status?: string }>();
   const [active, setActive] = useState<App | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -76,6 +79,12 @@ export default function ArtistApplications() {
     setApps((data ?? []).map((a) => ({ ...a, admin_note: null })) as App[]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (routeStatus === 'all' || routeStatus === 'pending' || routeStatus === 'approved' || routeStatus === 'rejected') {
+      setFilter(routeStatus);
+    }
+  }, [routeStatus]);
 
   useEffect(() => {
     load();
@@ -158,10 +167,10 @@ export default function ArtistApplications() {
       </header>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <Metric icon={<Clock className="w-4 h-4" />} label="Pending" value={counts.pending} active={filter === 'pending'} onClick={() => setFilter('pending')} />
-        <Metric icon={<UserCheck className="w-4 h-4" />} label="Approved" value={counts.approved} active={filter === 'approved'} onClick={() => setFilter('approved')} />
-        <Metric icon={<XCircle className="w-4 h-4" />} label="Rejected" value={counts.rejected} active={filter === 'rejected'} onClick={() => setFilter('rejected')} />
-        <Metric icon={<FileCheck2 className="w-4 h-4" />} label="All" value={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
+        <Metric icon={<Clock className="w-4 h-4" />} label="Pending" value={counts.pending} active={filter === 'pending'} onClick={() => navigate('/admin/artist-applications/pending')} />
+        <Metric icon={<UserCheck className="w-4 h-4" />} label="Approved" value={counts.approved} active={filter === 'approved'} onClick={() => navigate('/admin/artist-applications/approved')} />
+        <Metric icon={<XCircle className="w-4 h-4" />} label="Rejected" value={counts.rejected} active={filter === 'rejected'} onClick={() => navigate('/admin/artist-applications/rejected')} />
+        <Metric icon={<FileCheck2 className="w-4 h-4" />} label="All" value={counts.all} active={filter === 'all'} onClick={() => navigate('/admin/artist-applications/all')} />
       </div>
 
       {loading ? (
