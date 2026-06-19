@@ -14,6 +14,7 @@ import EmailVerificationCard from '@/components/EmailVerificationCard';
 import EqualizerModal from '@/components/EqualizerModal';
 import { SettingsUpdateButton } from '@/components/SettingsUpdateButton';
 import AnnouncementBanner from '@/components/AnnouncementBanner';
+import { supabase } from '@/integrations/supabase/client';
 
 import { applyTheme, type ThemeMode } from '@/lib/themeBoot';
 import { setEQSettings } from '@/lib/eqSettings';
@@ -46,6 +47,7 @@ const Settings = () => {
   const [gaplessPlayback, setGaplessPlayback] = useState(() => localStorage.getItem('uf_gapless') !== 'false');
   const [autoplay, setAutoplay] = useState(() => localStorage.getItem('uf_autoplay') !== 'false');
   const [notifications, setNotifications] = useState(() => localStorage.getItem('uf_notifications') !== 'false');
+  const [moodPushes, setMoodPushes] = useState(() => localStorage.getItem('uf_mood_pushes') !== 'false');
   const [haptics, setHaptics] = useState(() => localStorage.getItem('uf_haptics') !== 'false');
   const [theme, setTheme] = useState<ThemeMode>(() => (localStorage.getItem('uf_theme') as ThemeMode) || 'default');
   const [cacheSize, setCacheSize] = useState('0 MB');
@@ -369,7 +371,26 @@ const Settings = () => {
                 <span className="text-sm">Push Notifications</span>
                 <Switch checked={notifications} onCheckedChange={handleNotifications} className="data-[state=checked]:bg-primary scale-90" />
               </div>
+              <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
+                <div className="flex flex-col">
+                  <span className="text-sm">Smart Mood Picks</span>
+                  <span className="text-[11px] text-white/40">A daily song that matches your vibe</span>
+                </div>
+                <Switch
+                  checked={moodPushes}
+                  onCheckedChange={async (val) => {
+                    setMoodPushes(val);
+                    localStorage.setItem('uf_mood_pushes', String(val));
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      await supabase.from('profiles').update({ mood_pushes_enabled: val }).eq('user_id', user.id);
+                    }
+                  }}
+                  className="data-[state=checked]:bg-primary scale-90"
+                />
+              </div>
               <div className="px-4 py-3 border-b border-white/5">
+
                 <div className="flex items-center gap-2 mb-2">
                   <Bell className="w-4 h-4 text-primary" />
                   <span className="text-sm">App Banners</span>
