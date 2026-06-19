@@ -126,8 +126,17 @@ const ArtistAuth = () => {
           toast.error(error.message);
           return;
         }
-        const destination = await getArtistDestination((await supabase.auth.getUser()).data.user);
-        navigate(destination || '/artist/apply', { replace: true });
+        // Strict separation: only accounts that signed up as an artist (have
+        // the artist role or any application on file) can sign in here.
+        // Pure listener accounts get rejected — they must use /auth instead.
+        const authedUser = (await supabase.auth.getUser()).data.user;
+        const destination = await getArtistDestination(authedUser);
+        if (!destination) {
+          await supabase.auth.signOut();
+          toast.error('No artist account found for this email. Please sign up as an artist first.');
+          return;
+        }
+        navigate(destination, { replace: true });
       } else {
         const fullPhone = `${dial[1]} ${phone.trim()}`;
         const { error } = await signUp(email, password, username, dial[0]);
