@@ -220,7 +220,7 @@ export default function ArtistApply() {
   const allowedDocs = country ? docsForCountry(country) : [];
 
   const canNext = () => {
-    if (step === 1) return stageName.trim().length >= 2 && realName.trim().length >= 2 && phone.trim().length >= 5 && country.length === 2 && country !== 'XX' || (step === 1 && stageName.trim().length >= 2 && realName.trim().length >= 2 && phone.trim().length >= 5 && country === 'XX');
+    if (step === 1) return stageName.trim().length >= 2 && realName.trim().length >= 2 && phone.trim().length >= 5 && !!country;
     if (step === 2) return [instagram, youtube, spotify, appleMusic].some((s) => s.trim().length > 4);
     if (step === 3) return !!docType && !!docFront && (!needsBack || !!docBack) && !!selfie;
     if (step === 4) return !!livenessShots;
