@@ -59,14 +59,14 @@ export default function ArtistPublic() {
       if (!p) { setLoading(false); return; }
       setProfile(p as Profile);
 
-      const [{ data: s }, { count }, { data: follow }] = await Promise.all([
+      const [{ data: s }, { data: count }, { data: follow }] = await Promise.all([
         supabase.from('artist_songs').select('*').eq('artist_user_id', (p as Profile).user_id).eq('status', 'live').order('created_at', { ascending: false }),
-        supabase.from('artist_followers').select('id', { count: 'exact', head: true }).eq('artist_user_id', (p as Profile).user_id),
-        user ? supabase.from('artist_followers').select('id').eq('artist_user_id', (p as Profile).user_id).eq('follower_user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+        (supabase.rpc as any)('get_artist_follower_count', { _artist_user_id: (p as Profile).user_id }),
+        user ? (supabase.rpc as any)('is_following_artist', { _artist_user_id: (p as Profile).user_id }) : Promise.resolve({ data: false }),
       ]);
       const list = (s ?? []) as Song[];
       setSongs(list);
-      setFollowers(count ?? 0);
+      setFollowers(Number(count ?? 0));
       setIsFollowing(!!follow);
       setLoading(false);
 

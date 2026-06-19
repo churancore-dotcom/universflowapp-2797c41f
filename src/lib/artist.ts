@@ -107,7 +107,7 @@ export async function getMyApplication(userId: string) {
   // admin_note column is no longer SELECT-able by regular authenticated users;
   // fetch the rest of the row, then pull the owner-scoped note via RPC.
   const { data } = await supabase
-    .from('artist_applications')
+    .from('artist_applications_safe' as any)
     .select('id, user_id, stage_name, real_name, phone, country_code, social_links, id_doc_type, id_doc_front_path, id_doc_back_path, selfie_path, artist_photo_path, status, reviewed_at, reviewed_by, created_at, updated_at')
     .eq('user_id', userId)
     .maybeSingle();

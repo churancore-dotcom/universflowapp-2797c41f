@@ -27,14 +27,14 @@ export async function getArtistDestination(user?: User | null): Promise<ArtistDe
   }
 
   try {
-    const { data: application } = await supabase
-      .from('artist_applications')
+    const { data: application } = await (supabase as any)
+      .from('artist_applications_safe')
       .select('status')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (application?.status === 'pending' || application?.status === 'rejected') return '/artist/status';
-    if (application?.status === 'approved') return '/artist/status';
+    if ((application as any)?.status === 'pending' || (application as any)?.status === 'rejected') return '/artist/status';
+    if ((application as any)?.status === 'approved') return '/artist/status';
   } catch {
     // Fall back to signup intent below.
   }
