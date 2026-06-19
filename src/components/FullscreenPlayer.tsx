@@ -263,16 +263,6 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                   />
                 )}
-                  <motion.div
-                    className="absolute inset-[-15%] rounded-3xl pointer-events-none"
-                    style={{
-                      background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 60%)',
-                      filter: 'blur(30px)',
-                    }}
-                    animate={{ opacity: [0.6, 1, 0.6] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                )}
                 
                 <AnimatePresence mode="popLayout" initial={false}>
                   <motion.div
