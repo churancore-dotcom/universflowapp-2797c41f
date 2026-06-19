@@ -128,7 +128,8 @@ const CountryViralSection = memo(function CountryViralSection() {
     tracks.slice(0, 6).forEach((t) => prefetchIndexedTrack(t.artist, t.title));
   }, [tracks]);
 
-  const queueAsSongs: Song[] = useMemo(() => tracks.map((t) => ({
+  // Build queue from the *rotated* view so taps line up with what's visible.
+  const queueAsSongs: Song[] = useMemo(() => rotated.map((t) => ({
     id: t.id,
     title: t.title,
     artist: t.artist,
@@ -137,7 +138,7 @@ const CountryViralSection = memo(function CountryViralSection() {
     audio_url: t.audio_url || 'resolving',
     duration: t.duration,
     source: 'indexed' as const,
-  })), [tracks]);
+  })), [rotated]);
 
   const handleTap = useCallback((track: IndexedTrack, idx: number) => {
     triggerHaptic('impactLight');
@@ -146,6 +147,7 @@ const CountryViralSection = memo(function CountryViralSection() {
     if (currentSong?.id === song.id) togglePlay();
     else playSong(song, undefined, queueAsSongs);
   }, [queueAsSongs, currentSong?.id, togglePlay, playSong]);
+
 
   // ── Silent time/day personalization (zero-PII) ──
   // Deterministically rotate which slice of the chart we show based on the
