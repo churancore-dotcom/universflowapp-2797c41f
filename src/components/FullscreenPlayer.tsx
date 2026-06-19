@@ -1,6 +1,7 @@
 import { useState, memo, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ChevronDown, ListMusic, Share2, Sliders, ListOrdered } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ChevronDown, ListMusic, Share2, Sliders, ListOrdered, Mic2 } from 'lucide-react';
+import SyncedLyricsView from './SyncedLyricsView';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { usePlayerProgress } from '@/lib/playerProgressStore';
 import { useNavigate } from 'react-router-dom';
@@ -87,6 +88,7 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
   const [direction, setDirection] = useState(0);
   // Local seek-drag state — prevents the live `progress` updates from snapping
   // the slider thumb back while the user is dragging it.
@@ -219,19 +221,48 @@ const FullscreenPlayer = memo(function FullscreenPlayer() {
                 <p className="text-xs font-semibold text-white/90 truncate">{currentSong.album || 'Library'}</p>
               </div>
               
-              <button 
-                className="w-10 h-10 flex items-center justify-center -mr-2 active:scale-90 transition-transform" 
-                onClick={() => { triggerHaptic('impactLight'); setShowQueue(true); }}
-                aria-label="Open queue"
-              >
-                <ListOrdered className="w-5 h-5 text-white/80" />
-              </button>
+              <div className="flex items-center gap-1 -mr-2">
+                <button
+                  className={`w-10 h-10 flex items-center justify-center active:scale-90 transition-transform rounded-full ${showLyrics ? 'bg-rose-500/20 text-rose-300' : 'text-white/80'}`}
+                  onClick={() => { triggerHaptic('impactLight'); setShowLyrics((v) => !v); }}
+                  aria-label={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
+                >
+                  <Mic2 className="w-5 h-5" />
+                </button>
+                <button
+                  className="w-10 h-10 flex items-center justify-center active:scale-90 transition-transform"
+                  onClick={() => { triggerHaptic('impactLight'); setShowQueue(true); }}
+                  aria-label="Open queue"
+                >
+                  <ListOrdered className="w-5 h-5 text-white/80" />
+                </button>
+              </div>
             </div>
 
-            {/* Album Art - flex-1 to fill available space */}
+            {/* Album Art OR Lyrics — flex-1 to fill available space */}
             <div className="flex-1 flex items-center justify-center min-h-0">
+              {showLyrics ? (
+                <div className="w-full h-full max-w-[420px]">
+                  <SyncedLyricsView
+                    artist={currentSong.artist}
+                    title={currentSong.title}
+                    duration={currentSong.duration}
+                    bare={false}
+                  />
+                </div>
+              ) : (
               <div className="relative w-[78vw] max-w-[312px] aspect-square">
                 {isPlaying && (
+                  <motion.div
+                    className="absolute inset-[-15%] rounded-3xl pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 60%)',
+                      filter: 'blur(30px)',
+                    }}
+                    animate={{ opacity: [0.6, 1, 0.6] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
                   <motion.div
                     className="absolute inset-[-15%] rounded-3xl pointer-events-none"
                     style={{
