@@ -95,6 +95,7 @@ const ABTesting = lazy(() => import("./pages/admin/ABTesting"));
 const SecurityCenter = lazy(() => import("./pages/admin/SecurityCenter"));
 
 const SupportInbox = lazy(() => import("./pages/admin/SupportInbox"));
+const PerformancePanel = lazy(() => import("./pages/admin/PerformancePanel"));
 const AppUpdates = lazy(() => import("./pages/admin/AppUpdates"));
 const ArtistApplications = lazy(() => import("./pages/admin/ArtistApplications"));
 
@@ -336,6 +337,7 @@ const AnimatedRoutes = () => {
             <Route path="security" element={<SecurityCenter />} />
             <Route path="support" element={<SupportInbox />} />
             <Route path="app-updates" element={<AppUpdates />} />
+            <Route path="performance" element={<PerformancePanel />} />
             <Route path="artist-applications" element={<ArtistApplications />} />
             <Route path="artist-applications/:status" element={<ArtistApplications />} />
             <Route path="artist-verification" element={<Navigate to="/admin/artist-applications" replace />} />

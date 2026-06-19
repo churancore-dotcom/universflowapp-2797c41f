@@ -28,6 +28,7 @@ import {
   Lock,
   MessageCircle,
   Smartphone,
+  Gauge,
 } from 'lucide-react';
 
 const navItems = [
@@ -57,6 +58,7 @@ const navItems = [
   { icon: BarChart3, label: 'Bulk Actions', path: '/admin/bulk' },
   { icon: BarChart3, label: 'Activity Logs', path: '/admin/logs' },
   { icon: BarChart3, label: 'System Health', path: '/admin/health' },
+  { icon: Gauge, label: 'Performance Monitor', path: '/admin/performance' },
   { icon: BarChart3, label: 'Scheduler', path: '/admin/scheduler' },
   { icon: BarChart3, label: 'Backup', path: '/admin/backup' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
