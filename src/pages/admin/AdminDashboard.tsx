@@ -27,6 +27,14 @@ interface GenreData {
   value: number;
 }
 
+interface TopSong {
+  id: string;
+  title: string;
+  artist: string;
+  cover_url: string | null;
+  play_count: number | null;
+}
+
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 const AdminDashboard = () => {
@@ -36,7 +44,7 @@ const AdminDashboard = () => {
   });
   const [playData, setPlayData] = useState<PlayData[]>([]);
   const [genreData, setGenreData] = useState<GenreData[]>([]);
-  const [topSongs, setTopSongs] = useState<any[]>([]);
+  const [topSongs, setTopSongs] = useState<TopSong[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const navigate = useNavigate();
