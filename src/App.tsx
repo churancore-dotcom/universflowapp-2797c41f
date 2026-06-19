@@ -336,7 +336,8 @@ const AnimatedRoutes = () => {
             <Route path="security" element={<SecurityCenter />} />
             <Route path="support" element={<SupportInbox />} />
             <Route path="app-updates" element={<AppUpdates />} />
-            <Route path="artists-applications" element={<ArtistApplications />} />
+            <Route path="artist-applications" element={<ArtistApplications />} />
+            <Route path="artists-applications" element={<Navigate to="/admin/artist-applications" replace />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
