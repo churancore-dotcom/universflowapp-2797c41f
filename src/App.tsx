@@ -38,6 +38,7 @@ import { isMedianApp } from "./lib/median";
 import OfflinePlayerShell from "./components/OfflinePlayerShell";
 import OfflineGate from "./components/OfflineGate";
 import { SentryErrorBoundary } from "./components/SentryErrorBoundary";
+import { getArtistDestination, hasArtistSignupIntent, type ArtistDestination } from "./lib/artistRouting";
 
 // These are visited less often — keep lazy to keep initial bundle small.
 const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
@@ -143,6 +144,31 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const ListenerRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading, emailVerified } = useAuth();
+  const [artistDestination, setArtistDestination] = useState<ArtistDestination | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user || emailVerified !== true) {
+      setArtistDestination(undefined);
+      return;
+    }
+    setArtistDestination(undefined);
+    getArtistDestination(user).then((destination) => {
+      if (!cancelled) setArtistDestination(destination);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id, emailVerified]);
+
+  if (isLoading) return <LazyFallback />;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (emailVerified === null || artistDestination === undefined) return <LazyFallback />;
+  if (emailVerified === false) return <Navigate to="/check-email" replace />;
+  if (artistDestination) return <Navigate to={artistDestination} replace />;
+  return <>{children}</>;
+};
+
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, isLoading } = useAuth();
   // Server-side re-verification on every admin mount. Cached `isAdmin` from
@@ -185,10 +211,27 @@ const isWebLanding = typeof window !== 'undefined'
 
 const RootGate = () => {
   const { user, isLoading, emailVerified } = useAuth();
+  const [artistDestination, setArtistDestination] = useState<ArtistDestination | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user || emailVerified !== true) {
+      setArtistDestination(undefined);
+      return;
+    }
+    setArtistDestination(undefined);
+    getArtistDestination(user).then((destination) => {
+      if (!cancelled) setArtistDestination(destination);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id, emailVerified]);
+
   if (isLoading) return <LazyFallback />;
   if (user) {
     if (emailVerified === null) return <LazyFallback />;
     if (emailVerified === false) return <Navigate to="/check-email" replace />;
+    if (artistDestination === undefined) return <LazyFallback />;
+    if (artistDestination) return <Navigate to={artistDestination} replace />;
     return <Home />;
   }
   if (isMedianApp || !isWebLanding) return <Navigate to="/auth" replace />;
@@ -198,7 +241,7 @@ const RootGate = () => {
 const GetAppGate = () => {
   const { user } = useAuth();
   if (isMedianApp || !isWebLanding) {
-    return <Navigate to={user ? "/home" : "/auth"} replace />;
+    return <Navigate to={user ? "/" : "/auth"} replace />;
   }
   return <GetApp />;
 };
@@ -222,24 +265,24 @@ const AnimatedRoutes = () => {
           <Route path="/blog/trending-punjabi-songs-2026" element={<BlogTrendingPunjabiSongs2026 />} />
           <Route path="/welcome" element={<Navigate to="/auth" replace />} />
           <Route path="/auth" element={
-            user ? <Navigate to="/home" replace /> :
+            user ? <Navigate to="/" replace /> :
             <Auth />
           } />
           <Route path="/verify" element={<VerifyEmail />} />
           <Route path="/check-email" element={<CheckEmail />} />
           <Route path="/offline-player" element={<OfflinePlayerShell />} />
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-          <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
-          <Route path="/playlist/:id" element={<ProtectedRoute><PlaylistDetail /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/home" element={<ListenerRoute><Home /></ListenerRoute>} />
+          <Route path="/search" element={<ListenerRoute><Search /></ListenerRoute>} />
+          <Route path="/library" element={<ListenerRoute><Library /></ListenerRoute>} />
+          <Route path="/playlist/:id" element={<ListenerRoute><PlaylistDetail /></ListenerRoute>} />
+          <Route path="/profile" element={<ListenerRoute><Profile /></ListenerRoute>} />
+          <Route path="/settings" element={<ListenerRoute><Settings /></ListenerRoute>} />
           <Route path="/support" element={<Support />} />
-          <Route path="/offline" element={<ProtectedRoute><Offline /></ProtectedRoute>} />
-          <Route path="/artists" element={<ProtectedRoute><AllArtists /></ProtectedRoute>} />
-          <Route path="/subscription" element={<ProtectedRoute><ManageSubscription /></ProtectedRoute>} />
+          <Route path="/offline" element={<ListenerRoute><Offline /></ListenerRoute>} />
+          <Route path="/artists" element={<ListenerRoute><AllArtists /></ListenerRoute>} />
+          <Route path="/subscription" element={<ListenerRoute><ManageSubscription /></ListenerRoute>} />
           <Route path="/premium" element={<Premium />} />
-          <Route path="/downloads" element={<ProtectedRoute><Downloads /></ProtectedRoute>} />
+          <Route path="/downloads" element={<ListenerRoute><Downloads /></ListenerRoute>} />
 
           {/* Artist program — these MUST come before /artist/:artistId so static segments win */}
           <Route path="/artist/auth" element={user ? <Navigate to="/artist/apply" replace /> : <ArtistAuth />} />
@@ -320,6 +363,7 @@ const PostAuthGate = () => {
   const { user, emailVerified } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [artistFlow, setArtistFlow] = useState(false);
 
   // Open artist picker ONLY immediately after signup (not on every login),
   // and ONLY once the user's email is verified — otherwise unverified accounts
@@ -327,6 +371,18 @@ const PostAuthGate = () => {
   useEffect(() => {
     if (!user) return;
     if (emailVerified !== true) return;
+    let cancelled = false;
+    (async () => {
+      const destination = await getArtistDestination(user);
+      if (cancelled) return;
+      if (destination || hasArtistSignupIntent(user)) {
+        setArtistFlow(true);
+        setShowPicker(false);
+        localStorage.removeItem('uf_just_signed_up');
+        return;
+      }
+      setArtistFlow(false);
+
     const justSignedUp = localStorage.getItem('uf_just_signed_up');
     if (!justSignedUp) return;
 
@@ -346,6 +402,8 @@ const PostAuthGate = () => {
           setTimeout(() => setShowPicker(true), 600);
         }
       });
+    })();
+    return () => { cancelled = true; };
   }, [user, emailVerified]);
 
   const handlePickerComplete = () => {
@@ -354,6 +412,7 @@ const PostAuthGate = () => {
   };
 
   if (!user) return null;
+  if (artistFlow) return null;
   return (
     <>
       <AnimatePresence>
