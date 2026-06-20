@@ -38,6 +38,15 @@ interface NativeAudioPluginShape {
   setVolume(opts: { volume: number }): Promise<void>;
   stop(): Promise<void>;
   getState(): Promise<NativeAudioState>;
+  // Native DSP (Android audiofx)
+  setEqBands(opts: { bands: number[] }): Promise<void>;
+  setBassBoost(opts: { percent: number }): Promise<void>;
+  setReverb(opts: { percent: number }): Promise<void>;
+  setStudioSpace(opts: { id: string }): Promise<void>;
+  setLateNight(opts: { enabled: boolean }): Promise<void>;
+  setHeadphoneSurround(opts: { enabled: boolean }): Promise<void>;
+  setSpatial8D(opts: { enabled: boolean }): Promise<void>;
+  setPlaybackSpeed(opts: { speed: number }): Promise<void>;
   addListener(
     eventName: 'nativeAudioEvent',
     cb: (e: NativeAudioEvent) => void,
@@ -98,4 +107,39 @@ export async function nativeAudioSetVolume(volume: number): Promise<void> {
 export async function nativeAudioStop(): Promise<void> {
   if (!isNativeAndroid()) return;
   try { await NativeAudio.stop(); } catch { /* noop */ }
+}
+
+// ===== Native DSP setters =====
+
+export async function nativeAudioSetEqBands(bands: number[]): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setEqBands({ bands: bands.map(b => Math.round(b)) }); } catch { /* noop */ }
+}
+export async function nativeAudioSetBassBoost(percent: number): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setBassBoost({ percent: Math.max(0, Math.min(100, Math.round(percent))) }); } catch { /* noop */ }
+}
+export async function nativeAudioSetReverb(percent: number): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setReverb({ percent: Math.max(0, Math.min(100, Math.round(percent))) }); } catch { /* noop */ }
+}
+export async function nativeAudioSetStudioSpace(id: string): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setStudioSpace({ id: id || 'off' }); } catch { /* noop */ }
+}
+export async function nativeAudioSetLateNight(enabled: boolean): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setLateNight({ enabled: !!enabled }); } catch { /* noop */ }
+}
+export async function nativeAudioSetHeadphoneSurround(enabled: boolean): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setHeadphoneSurround({ enabled: !!enabled }); } catch { /* noop */ }
+}
+export async function nativeAudioSetSpatial8D(enabled: boolean): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setSpatial8D({ enabled: !!enabled }); } catch { /* noop */ }
+}
+export async function nativeAudioSetPlaybackSpeed(speed: number): Promise<void> {
+  if (!isNativeAndroid()) return;
+  try { await NativeAudio.setPlaybackSpeed({ speed: Math.max(0.5, Math.min(2, speed)) }); } catch { /* noop */ }
 }
