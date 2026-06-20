@@ -397,6 +397,31 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     nextAudio.setAttribute('x-webkit-airplay', 'allow');
     nextAudioRef.current = nextAudio;
 
+    // Native ExoPlayer mirror — on Capacitor Android, mutes this HTMLAudio
+    // and routes audible playback through a foreground-service ExoPlayer
+    // so backgrounding / lock-screen no longer stutters. No-op on web/iOS.
+    const nativeMirror = createNativePlaybackMirror({
+      getMeta: () => {
+        const s = currentSongRef.current;
+        if (!s) return null;
+        return {
+          title: s.title,
+          artist: s.artist,
+          album: s.album,
+          cover: s.cover_url,
+        };
+      },
+      onNext: () => { nextSongRef.current?.(); },
+      onPrev: () => { prevSongRef.current?.(); },
+      onEnded: () => {
+        // Fallback when HTMLAudio's ended doesn't fire (backgrounded WebView).
+        try { audioRef.current?.dispatchEvent(new Event('ended')); } catch { /* noop */ }
+      },
+    });
+    nativeMirror.attach(audio);
+
+
+
     // Track playing state before going to background
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
