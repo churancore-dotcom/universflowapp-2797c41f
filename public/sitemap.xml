@@ -133,6 +133,24 @@
     <priority>0.4</priority>
   </url>
   <url>
+    <loc>https://universflow.in/artist/apply</loc>
+    <lastmod>2026-06-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://universflow.in/artist/status</loc>
+    <lastmod>2026-06-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://universflow.in/artist/studio</loc>
+    <lastmod>2026-06-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://universflow.in/blog/free-music-download-apps-india</loc>
     <lastmod>2026-06-20</lastmod>
     <changefreq>monthly</changefreq>
