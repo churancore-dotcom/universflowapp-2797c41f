@@ -270,6 +270,10 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
                   alt=""
                   className="w-full h-full object-cover"
                   loading="eager"
+                  fetchPriority="high"
+                  width={88}
+                  height={88}
+                  decoding="async"
                 />
               </div>
             )}
@@ -316,7 +320,9 @@ const HomeBento: React.FC<Props> = ({ songs }) => {
               src={artistOfWeek.image}
               alt={artistOfWeek.name}
               className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
               referrerPolicy="no-referrer"
             />
           ) : (

@@ -77,6 +77,9 @@ const GetApp = () => {
                 className="w-[78%] h-[78%] object-contain"
                 width={88}
                 height={88}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
               />
             </div>
 
@@ -135,6 +138,9 @@ const GetApp = () => {
                   loading={i === 0 ? "eager" : "lazy"}
                   decoding="async"
                   className="w-full h-full object-cover"
+                  width={260}
+                  height={563}
+                  fetchPriority={i === 0 ? "high" : "auto"}
                 />
               </div>
             ))}
