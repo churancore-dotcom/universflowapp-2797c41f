@@ -167,7 +167,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ success: false, error: String(e) } satisfies LyricsResponse), {
+    console.error('lyrics error', e);
+    return new Response(JSON.stringify({ success: false, error: 'An unexpected error occurred' } satisfies LyricsResponse), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
