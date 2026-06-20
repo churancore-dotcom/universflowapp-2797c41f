@@ -389,6 +389,7 @@ const Settings = () => {
                     }
                   }}
                   className="data-[state=checked]:bg-primary scale-90"
+                  aria-label="Toggle Smart Mood Picks"
                 />
               </div>
               <div className="px-4 py-3 border-b border-white/5">
