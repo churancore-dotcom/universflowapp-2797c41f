@@ -332,6 +332,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     queueRef.current = queue;
   }, [queue]);
 
+  useEffect(() => {
+    currentSongRef.current = currentSong;
+  }, [currentSong]);
+
 
   // YouTube IFrame fallback
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null);
