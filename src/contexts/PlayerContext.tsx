@@ -8,6 +8,7 @@ import { recordPerfEvent } from '@/lib/perfMonitor';
 import { resume as resumeAudioEngine } from '@/lib/audioEngine';
 import { EQ_SETTINGS_KEY, getEQSettings, isEqActive } from '@/lib/eqSettings';
 import { wrapStreamUrl, isStreamProxyUrl } from '@/lib/streamProxy';
+import { createNativePlaybackMirror } from '@/lib/nativePlaybackMirror';
 import { toast } from 'sonner';
 
 interface YouTubePlayer {
