@@ -1,6 +1,6 @@
-// Generates public/sitemap.xml for Universflow's indexable public routes.
-// Dynamic artist + public playlist entries are fetched from Supabase at build time
-// (anon key only — RLS allows SELECT on artists and public playlists).
+// Generates public/sitemap.xml for every non-admin Universflow route.
+// Dynamic public playlist + artist entries are fetched from Lovable Cloud at build time
+// using the publishable anon key only.
 
 import { writeFileSync } from "fs";
 import { resolve } from "path";
@@ -25,29 +25,38 @@ const staticEntries: SitemapEntry[] = [
   { path: "/download", lastmod: today, changefreq: "weekly", priority: "0.85" },
   { path: "/app", lastmod: today, changefreq: "weekly", priority: "0.85" },
   { path: "/apk", lastmod: today, changefreq: "weekly", priority: "0.85" },
-  { path: "/home", lastmod: today, changefreq: "daily", priority: "0.95" },
-  { path: "/search", lastmod: today, changefreq: "daily", priority: "0.9" },
-  { path: "/artists", lastmod: today, changefreq: "weekly", priority: "0.85" },
-  { path: "/premium", lastmod: today, changefreq: "monthly", priority: "0.8" },
-  { path: "/support", lastmod: today, changefreq: "monthly", priority: "0.65" },
-  { path: "/library", lastmod: today, changefreq: "weekly", priority: "0.7" },
-  { path: "/profile", lastmod: today, changefreq: "weekly", priority: "0.6" },
+  { path: "/blog/free-music-download-apps-india", lastmod: today, changefreq: "monthly", priority: "0.7" },
+  { path: "/blog/universflow-vs-jiosaavn-vs-gaana", lastmod: today, changefreq: "monthly", priority: "0.7" },
+  { path: "/blog/trending-punjabi-songs-2026", lastmod: today, changefreq: "weekly", priority: "0.75" },
   { path: "/welcome", lastmod: today, changefreq: "monthly", priority: "0.5" },
   { path: "/auth", lastmod: today, changefreq: "monthly", priority: "0.5" },
   { path: "/verify", lastmod: today, changefreq: "monthly", priority: "0.3" },
   { path: "/check-email", lastmod: today, changefreq: "monthly", priority: "0.3" },
   { path: "/offline-player", lastmod: today, changefreq: "monthly", priority: "0.3" },
-  { path: "/offline", lastmod: today, changefreq: "monthly", priority: "0.3" },
-  { path: "/downloads", lastmod: today, changefreq: "weekly", priority: "0.6" },
+  { path: "/home", lastmod: today, changefreq: "daily", priority: "0.95" },
+  { path: "/search", lastmod: today, changefreq: "daily", priority: "0.9" },
+  { path: "/library", lastmod: today, changefreq: "weekly", priority: "0.7" },
+  { path: "/profile", lastmod: today, changefreq: "weekly", priority: "0.6" },
   { path: "/settings", lastmod: today, changefreq: "monthly", priority: "0.4" },
+  { path: "/support", lastmod: today, changefreq: "monthly", priority: "0.65" },
+  { path: "/offline", lastmod: today, changefreq: "monthly", priority: "0.3" },
+  { path: "/artists", lastmod: today, changefreq: "weekly", priority: "0.85" },
   { path: "/subscription", lastmod: today, changefreq: "monthly", priority: "0.5" },
+  { path: "/premium", lastmod: today, changefreq: "monthly", priority: "0.8" },
+  { path: "/downloads", lastmod: today, changefreq: "weekly", priority: "0.6" },
   { path: "/artist/auth", lastmod: today, changefreq: "monthly", priority: "0.4" },
   { path: "/artist/apply", lastmod: today, changefreq: "monthly", priority: "0.5" },
   { path: "/artist/status", lastmod: today, changefreq: "monthly", priority: "0.3" },
   { path: "/artist/studio", lastmod: today, changefreq: "monthly", priority: "0.4" },
-  { path: "/blog/free-music-download-apps-india", lastmod: today, changefreq: "monthly", priority: "0.7" },
-  { path: "/blog/universflow-vs-jiosaavn-vs-gaana", lastmod: today, changefreq: "monthly", priority: "0.7" },
-  { path: "/blog/trending-punjabi-songs-2026", lastmod: today, changefreq: "weekly", priority: "0.75" },
+  { path: "/artist/studio/upload", lastmod: today, changefreq: "monthly", priority: "0.3" },
+  { path: "/artist/studio/songs", lastmod: today, changefreq: "monthly", priority: "0.3" },
+  { path: "/artist/studio/analytics", lastmod: today, changefreq: "monthly", priority: "0.3" },
+  { path: "/artist/studio/followers", lastmod: today, changefreq: "monthly", priority: "0.3" },
+  { path: "/artist/studio/profile", lastmod: today, changefreq: "monthly", priority: "0.3" },
+  { path: "/legal/terms", lastmod: today, changefreq: "yearly", priority: "0.35" },
+  { path: "/legal/privacy", lastmod: today, changefreq: "yearly", priority: "0.35" },
+  { path: "/legal/artist-terms", lastmod: today, changefreq: "yearly", priority: "0.3" },
+  { path: "/legal/artist-privacy", lastmod: today, changefreq: "yearly", priority: "0.3" },
 ];
 
 async function fetchDynamic(): Promise<SitemapEntry[]> {
@@ -57,8 +66,9 @@ async function fetchDynamic(): Promise<SitemapEntry[]> {
   };
   const out: SitemapEntry[] = [];
   try {
-    const [artistsRes, playlistsRes] = await Promise.all([
+    const [artistsRes, artistProfilesRes, playlistsRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/artists?select=id,updated_at`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/artist_profiles?select=slug,updated_at&slug=not.is.null`, { headers }),
       fetch(`${SUPABASE_URL}/rest/v1/playlists?select=id,updated_at&is_public=eq.true`, { headers }),
     ]);
     if (artistsRes.ok) {
@@ -73,6 +83,20 @@ async function fetchDynamic(): Promise<SitemapEntry[]> {
       }
     } else {
       console.warn(`[sitemap] artists fetch failed: ${artistsRes.status}`);
+    }
+    if (artistProfilesRes.ok) {
+      const rows = (await artistProfilesRes.json()) as Array<{ slug: string | null; updated_at?: string }>;
+      for (const r of rows) {
+        if (!r.slug) continue;
+        out.push({
+          path: `/a/${encodeURIComponent(r.slug)}`,
+          lastmod: (r.updated_at || today).slice(0, 10),
+          changefreq: "weekly",
+          priority: "0.75",
+        });
+      }
+    } else {
+      console.warn(`[sitemap] artist_profiles fetch failed: ${artistProfilesRes.status}`);
     }
     if (playlistsRes.ok) {
       const rows = (await playlistsRes.json()) as Array<{ id: string; updated_at?: string }>;
