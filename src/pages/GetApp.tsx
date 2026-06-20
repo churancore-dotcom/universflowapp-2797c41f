@@ -183,7 +183,7 @@ const GetApp = () => {
             />
             <div className="relative">
               <div className="w-[56px] h-[56px] mx-auto rounded-2xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center">
-                <img src={appLogo} alt="Universflow app logo" className="w-[78%] h-[78%] object-contain" />
+                <img src={appLogo.url} alt="Universflow app logo" className="w-[78%] h-[78%] object-contain" />
               </div>
               <h2 className="mt-4 text-2xl font-extrabold leading-tight">Get Universflow</h2>
               <a
@@ -201,7 +201,7 @@ const GetApp = () => {
 
         <footer className="px-5 py-8 text-center text-[11px] text-white/60 border-t border-white/5">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <img src={appLogo} alt="" className="w-4 h-4 rounded-[4px] object-contain" />
+            <img src={appLogo.url} alt="" className="w-4 h-4 rounded-[4px] object-contain" />
             <span className="font-bold tracking-widest text-white/80">UNIVERSFLOW</span>
           </div>
           <div className="space-x-3">
