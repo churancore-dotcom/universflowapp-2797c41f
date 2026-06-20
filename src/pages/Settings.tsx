@@ -272,6 +272,7 @@ const Settings = () => {
                     toggleGaplessPro();
                   }}
                   className="data-[state=checked]:bg-primary scale-90"
+                  aria-label="Toggle Gapless Pro"
                 />
               </div>
               <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
