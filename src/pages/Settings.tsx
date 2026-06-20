@@ -209,6 +209,7 @@ const Settings = () => {
                       checked={cfEnabled}
                       onCheckedChange={() => toggleCrossfade()}
                       className="data-[state=checked]:bg-primary scale-75"
+                      aria-label="Toggle crossfade"
                     />
                   </div>
                   <span className="text-sm text-primary font-medium">{cfEnabled ? `${cfDuration}s` : 'Off'}</span>
