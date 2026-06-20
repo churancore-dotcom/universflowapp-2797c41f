@@ -56,30 +56,11 @@ jobs:
             fi
           done
 
-      - name: Fix duplicate INTERNET permission in manifest
+      - name: Fix duplicate permission lines in manifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # Remove duplicate INTERNET permission if exists
-          python3 - <<'EOF'
-import re
-with open("android/app/src/main/AndroidManifest.xml", "r") as f:
-    content = f.read()
-# Remove duplicate permissions
-seen = set()
-lines = content.split('\n')
-clean = []
-for line in lines:
-    stripped = line.strip()
-    if 'uses-permission' in stripped:
-        if stripped not in seen:
-            seen.add(stripped)
-            clean.append(line)
-    else:
-        clean.append(line)
-with open("android/app/src/main/AndroidManifest.xml", "w") as f:
-    f.write('\n'.join(clean))
-print("Manifest cleaned")
-EOF
+          awk '!/uses-permission/ || !seen[$0]++' "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
+          echo "Manifest cleaned"
 
       - name: Ensure required permissions in manifest
         run: |
