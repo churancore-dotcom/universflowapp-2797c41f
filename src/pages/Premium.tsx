@@ -16,7 +16,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEmailVerified } from '@/hooks/useEmailVerified';
 import { toast } from '@/hooks/use-toast';
 import SEOHead from '@/components/SEOHead';
-import appLogo from '@/assets/app-logo.png';
+import appLogo from '@/assets/app-logo.gif.asset.json';
+
 
 const LogoBadge = ({ size = 56 }: { size?: number }) => (
   <div
@@ -29,7 +30,7 @@ const LogoBadge = ({ size = 56 }: { size?: number }) => (
       boxShadow: '0 10px 30px -10px hsl(var(--primary) / 0.5)',
     }}
   >
-    <img src={appLogo} alt="Universflow" className="w-[68%] h-[68%] object-contain" />
+    <img src={appLogo.url} alt="Universflow" className="w-[68%] h-[68%] object-contain" />
   </div>
 );
 

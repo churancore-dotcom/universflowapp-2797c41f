@@ -9,7 +9,8 @@ import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, AtSign } from 'lucide-rea
 import { toast } from 'sonner';
 import { FadeTransition } from '@/components/PageTransition';
 import SEOHead from '@/components/SEOHead';
-import appLogo from '@/assets/app-logo.png';
+import appLogo from '@/assets/app-logo.gif.asset.json';
+
 
 function detectCountryCode(): string | undefined {
   try {
