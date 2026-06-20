@@ -44,6 +44,27 @@ async function inferMood(songs: string[], hour: number, apiKey: string): Promise
   }
 }
 
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
+async function isAuthorized(req: Request, admin: ReturnType<typeof createClient>): Promise<boolean> {
+  const header = req.headers.get("x-cron-secret") ?? "";
+  if (!header) return false;
+  const envSecret = (Deno.env.get("CRON_SECRET") ?? "").trim();
+  if (envSecret && safeEqual(header, envSecret)) return true;
+  const { data } = await admin
+    .from("internal_secrets")
+    .select("value")
+    .eq("key", "chart_aggregator_cron_secret")
+    .maybeSingle();
+  const secret = typeof data?.value === "string" ? data.value.trim() : "";
+  return secret.length > 0 && safeEqual(header, secret);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -52,12 +73,19 @@ Deno.serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY missing" }), {
+      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    if (!(await isAuthorized(req, admin))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // Eligible users: opted-in, has device token, not pushed in last 18h, played something last 24h
     const { data: candidates } = await admin
