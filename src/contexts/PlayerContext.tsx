@@ -1775,6 +1775,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [queue, currentIndex, playSongAtIndex]);
 
+  // Keep refs in sync so the native ExoPlayer mirror (lock-screen / BT
+  // transport events) can call back into the current handlers.
+  useEffect(() => { nextSongRef.current = nextSong; }, [nextSong]);
+  useEffect(() => { prevSongRef.current = prevSong; }, [prevSong]);
+
   const seek = useCallback((time: number) => {
     if (youtubeActiveRef.current && youtubePlayerRef.current) {
       try { youtubePlayerRef.current.seekTo(time, true); } catch { /* ignore */ }
