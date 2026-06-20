@@ -20,7 +20,7 @@ interface SEOHeadProps {
 const SITE_ORIGIN = 'https://universflow.in';
 
 const DEFAULT_IMAGE =
-  'https://storage.googleapis.com/gpt-engineer-file-uploads/d6CK1hptEYS0iYCrQMmYcx7HukD2/social-images/social-1768315544947-Screenshot 2026-01-13 201134.png';
+  'https://storage.googleapis.com/gpt-engineer-file-uploads/d6CK1hptEYS0iYCrQMmYcx7HukD2/social-images/social-1768315544947-Screenshot%202026-01-13%20201134.png';
 
 const SEOHead = ({
   title = 'Univers Flow — Free Music Streaming & Downloads',

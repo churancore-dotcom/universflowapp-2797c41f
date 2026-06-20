@@ -209,6 +209,7 @@ const Settings = () => {
                       checked={cfEnabled}
                       onCheckedChange={() => toggleCrossfade()}
                       className="data-[state=checked]:bg-primary scale-75"
+                      aria-label="Toggle crossfade"
                     />
                   </div>
                   <span className="text-sm text-primary font-medium">{cfEnabled ? `${cfDuration}s` : 'Off'}</span>
@@ -271,15 +272,16 @@ const Settings = () => {
                     toggleGaplessPro();
                   }}
                   className="data-[state=checked]:bg-primary scale-90"
+                  aria-label="Toggle Gapless Pro"
                 />
               </div>
               <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
                 <span className="text-sm">Gapless Playback</span>
-                <Switch checked={gaplessPlayback} onCheckedChange={handleGapless} className="data-[state=checked]:bg-primary scale-90" />
+                <Switch checked={gaplessPlayback} onCheckedChange={handleGapless} className="data-[state=checked]:bg-primary scale-90" aria-label="Toggle gapless playback" />
               </div>
               <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
                 <span className="text-sm">Autoplay</span>
-                <Switch checked={autoplay} onCheckedChange={handleAutoplay} className="data-[state=checked]:bg-primary scale-90" />
+                <Switch checked={autoplay} onCheckedChange={handleAutoplay} className="data-[state=checked]:bg-primary scale-90" aria-label="Toggle autoplay" />
               </div>
 
               {/* Playback speed */}
@@ -369,7 +371,7 @@ const Settings = () => {
             <div className="rounded-3xl overflow-hidden bg-card/50 border border-white/5 backdrop-blur-sm">
               <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
                 <span className="text-sm">Push Notifications</span>
-                <Switch checked={notifications} onCheckedChange={handleNotifications} className="data-[state=checked]:bg-primary scale-90" />
+                <Switch checked={notifications} onCheckedChange={handleNotifications} className="data-[state=checked]:bg-primary scale-90" aria-label="Toggle push notifications" />
               </div>
               <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
                 <div className="flex flex-col">
@@ -387,6 +389,7 @@ const Settings = () => {
                     }
                   }}
                   className="data-[state=checked]:bg-primary scale-90"
+                  aria-label="Toggle Smart Mood Picks"
                 />
               </div>
               <div className="px-4 py-3 border-b border-white/5">
@@ -399,7 +402,7 @@ const Settings = () => {
               </div>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span className="text-sm">Haptic Feedback</span>
-                <Switch checked={haptics} onCheckedChange={handleHaptics} className="data-[state=checked]:bg-primary scale-90" />
+                <Switch checked={haptics} onCheckedChange={handleHaptics} className="data-[state=checked]:bg-primary scale-90" aria-label="Toggle haptic feedback" />
               </div>
             </div>
           </section>
