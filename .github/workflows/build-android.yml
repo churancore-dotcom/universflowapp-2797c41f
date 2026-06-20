@@ -108,7 +108,7 @@ jobs:
           echo "=== app build.gradle ==="
           grep -n "google-services\|firebase" "$APP_GRADLE" || true
 
-      - name: Write MainActivity (registers MediaNotificationPlugin)
+      - name: Write MainActivity (registers MediaNotification + NativeAudioPlayer)
         run: |
           PKG="app.lovable.id5acaae55bbc847a7bd32f3924d8ef986"
           PKG_PATH="app/lovable/id5acaae55bbc847a7bd32f3924d8ef986"
@@ -121,11 +121,13 @@ jobs:
           import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
           import ${PKG}.media.MediaNotificationPlugin;
+          import ${PKG}.media.NativeAudioPlayerPlugin;
 
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   registerPlugin(MediaNotificationPlugin.class);
+                  registerPlugin(NativeAudioPlayerPlugin.class);
                   super.onCreate(savedInstanceState);
               }
           }
@@ -162,19 +164,24 @@ jobs:
           add_perm "WAKE_LOCK"
           add_perm "MEDIA_CONTENT_CONTROL"
 
-          # Register the foreground service before </application>
+          # Register the foreground services before </application>
           if ! grep -q "MediaNotificationService" "$MANIFEST"; then
-            sed -i 's|</application>|    <service android:name=".media.MediaNotificationService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n        <receiver android:name="androidx.media.session.MediaButtonReceiver" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MEDIA_BUTTON" />\n            </intent-filter>\n        </receiver>\n    </application>|' "$MANIFEST"
+            sed -i 's|</application>|    <service android:name=".media.MediaNotificationService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n        <service android:name=".media.NativeAudioPlayerService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n        <receiver android:name="androidx.media.session.MediaButtonReceiver" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MEDIA_BUTTON" />\n            </intent-filter>\n        </receiver>\n    </application>|' "$MANIFEST"
+          elif ! grep -q "NativeAudioPlayerService" "$MANIFEST"; then
+            sed -i 's|</application>|    <service android:name=".media.NativeAudioPlayerService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n    </application>|' "$MANIFEST"
           fi
 
-          # Add androidx.media dependency to app build.gradle
+          # Add androidx.media + Media3 (ExoPlayer) dependencies to app build.gradle
           APP_GRADLE="android/app/build.gradle"
           if ! grep -q "androidx.media:media" "$APP_GRADLE"; then
             sed -i "s|dependencies {|dependencies {\n    implementation 'androidx.media:media:1.7.0'|" "$APP_GRADLE"
           fi
+          if ! grep -q "androidx.media3:media3-exoplayer" "$APP_GRADLE"; then
+            sed -i "s|dependencies {|dependencies {\n    implementation 'androidx.media3:media3-exoplayer:1.4.1'\n    implementation 'androidx.media3:media3-session:1.4.1'\n    implementation 'androidx.media3:media3-ui:1.4.1'\n    implementation 'androidx.media3:media3-datasource-okhttp:1.4.1'|" "$APP_GRADLE"
+          fi
 
-          echo "=== Manifest perms / service ==="
-          grep -nE "POST_NOTIFICATIONS|FOREGROUND_SERVICE|MediaNotificationService|MediaButtonReceiver" "$MANIFEST" || true
+          echo "=== Manifest perms / services ==="
+          grep -nE "POST_NOTIFICATIONS|FOREGROUND_SERVICE|MediaNotificationService|NativeAudioPlayerService|MediaButtonReceiver" "$MANIFEST" || true
           echo "=== Plugin files ==="
           ls -la "android/app/src/main/java/${PKG_PATH}/media/"
 
